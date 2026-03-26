@@ -308,7 +308,7 @@ const readData = async (name) => {
         createdAt: new Date().toISOString()
       });
     }
-    await pool.query('INSERT INTO data_store (name, data) VALUES ($1, $2)', [name, seedData]);
+    await pool.query('INSERT INTO data_store (name, data) VALUES ($1, $2::jsonb)', [name, JSON.stringify(seedData)]);
     return cloneJson(seedData);
   }
 
@@ -326,8 +326,8 @@ const writeData = async (name, data) => {
   await ensureDatabase();
   const pool = getPool();
   await pool.query(
-    'INSERT INTO data_store (name, data, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (name) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()',
-    [name, data]
+    'INSERT INTO data_store (name, data, updated_at) VALUES ($1, $2::jsonb, NOW()) ON CONFLICT (name) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()',
+    [name, JSON.stringify(data)]
   );
 };
 
