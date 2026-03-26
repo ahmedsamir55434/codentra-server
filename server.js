@@ -195,7 +195,6 @@ seedRuntimeData();
 
 // JSON storage helpers
 const JSON_CACHE = new Map();
-const DATA_CACHE = new Map();
 let dbPool;
 let dbInitPromise = null;
 
@@ -282,14 +281,12 @@ const ensureDatabase = async () => {
       if (res.rowCount === 0) {
         const seedData = readJsonFile(def.file, def.fallback);
         await pool.query('INSERT INTO data_store (name, data) VALUES ($1, $2)', [def.name, seedData]);
-        DATA_CACHE.set(def.name, seedData);
-      } else {
-        DATA_CACHE.set(def.name, res.rows[0].data);
       }
     }
 
-    const users = Array.isArray(DATA_CACHE.get('users')) ? DATA_CACHE.get('users') : [];
-    if (!users.find(u => u && u.email === 'admin@codentra.com')) {
+    const userRes = await pool.query('SELECT data FROM data_store WHERE name = $1', ['users']);
+    const users = userRes.rowCount ? userRes.rows[0].data : [];
+    if (Array.isArray(users) && !users.find(u => u && u.email === 'admin@codentra.com')) {
       users.push({
         id: uuidv4(),
         name: 'Admin',
@@ -299,7 +296,6 @@ const ensureDatabase = async () => {
         isSuperAdmin: true,
         createdAt: new Date().toISOString()
       });
-      DATA_CACHE.set('users', users);
       await pool.query(
         'INSERT INTO data_store (name, data, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (name) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()',
         ['users', users]
@@ -317,20 +313,14 @@ const readData = async (name) => {
   }
 
   await ensureDatabase();
-  if (DATA_CACHE.has(name)) {
-    return cloneJson(DATA_CACHE.get(name));
-  }
-
   const pool = getPool();
   const res = await pool.query('SELECT data FROM data_store WHERE name = $1', [name]);
   if (res.rowCount === 0) {
     const seedData = readJsonFile(def.file, def.fallback);
     await pool.query('INSERT INTO data_store (name, data) VALUES ($1, $2)', [name, seedData]);
-    DATA_CACHE.set(name, seedData);
     return cloneJson(seedData);
   }
 
-  DATA_CACHE.set(name, res.rows[0].data);
   return cloneJson(res.rows[0].data);
 };
 
@@ -343,7 +333,6 @@ const writeData = async (name, data) => {
   }
 
   await ensureDatabase();
-  DATA_CACHE.set(name, data);
   const pool = getPool();
   await pool.query(
     'INSERT INTO data_store (name, data, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (name) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()',
