@@ -22,7 +22,13 @@
         <div class="success-message"><%= success %></div>
       <% } %>
 
-      <% if (!bookings || bookings.length === 0) { %>
+      <% if (isUnderDevelopment) { %>
+        <div class="empty-state">
+          <div class="empty-icon">🚧</div>
+          <h2>ميزة المواعيد تحت التطوير</h2>
+          <p>سيتم تفعيل الميتنجات قريباً.</p>
+        </div>
+      <% } else if (!bookings || bookings.length === 0) { %>
         <div class="empty-state">
           <div class="empty-icon">📅</div>
           <h2>لا يوجد حجوزات بعد</h2>

@@ -22,7 +22,13 @@
         <div class="success-message"><%= success %></div>
       <% } %>
 
-      <% if (!admins || admins.length === 0) { %>
+      <% if (isUnderDevelopment) { %>
+        <div class="empty-state">
+          <div class="empty-icon">🚧</div>
+          <h2>ميزة حجز الجلسات تحت التطوير</h2>
+          <p>سيتم تفعيل الميتنجات قريباً.</p>
+        </div>
+      <% } else if (!admins || admins.length === 0) { %>
         <div class="empty-state">
           <div class="empty-icon">📅</div>
           <h2>لا يوجد أدمنز حالياً</h2>
