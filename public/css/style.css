@@ -118,7 +118,7 @@ body {
   height: auto;
   padding-top: 8px;
   padding-bottom: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 12px;
 }
 
@@ -142,7 +142,10 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
   justify-content: flex-end;
 }
 
@@ -150,7 +153,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .user-name {
@@ -512,10 +515,11 @@ body {
 
 @media (max-width: 768px) {
   .main-header .container {
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     height: auto;
-    padding: 15px 20px;
-    gap: 15px;
+    padding: 12px 16px;
+    gap: 10px;
   }
 
   .logo a {
@@ -530,6 +534,7 @@ body {
     width: 100%;
     justify-content: center;
     gap: 8px;
+    overflow-x: auto;
   }
 
   .nav-links {

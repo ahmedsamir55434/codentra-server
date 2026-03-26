@@ -680,10 +680,6 @@ app.use('/uploads', express.static(UPLOADS_DIR));
 if (IS_VERCEL) {
   app.use('/uploads', express.static(BUNDLED_UPLOADS_DIR));
 }
-app.use((req, res, next) => {
-  res.locals.appointmentsUnderDevelopment = APPOINTMENTS_DISABLED;
-  next();
-});
 
 if (TRUST_PROXY) {
   app.set('trust proxy', 1);
@@ -2327,13 +2323,7 @@ const migrateAppointmentsBookingsMeetingLinks = async () => {
 // User - Browse available admin slots
 app.get('/appointments', requireAuth, async (req, res) => {
   if (APPOINTMENTS_DISABLED) {
-    return res.render('appointments', {
-      user: req.session.user,
-      admins: [],
-      success: null,
-      error: null,
-      isUnderDevelopment: true
-    });
+    return res.redirect('/');
   }
   const admins = await getAdminUsers();
   const data = await migrateAppointmentsBookingsMeetingLinks();
@@ -2367,7 +2357,7 @@ app.get('/appointments', requireAuth, async (req, res) => {
 // User - Book a slot
 app.post('/appointments/book', requireAuth, async (req, res) => {
   if (APPOINTMENTS_DISABLED) {
-    return res.redirect('/appointments?error=ميزة الحجز تحت التطوير حالياً');
+    return res.redirect('/');
   }
   const { slotId, notes } = req.body;
   if (!slotId) return res.redirect('/appointments?error=اختر ميعاد للحجز');
@@ -2413,13 +2403,7 @@ app.post('/appointments/book', requireAuth, async (req, res) => {
 // User - View my appointments
 app.get('/my-appointments', requireAuth, async (req, res) => {
   if (APPOINTMENTS_DISABLED) {
-    return res.render('my-appointments', {
-      user: req.session.user,
-      bookings: [],
-      success: null,
-      error: null,
-      isUnderDevelopment: true
-    });
+    return res.redirect('/');
   }
   const data = await migrateAppointmentsBookingsMeetingLinks();
   const myBookings = (data.bookings || [])
