@@ -114,7 +114,10 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 70px;
+  min-height: 70px;
+  height: auto;
+  padding-top: 8px;
+  padding-bottom: 8px;
   flex-wrap: wrap;
   gap: 12px;
 }

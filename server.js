@@ -192,119 +192,80 @@ const seedRuntimeData = () => {
 seedRuntimeData();
 
 // JSON storage helpers
+const JSON_CACHE = new Map();
+
+const cloneJson = (value) => {
+  if (value === null || value === undefined) return value;
+  return JSON.parse(JSON.stringify(value));
+};
+
+const readJsonFile = (fileName, fallback) => {
+  const filePath = path.join(DATA_DIR, fileName);
+  if (JSON_CACHE.has(filePath)) {
+    return cloneJson(JSON_CACHE.get(filePath));
+  }
+
+  let data;
+  if (!fs.existsSync(filePath)) {
+    data = typeof fallback === 'function' ? fallback() : fallback;
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  } else {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    data = raw ? JSON.parse(raw) : (typeof fallback === 'function' ? fallback() : fallback);
+  }
+
+  JSON_CACHE.set(filePath, data);
+  return cloneJson(data);
+};
+
+const writeJsonFile = (fileName, data) => {
+  const filePath = path.join(DATA_DIR, fileName);
+  JSON_CACHE.set(filePath, data);
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+};
+
 const db = {
-  users: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'users.json'), 'utf8') || '[]'),
-  projects: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'projects.json'), 'utf8') || '[]'),
-  purchases: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'purchases.json'), 'utf8') || '[]'),
-  modifications: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'modifications.json'), 'utf8') || '[]'),
-  coupons: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'coupons.json'), 'utf8') || '[]'),
-  referrals: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'referrals.json'), 'utf8') || '[]'),
-  walletCodes: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'wallet-codes.json'), 'utf8') || '[]'),
-  appointments: () => {
-    const filePath = path.join(DATA_DIR, 'appointments.json');
-    if (!fs.existsSync(filePath)) {
-      const initial = { timeSlots: [], bookings: [] };
-      fs.writeFileSync(filePath, JSON.stringify(initial, null, 2));
-      return initial;
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '{"timeSlots":[],"bookings":[]}');
-  },
-  saveUsers: (data) => fs.writeFileSync(path.join(DATA_DIR, 'users.json'), JSON.stringify(data, null, 2)),
-  saveProjects: (data) => fs.writeFileSync(path.join(DATA_DIR, 'projects.json'), JSON.stringify(data, null, 2)),
-  savePurchases: (data) => fs.writeFileSync(path.join(DATA_DIR, 'purchases.json'), JSON.stringify(data, null, 2)),
-  saveModifications: (data) => fs.writeFileSync(path.join(DATA_DIR, 'modifications.json'), JSON.stringify(data, null, 2)),
-  saveCoupons: (data) => fs.writeFileSync(path.join(DATA_DIR, 'coupons.json'), JSON.stringify(data, null, 2)),
-  saveReferrals: (data) => fs.writeFileSync(path.join(DATA_DIR, 'referrals.json'), JSON.stringify(data, null, 2)),
-  saveWalletCodes: (data) => fs.writeFileSync(path.join(DATA_DIR, 'wallet-codes.json'), JSON.stringify(data, null, 2)),
-  reviews: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'reviews.json'), 'utf8') || '[]'),
-  saveReviews: (data) => fs.writeFileSync(path.join(DATA_DIR, 'reviews.json'), JSON.stringify(data, null, 2)),
-  messages: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'messages.json'), 'utf8') || '[]'),
-  saveMessages: (data) => fs.writeFileSync(path.join(DATA_DIR, 'messages.json'), JSON.stringify(data, null, 2)),
-  adminTeamMessages: () => {
-    const filePath = path.join(DATA_DIR, 'admin-team-messages.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveAdminTeamMessages: (data) => fs.writeFileSync(path.join(DATA_DIR, 'admin-team-messages.json'), JSON.stringify(data, null, 2)),
-  carts: () => {
-    const filePath = path.join(DATA_DIR, 'carts.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveCarts: (data) => fs.writeFileSync(path.join(DATA_DIR, 'carts.json'), JSON.stringify(data, null, 2)),
-  invoices: () => {
-    const filePath = path.join(DATA_DIR, 'invoices.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveInvoices: (data) => fs.writeFileSync(path.join(DATA_DIR, 'invoices.json'), JSON.stringify(data, null, 2)),
-  saveAppointments: (data) => fs.writeFileSync(path.join(DATA_DIR, 'appointments.json'), JSON.stringify(data, null, 2))
-  ,
-  meetingRecordings: () => {
-    const filePath = path.join(DATA_DIR, 'meeting-recordings.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveMeetingRecordings: (data) => fs.writeFileSync(path.join(DATA_DIR, 'meeting-recordings.json'), JSON.stringify(data, null, 2)),
-  subscriptionPlans: () => {
-    const filePath = path.join(DATA_DIR, 'subscription-plans.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  subscriptions: () => {
-    const filePath = path.join(DATA_DIR, 'subscriptions.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  subscriptionPayments: () => {
-    const filePath = path.join(DATA_DIR, 'subscription-payments.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveSubscriptionPlans: (data) => fs.writeFileSync(path.join(DATA_DIR, 'subscription-plans.json'), JSON.stringify(data, null, 2)),
-  saveSubscriptions: (data) => fs.writeFileSync(path.join(DATA_DIR, 'subscriptions.json'), JSON.stringify(data, null, 2)),
-  saveSubscriptionPayments: (data) => fs.writeFileSync(path.join(DATA_DIR, 'subscription-payments.json'), JSON.stringify(data, null, 2)),
-  subscriptionCoupons: () => {
-    const filePath = path.join(DATA_DIR, 'subscription-coupons.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveSubscriptionCoupons: (data) => fs.writeFileSync(path.join(DATA_DIR, 'subscription-coupons.json'), JSON.stringify(data, null, 2)),
-  loyaltySettings: () => {
-    const filePath = path.join(DATA_DIR, 'loyalty-settings.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(
-        filePath,
-        JSON.stringify({ enabled: true, pointsPerEGP: 0.1, redeem: { enabled: true, pointsToEGP: 0.1, minPoints: 100 } }, null, 2)
-      );
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '{}');
-  },
-  saveLoyaltySettings: (data) => fs.writeFileSync(path.join(DATA_DIR, 'loyalty-settings.json'), JSON.stringify(data, null, 2))
+  users: () => readJsonFile('users.json', []),
+  projects: () => readJsonFile('projects.json', []),
+  purchases: () => readJsonFile('purchases.json', []),
+  modifications: () => readJsonFile('modifications.json', []),
+  coupons: () => readJsonFile('coupons.json', []),
+  referrals: () => readJsonFile('referrals.json', []),
+  walletCodes: () => readJsonFile('wallet-codes.json', []),
+  appointments: () => readJsonFile('appointments.json', () => ({ timeSlots: [], bookings: [] })),
+  saveUsers: (data) => writeJsonFile('users.json', data),
+  saveProjects: (data) => writeJsonFile('projects.json', data),
+  savePurchases: (data) => writeJsonFile('purchases.json', data),
+  saveModifications: (data) => writeJsonFile('modifications.json', data),
+  saveCoupons: (data) => writeJsonFile('coupons.json', data),
+  saveReferrals: (data) => writeJsonFile('referrals.json', data),
+  saveWalletCodes: (data) => writeJsonFile('wallet-codes.json', data),
+  reviews: () => readJsonFile('reviews.json', []),
+  saveReviews: (data) => writeJsonFile('reviews.json', data),
+  messages: () => readJsonFile('messages.json', []),
+  saveMessages: (data) => writeJsonFile('messages.json', data),
+  adminTeamMessages: () => readJsonFile('admin-team-messages.json', []),
+  saveAdminTeamMessages: (data) => writeJsonFile('admin-team-messages.json', data),
+  carts: () => readJsonFile('carts.json', []),
+  saveCarts: (data) => writeJsonFile('carts.json', data),
+  invoices: () => readJsonFile('invoices.json', []),
+  saveInvoices: (data) => writeJsonFile('invoices.json', data),
+  saveAppointments: (data) => writeJsonFile('appointments.json', data),
+  meetingRecordings: () => readJsonFile('meeting-recordings.json', []),
+  saveMeetingRecordings: (data) => writeJsonFile('meeting-recordings.json', data),
+  subscriptionPlans: () => readJsonFile('subscription-plans.json', []),
+  subscriptions: () => readJsonFile('subscriptions.json', []),
+  subscriptionPayments: () => readJsonFile('subscription-payments.json', []),
+  saveSubscriptionPlans: (data) => writeJsonFile('subscription-plans.json', data),
+  saveSubscriptions: (data) => writeJsonFile('subscriptions.json', data),
+  saveSubscriptionPayments: (data) => writeJsonFile('subscription-payments.json', data),
+  subscriptionCoupons: () => readJsonFile('subscription-coupons.json', []),
+  saveSubscriptionCoupons: (data) => writeJsonFile('subscription-coupons.json', data),
+  loyaltySettings: () => readJsonFile(
+    'loyalty-settings.json',
+    () => ({ enabled: true, pointsPerEGP: 0.1, redeem: { enabled: true, pointsToEGP: 0.1, minPoints: 100 } })
+  ),
+  saveLoyaltySettings: (data) => writeJsonFile('loyalty-settings.json', data)
 };
 
 const normalizeCouponCode = (code) => {
