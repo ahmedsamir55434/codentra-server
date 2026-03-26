@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الرسائل - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="adminSidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.projects))) { %>
+          <a href="/admin/projects/new">إضافة مشروع</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.purchases))) { %>
+          <a href="/admin/purchases">المشتريات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.modifications))) { %>
+          <a href="/admin/modifications">طلبات التعديل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.messages))) { %>
+          <a href="/admin/messages" class="active">الرسائل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.reviews))) { %>
+          <a href="/admin/reviews">التقييمات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.coupons))) { %>
+          <a href="/admin/coupons">الكوبونات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.referrals))) { %>
+          <a href="/admin/referrals">الإحالات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletCodes))) { %>
+          <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletBalances))) { %>
+          <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.appointments))) { %>
+          <a href="/admin/appointments">المواعيد</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionCoupons))) { %>
+          <a href="/admin/subscription-coupons">كوبونات الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionPlans))) { %>
+          <a href="/admin/subscription-plans">خطط الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionReports))) { %>
+          <a href="/admin/subscription-reports">تقارير الاشتراك</a>
+        <% } %>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/meeting-recordings">تسجيلات الاجتماعات</a>
+          <a href="/admin/admins">إدارة الأدمنز</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.users))) { %>
+          <a href="/admin/users">المستخدمين</a>
+        <% } %>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+    
+    <button class="admin-nav-toggle" id="adminNavToggle">☰</button>
+
+    <main class="admin-content">
+      <h1>الرسائل</h1>
+      
+      <% 
+        const conversationKeys = Object.keys(conversations);
+        if (conversationKeys.length === 0) { 
+      %>
+        <div class="empty-state">
+          <p>لا توجد رسائل بعد</p>
+        </div>
+      <% } else { %>
+        <div class="conversations-list">
+          <% 
+            conversationKeys.forEach(userId => {
+              const msgs = conversations[userId];
+              const lastMsg = msgs[msgs.length - 1];
+              const chatUser = users.find(u => u.id === userId);
+              const unreadCount = msgs.filter(m => m.senderId === userId && !m.read).length;
+          %>
+            <a href="/admin/messages/<%= userId %>" class="conversation-card <%= unreadCount > 0 ? 'has-unread' : '' %>">
+              <div class="conversation-info">
+                <h3><%= chatUser ? chatUser.name : 'مستخدم غير معروف' %></h3>
+                <p class="last-message"><%= lastMsg.content.substring(0, 50) %>...</p>
+                <span class="conversation-date"><%= new Date(lastMsg.createdAt).toLocaleString('ar-EG') %></span>
+              </div>
+              <% if (unreadCount > 0) { %>
+                <span class="unread-badge"><%= unreadCount %></span>
+              <% } %>
+            </a>
+          <% }) %>
+        </div>
+      <% } %>
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+  
+  <script>
+    // Mobile sidebar toggle
+    const adminNavToggle = document.getElementById('adminNavToggle');
+    const adminSidebar = document.getElementById('adminSidebar');
+    
+    if (adminNavToggle && adminSidebar) {
+      adminNavToggle.addEventListener('click', () => {
+        adminSidebar.classList.toggle('active');
+      });
+      
+      // Close sidebar when clicking outside
+      document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 768) {
+          if (!adminSidebar.contains(e.target) && !adminNavToggle.contains(e.target)) {
+            adminSidebar.classList.remove('active');
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

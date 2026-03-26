@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>إدارة الأدمنز - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.projects))) { %>
+          <a href="/admin/projects/new">إضافة مشروع</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.purchases))) { %>
+          <a href="/admin/purchases">المشتريات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.modifications))) { %>
+          <a href="/admin/modifications">طلبات التعديل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.messages))) { %>
+          <a href="/admin/messages">الرسائل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.reviews))) { %>
+          <a href="/admin/reviews">التقييمات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.coupons))) { %>
+          <a href="/admin/coupons">الكوبونات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.referrals))) { %>
+          <a href="/admin/referrals">الإحالات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletCodes))) { %>
+          <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletBalances))) { %>
+          <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.appointments))) { %>
+          <a href="/admin/appointments">المواعيد</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionCoupons))) { %>
+          <a href="/admin/subscription-coupons">كوبونات الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionPlans))) { %>
+          <a href="/admin/subscription-plans">خطط الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionReports))) { %>
+          <a href="/admin/subscription-reports">تقارير الاشتراك</a>
+        <% } %>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/admins" class="active">إدارة الأدمنز</a>
+          <a href="/admin/meeting-recordings">تسجيلات الاجتماعات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.users))) { %>
+          <a href="/admin/users">المستخدمين</a>
+        <% } %>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content admin-page-admins">
+      <h1>إدارة الأدمنز</h1>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <h2>إضافة أدمن جديد</h2>
+        </div>
+
+        <% if (error) { %>
+          <div class="error-message"><%= error %></div>
+        <% } %>
+        <% if (success) { %>
+          <div class="success-message"><%= success %></div>
+        <% } %>
+
+        <div class="form-container">
+          <form action="/admin/admins" method="POST" class="admin-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="name">الاسم *</label>
+                <input type="text" id="name" name="name" required>
+              </div>
+              <div class="form-group">
+                <label for="email">البريد الإلكتروني *</label>
+                <input type="email" id="email" name="email" required>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="password">كلمة المرور *</label>
+              <input type="password" id="password" name="password" required>
+            </div>
+
+            <div class="form-group">
+              <label>الصلاحيات *</label>
+              <div class="permissions-grid">
+                <label class="permission-item"><input type="checkbox" name="perm_projects" value="1"> المشاريع</label>
+                <label class="permission-item"><input type="checkbox" name="perm_purchases" value="1"> المشتريات</label>
+                <label class="permission-item"><input type="checkbox" name="perm_modifications" value="1"> طلبات التعديل</label>
+                <label class="permission-item"><input type="checkbox" name="perm_messages" value="1"> الرسائل</label>
+                <label class="permission-item"><input type="checkbox" name="perm_reviews" value="1"> التقييمات</label>
+                <label class="permission-item"><input type="checkbox" name="perm_coupons" value="1"> كوبونات المشاريع</label>
+                <label class="permission-item"><input type="checkbox" name="perm_referrals" value="1"> الإحالات</label>
+                <label class="permission-item"><input type="checkbox" name="perm_walletCodes" value="1"> أكواد الشحن</label>
+                <label class="permission-item"><input type="checkbox" name="perm_walletBalances" value="1"> أرصدة العملاء</label>
+                <label class="permission-item"><input type="checkbox" name="perm_users" value="1"> المستخدمين</label>
+                <label class="permission-item"><input type="checkbox" name="perm_appointments" value="1"> المواعيد</label>
+                <label class="permission-item"><input type="checkbox" name="perm_subscriptionCoupons" value="1"> كوبونات الاشتراك</label>
+                <label class="permission-item"><input type="checkbox" name="perm_subscriptionPlans" value="1"> خطط الاشتراك</label>
+                <label class="permission-item"><input type="checkbox" name="perm_subscriptionReports" value="1"> تقارير الاشتراك</label>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">إضافة أدمن</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <h2>قائمة الأدمنز</h2>
+        </div>
+
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>البريد</th>
+                <th>سوبر أدمن</th>
+                <th>الصلاحيات</th>
+                <th>تاريخ الإنشاء</th>
+                <th>حفظ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% admins.forEach(a => { %>
+                <tr>
+                  <td><%= a.name %></td>
+                  <td><%= a.email %></td>
+                  <td>
+                    <span class="super-badge <%= a.isSuperAdmin ? 'super' : 'normal' %>"><%= a.isSuperAdmin ? 'نعم' : 'لا' %></span>
+                  </td>
+                  <td>
+                    <% if (!a.isSuperAdmin) { %>
+                      <form action="/admin/admins/<%= a.id %>/permissions" method="POST" class="perms-inline-form">
+                        <div class="permissions-grid small">
+                          <label class="permission-item"><input type="checkbox" name="perm_projects" value="1" <%= a.adminPermissions && a.adminPermissions.projects ? 'checked' : '' %>> المشاريع</label>
+                          <label class="permission-item"><input type="checkbox" name="perm_purchases" value="1" <%= a.adminPermissions && a.adminPermissions.purchases ? 'checked' : '' %>> المشتريات</label>
+                          <label class="permission-item"><input type="checkbox" name="perm_modifications" value="1" <%= a.adminPermissions && a.adminPermissions.modifications ? 'checked' : '' %>> التعديل</label>
+                          <label class="permission-item"><input type="checkbox" name="perm_messages" value="1" <%= a.adminPermissions && a.adminPermissions.messages ? 'checked' : '' %>> الرسائل</label>
+                          <label class="permission-item"><input type="checkbox" name="perm_reviews" value="1" <%= a.adminPermissions && a.adminPermissions.reviews ? 'checked' : '' %>> التقييمات</label>
+                          <label class="permission-item"><input type="checkbox" name="perm_coupons" value="1" <%= a.adminPermissions && a.adminPermissions.coupons ? 'checked' : '' %>> الكوبونات</label>
+                          <label class="permission-item"><input type="checkbox" name="perm_referrals" value="1" <%= a.adminPermissions && a.adminPermissions.referrals ? 'checked' : '' %>> الإحالات</label>
+                          <label class="permission-item"><input type="checkbox" name="perm_walletCodes" value="1" <%= a.adminPermissions && a.adminPermissions.walletCodes ? 'checked' : '' %>> الشحن</label>
+                          <label class="permission-item"><input type="checkbox" name="perm_walletBalances" value="1" <%= a.adminPermissions && a.adminPermissions.walletBalances ? 'checked' : '' %>> الأرصدة</label>
+                          <label class="permission-item"><input type="checkbox" name="perm_users" value="1" <%= a.adminPermissions && a.adminPermissions.users ? 'checked' : '' %>> المستخدمين</label>
+                          <label class="permission-item"><input type="checkbox" name="perm_appointments" value="1" <%= a.adminPermissions && a.adminPermissions.appointments ? 'checked' : '' %>> المواعيد</label>
+                          <label class="permission-item"><input type="checkbox" name="perm_subscriptionCoupons" value="1" <%= a.adminPermissions && a.adminPermissions.subscriptionCoupons ? 'checked' : '' %>> كوبونات الاشتراك</label>
+                          <label class="permission-item"><input type="checkbox" name="perm_subscriptionPlans" value="1" <%= a.adminPermissions && a.adminPermissions.subscriptionPlans ? 'checked' : '' %>> خطط الاشتراك</label>
+                          <label class="permission-item"><input type="checkbox" name="perm_subscriptionReports" value="1" <%= a.adminPermissions && a.adminPermissions.subscriptionReports ? 'checked' : '' %>> تقارير الاشتراك</label>
+                        </div>
+                    <% } else { %>
+                      كل الصلاحيات
+                    <% } %>
+                  </td>
+                  <td><%= a.createdAt ? new Date(a.createdAt).toLocaleString('ar-EG') : '-' %></td>
+                  <td>
+                    <% if (!a.isSuperAdmin) { %>
+                        <button type="submit" class="btn btn-primary">حفظ</button>
+                      </form>
+                    <% } else { %>
+                      -
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

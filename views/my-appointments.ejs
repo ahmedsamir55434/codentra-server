@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مواعيدي - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/purchases.css">
+  <link rel="stylesheet" href="/css/appointments.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="purchases-page appointments-page">
+    <div class="container">
+      <h1>مواعيدي</h1>
+
+      <% if (error) { %>
+        <div class="error-message"><%= error %></div>
+      <% } %>
+      <% if (success) { %>
+        <div class="success-message"><%= success %></div>
+      <% } %>
+
+      <% if (!bookings || bookings.length === 0) { %>
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <h2>لا يوجد حجوزات بعد</h2>
+          <p>ابدأ بحجز جلسة مع أحد الأدمنز</p>
+          <a href="/appointments" class="btn btn-primary">حجز جلسة</a>
+        </div>
+      <% } else { %>
+        <div class="purchases-list">
+          <% bookings.forEach(b => { %>
+            <div class="purchase-card">
+              <div class="purchase-info">
+                <h3 style="margin-top:0;">جلسة مع <%= b.adminName || 'Admin' %></h3>
+                <div class="purchase-meta">
+                  <span class="purchase-date"><%= b.startAt ? new Date(b.startAt).toLocaleString('ar-EG') : '' %></span>
+                  <span class="purchase-price"><%= Number(b.durationMinutes || 30) %> دقيقة</span>
+                  <span class="status-badge approved">✓ <%= b.status === 'confirmed' ? 'مؤكد' : (b.status || '') %></span>
+                </div>
+                <% if (b.notes) { %>
+                  <p class="modification-note"><%= b.notes %></p>
+                <% } %>
+              </div>
+              <div class="purchase-actions">
+                <% if (b.meetingLink) { %>
+                  <a href="<%= b.meetingLink %>" target="_blank" rel="noopener" class="btn btn-primary">دخول الاجتماع</a>
+                <% } else { %>
+                  <span class="waiting-text">رابط الاجتماع غير متاح</span>
+                <% } %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

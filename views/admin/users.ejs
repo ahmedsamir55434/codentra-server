@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المستخدمين - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.projects))) { %>
+          <a href="/admin/projects/new">إضافة مشروع</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.purchases))) { %>
+          <a href="/admin/purchases">المشتريات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.modifications))) { %>
+          <a href="/admin/modifications">طلبات التعديل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.messages))) { %>
+          <a href="/admin/messages">الرسائل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.reviews))) { %>
+          <a href="/admin/reviews">التقييمات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.coupons))) { %>
+          <a href="/admin/coupons">الكوبونات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.referrals))) { %>
+          <a href="/admin/referrals">الإحالات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletCodes))) { %>
+          <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletBalances))) { %>
+          <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.appointments))) { %>
+          <a href="/admin/appointments">المواعيد</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionCoupons))) { %>
+          <a href="/admin/subscription-coupons">كوبونات الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionPlans))) { %>
+          <a href="/admin/subscription-plans">خطط الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionReports))) { %>
+          <a href="/admin/subscription-reports">تقارير الاشتراك</a>
+        <% } %>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/meeting-recordings">تسجيلات الاجتماعات</a>
+          <a href="/admin/admins">إدارة الأدمنز</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.users))) { %>
+          <a href="/admin/users" class="active">المستخدمين</a>
+        <% } %>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>المستخدمين</h1>
+
+      <% if (typeof success !== 'undefined' && success) { %>
+        <div class="success-message" style="background: #e6ffed; border: 1px solid #b7ebc6; color: #1e7e34; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
+          <%= success %>
+        </div>
+      <% } %>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="error-message" style="background: #fee; border: 1px solid #fcc; color: #c33; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
+          <%= error %>
+        </div>
+      <% } %>
+      
+      <% if (users.filter(u => u.role === 'user').length === 0) { %>
+        <div class="empty-state">
+          <p>لا يوجد مستخدمين مسجلين</p>
+        </div>
+      <% } else { %>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>الاسم</th>
+                <th>البريد الإلكتروني</th>
+                <th>تاريخ التسجيل</th>
+                <th>الدور</th>
+                <th>الحالة</th>
+                <th>التحكم</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% users.forEach(user => { %>
+                <tr>
+                  <td><%= user.name %></td>
+                  <td><%= user.email %></td>
+                  <td><%= new Date(user.createdAt).toLocaleDateString('ar-EG') %></td>
+                  <td>
+                    <span class="role-badge <%= user.role %>"><%= user.role === 'admin' ? 'أدمن' : 'مستخدم' %></span>
+                  </td>
+                  <td>
+                    <% if (user.isBlocked) { %>
+                      <span class="status-badge blocked">محظور</span>
+                      <% if (user.blockedUntil) { %>
+                        <small>حتى <%= new Date(user.blockedUntil).toLocaleDateString('ar-EG') %></small>
+                      <% } %>
+                    <% } else { %>
+                      <span class="status-badge active">نشط</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <% if (user.role === 'user') { %>
+                      <% if (user.isBlocked) { %>
+                        <form action="/admin/users/<%= user.id %>/unblock" method="POST" style="display:inline;">
+                          <button type="submit" class="btn btn-small btn-success">فك الحظر</button>
+                        </form>
+                      <% } else { %>
+                        <button onclick="showBlockModal('<%= user.id %>', '<%= user.name %>')" class="btn btn-small btn-danger">حظر</button>
+                      <% } %>
+                    <% } else { %>
+                      <span class="text-muted">أدمن</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+
+  <!-- Block User Modal -->
+  <div id="blockModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>حظر مستخدم: <span id="blockUserName"></span></h3>
+        <button class="modal-close" onclick="closeBlockModal()">&times;</button>
+      </div>
+      <form id="blockForm" action="/admin/users/" method="POST" class="modal-body">
+        <input type="hidden" id="blockUserId" name="userId">
+        
+        <div class="form-group">
+          <label for="blockType">نوع الحظر</label>
+          <select id="blockType" name="blockType" required onchange="handleBlockTypeChange()">
+            <option value="">اختر نوع الحظر</option>
+            <option value="permanent">دائم</option>
+            <option value="temporary">مؤقت</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="durationGroup" style="display:none;">
+          <label for="duration">مدة الحظر</label>
+          <select id="duration" name="duration">
+            <option value="1">يوم واحد</option>
+            <option value="7">أسبوع</option>
+            <option value="30">شهر</option>
+            <option value="90">3 أشهر</option>
+            <option value="365">سنة</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="blockReason">سبب الحظر</label>
+          <textarea id="blockReason" name="blockReason" rows="4" required placeholder="اكتب سبب الحظر بشكل واضح..."></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeBlockModal()">إلغاء</button>
+          <button type="submit" class="btn btn-danger">تأكيد الحظر</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <style>
+    .status-badge {
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .status-badge.active {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .status-badge.blocked {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .btn-small {
+      padding: 4px 8px;
+      font-size: 12px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      margin: 0 2px;
+    }
+    
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+    
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+    
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    .modal-content {
+      background: #0b0f17;
+      color: #ffffff;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #ffffff;
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.9);
+    }
+    
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 4px;
+      background: rgba(255,255,255,0.06);
+      color: #ffffff;
+    }
+
+    .form-group select option {
+      background: #0b0f17;
+      color: #ffffff;
+    }
+    
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      padding: 20px;
+      border-top: 1px solid rgba(255,255,255,0.12);
+    }
+    
+    .text-muted {
+      color: #6c757d;
+    }
+  </style>
+
+  <script>
+    function showBlockModal(userId, userName) {
+      const form = document.getElementById('blockForm');
+      if (form) form.action = `/admin/users/${userId}/block`;
+      document.getElementById('blockUserId').value = userId;
+      document.getElementById('blockUserName').textContent = userName;
+      document.getElementById('blockModal').style.display = 'flex';
+    }
+    
+    function closeBlockModal() {
+      document.getElementById('blockModal').style.display = 'none';
+      const form = document.getElementById('blockForm');
+      if (form) form.reset();
+      document.getElementById('durationGroup').style.display = 'none';
+    }
+    
+    function handleBlockTypeChange() {
+      const blockType = document.getElementById('blockType').value;
+      const durationGroup = document.getElementById('durationGroup');
+      
+      if (blockType === 'temporary') {
+        durationGroup.style.display = 'block';
+      } else {
+        durationGroup.style.display = 'none';
+      }
+    }
+    
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById('blockModal');
+      if (event.target === modal) {
+        closeBlockModal();
+      }
+    }
+  </script>
+</body>
+</html>

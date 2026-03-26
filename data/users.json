@@ -1,0 +1,113 @@
+[
+  {
+    "id": "5254e664-ba64-42eb-af35-ec814313b561",
+    "name": "Admin",
+    "email": "admin@codentra.com",
+    "password": "$2a$10$SoxxkY6/.z2SV03QT1oFLu0lzAMGWyJrLrPh2gGM2dyPcy7nfuNAm",
+    "role": "admin",
+    "createdAt": "2026-02-23T13:59:16.053Z",
+    "isSuperAdmin": true
+  },
+  {
+    "id": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "name": "ahmed samir",
+    "email": "ssabry3333@icloud.com",
+    "password": "$2a$10$wxZyQXktb.NAT6SfDwB0auU0uO6Xgp52ul3pcWK9HBfyNNpCtJJwa",
+    "role": "user",
+    "createdAt": "2026-02-23T14:14:37.599Z",
+    "walletBalance": 10,
+    "referralCode": "74725916",
+    "referredBy": null,
+    "loyaltyPoints": 95767,
+    "isBlocked": true,
+    "blockedReason": "انت مال امك",
+    "blockedBy": "5254e664-ba64-42eb-af35-ec814313b561",
+    "blockedAt": "2026-03-25T15:32:35.438Z",
+    "blockedUntil": "2026-03-26T15:32:35.438Z"
+  },
+  {
+    "id": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "name": "ahmed samir",
+    "email": "ahmedsamirsabry2100@gmail.com",
+    "password": "$2a$10$bl.ZIO35r5Gp9VLb0jbqsupNjaW2d6iXGoPiR9Jcta5w0AR/Ma3xu",
+    "role": "user",
+    "createdAt": "2026-02-25T17:58:16.225Z",
+    "referralCode": "62F1EB31",
+    "walletBalance": 182.4,
+    "referredBy": null,
+    "loyaltyPoints": 7272077,
+    "isBlocked": false,
+    "blockedReason": null,
+    "blockedBy": null,
+    "blockedAt": null,
+    "blockedUntil": null
+  },
+  {
+    "id": "f32f34e5-e1ac-455e-8286-097aed9ea9be",
+    "name": "hgjvhj",
+    "email": "lemetit670@dolofan.com",
+    "password": "$2a$10$xIitbbe7ksiu0Miaw75xHOqLY75g0ihUFTnqhRfSErEofqfdcvnlm",
+    "role": "user",
+    "referralCode": "2BC156F8",
+    "walletBalance": 9998,
+    "referredBy": {
+      "id": "30f6356d-f109-439a-b18f-aa11196bcc99",
+      "name": "ahmed samir",
+      "email": "ssabry3333@icloud.com"
+    },
+    "loyaltyPoints": 100,
+    "isBlocked": false,
+    "blockedReason": null,
+    "blockedBy": null,
+    "blockedAt": null,
+    "blockedUntil": null
+  },
+  {
+    "id": "3cab6d8d-6243-4a9a-be8b-55aa93a5ff90",
+    "name": "ahmed samir..admin",
+    "email": "adminahmedsamir@codentra.com",
+    "password": "$2a$10$CLikRoRd2Gto5YcYT2WkH.p2hYPXyyC3w25NbuLW/VcyteK/3koiS",
+    "role": "admin",
+    "isSuperAdmin": false,
+    "createdAt": "2026-02-25T21:53:41.567Z",
+    "adminPermissions": {
+      "projects": false,
+      "purchases": false,
+      "modifications": false,
+      "messages": true,
+      "reviews": false,
+      "coupons": false,
+      "referrals": false,
+      "walletCodes": false,
+      "walletBalances": false,
+      "users": false,
+      "appointments": false,
+      "subscriptionCoupons": false,
+      "subscriptionPlans": false,
+      "subscriptionReports": false
+    }
+  },
+  {
+    "id": "8e87512f-5670-42ef-bea7-230a5324f823",
+    "name": "test user",
+    "email": "testuser@test.com",
+    "password": "$2a$10$B9gDDP56AYeKxQEM59/oBOtN6dLT4R1xOCYQss9.Vg98PBjBdvLMG",
+    "role": "user",
+    "referralCode": "EEA0FFE1",
+    "walletBalance": 0,
+    "referredBy": null,
+    "createdAt": "2026-02-26T13:52:21.709Z"
+  },
+  {
+    "id": "83d43a89-4e04-4edc-8482-e947c156c0e3",
+    "name": "Samir",
+    "email": "Ssabry33@yahoo.com",
+    "password": "$2a$10$AVLR99Mma6XkgUNSqd3s1e.SidfpNXLVLQCn4zZNprnnujtWYsdnu",
+    "role": "user",
+    "referralCode": "572C299F",
+    "walletBalance": 992940,
+    "referredBy": null,
+    "createdAt": "2026-03-24T18:29:50.893Z",
+    "loyaltyPoints": 606
+  }
+]

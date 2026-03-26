@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>حجز جلسة - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/purchases.css">
+  <link rel="stylesheet" href="/css/appointments.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="purchases-page appointments-page">
+    <div class="container">
+      <h1>حجز جلسة</h1>
+
+      <% if (error) { %>
+        <div class="error-message"><%= error %></div>
+      <% } %>
+      <% if (success) { %>
+        <div class="success-message"><%= success %></div>
+      <% } %>
+
+      <% if (!admins || admins.length === 0) { %>
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <h2>لا يوجد أدمنز حالياً</h2>
+          <p>حاول مرة أخرى لاحقاً</p>
+        </div>
+      <% } else { %>
+        <div class="purchases-list">
+          <% admins.forEach(admin => { %>
+            <div class="purchase-card">
+              <div class="purchase-info">
+                <h3 style="margin-top:0;"><%= admin.name %></h3>
+                <p style="margin:0; opacity:0.9;">البريد: <%= admin.email %></p>
+              </div>
+
+              <div class="purchase-actions" style="width:100%;">
+                <% const slots = admin.slots || []; %>
+                <% if (!slots.length) { %>
+                  <span class="waiting-text">لا يوجد مواعيد متاحة حالياً</span>
+                <% } else { %>
+                  <form action="/appointments/book" method="POST" class="appointment-book-form">
+                    <select name="slotId" required>
+                      <% slots.forEach(s => { %>
+                        <option value="<%= s.id %>"><%= s.label %> (<%= Number(s.durationMinutes || 30) %> دقيقة)</option>
+                      <% }) %>
+                    </select>
+                    <input type="text" name="notes" placeholder="ملاحظات (اختياري)">
+                    <button type="submit" class="btn btn-primary">حجز</button>
+                  </form>
+                <% } %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

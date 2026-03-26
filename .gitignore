@@ -1,0 +1,8 @@
+.DS_Store
+.env
+node_modules
+uploads/256c4032-c7f4-4c70-a416-1ed353be4072-CityShift-2D-Drive-Template.zip
+codentra-vps-mongodb/
+codentra-vps-deploy/
+codentra-vps-deploy-*.zip
+mobile-app/

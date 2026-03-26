@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الإحالات - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/projects/new">إضافة مشروع</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/admin/modifications">طلبات التعديل</a>
+        <a href="/admin/messages">الرسائل</a>
+        <a href="/admin/reviews">التقييمات</a>
+        <a href="/admin/coupons">الكوبونات</a>
+        <a href="/admin/referrals" class="active">الإحالات</a>
+        <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/admins">إدارة الأدمنز</a>
+        <% } %>
+        <a href="/admin/users">المستخدمين</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>الإحالات</h1>
+
+      <% if (!referrals || referrals.length === 0) { %>
+        <div class="empty-state">
+          <div class="empty-icon">🔗</div>
+          <h2>لا توجد إحالات بعد</h2>
+          <p>ستظهر الإحالات هنا عند استخدام المستخدمين لأكواد الإحالة.</p>
+        </div>
+      <% } else { %>
+        <div class="table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>الكود</th>
+                <th>صاحب الكود</th>
+                <th>المحال</th>
+                <th>الحالة</th>
+                <th>المكافأة</th>
+                <th>تاريخ الإنشاء</th>
+                <th>تاريخ المكافأة</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% referrals.slice().reverse().forEach(r => {
+                const referrer = users.find(u => u.id === r.referrerUserId);
+                const referred = users.find(u => u.id === r.referredUserId);
+              %>
+                <tr>
+                  <td><%= r.code %></td>
+                  <td><%= referrer ? (referrer.name + ' (' + referrer.email + ')') : 'غير معروف' %></td>
+                  <td><%= referred ? (referred.name + ' (' + referred.email + ')') : 'غير معروف' %></td>
+                  <td>
+                    <% if (r.status === 'rewarded') { %>
+                      <span class="status-badge approved">✓ تم إضافة الرصيد</span>
+                    <% } else { %>
+                      <span class="status-badge pending">⏳ بانتظار أول شراء</span>
+                    <% } %>
+                  </td>
+                  <td><%= Number(r.rewardAmount || 0) %> ج</td>
+                  <td><%= r.createdAt ? new Date(r.createdAt).toLocaleDateString('ar-EG') : '-' %></td>
+                  <td><%= r.rewardedAt ? new Date(r.rewardedAt).toLocaleDateString('ar-EG') : '-' %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

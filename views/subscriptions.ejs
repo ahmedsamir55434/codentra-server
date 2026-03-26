@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>الاشتراكات - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/purchases.css" />
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="page purchases-page" style="padding: 30px 0;">
+    <div class="container">
+      <h1 style="margin-bottom: 10px;">الاشتراكات الشهرية</h1>
+      <p style="opacity: .9; margin-bottom: 20px;">الاجتماعات مجانية للجميع. الاشتراك يضيف مزايا عامة (بدون علاقة بالاجتماعات).</p>
+
+      <% if (error) { %>
+        <div class="error-message"><%= error %></div>
+      <% } %>
+      <% if (success) { %>
+        <div class="success-message"><%= success %></div>
+      <% } %>
+
+      <section class="purchase-card" style="margin-bottom: 18px;">
+        <h2 style="margin-bottom: 8px;">حالة اشتراكك</h2>
+        <% if (activeSubscription) { %>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div>الخطة: <strong><%= activePlan ? activePlan.name : activeSubscription.planId %></strong></div>
+            <div>ينتهي في: <strong><%= activeSubscription.currentPeriodEnd ? new Date(activeSubscription.currentPeriodEnd).toLocaleString('ar-EG') : '-' %></strong></div>
+          </div>
+          <form method="POST" action="/subscriptions/cancel" style="margin-top: 12px;">
+            <button type="submit" class="btn btn-secondary">إلغاء الاشتراك</button>
+          </form>
+        <% } else { %>
+          <div>لا يوجد اشتراك نشط حالياً</div>
+        <% } %>
+      </section>
+
+      <section class="purchases-grid">
+        <% plans.forEach(plan => { %>
+          <div class="purchase-card">
+            <h2 style="margin-bottom: 6px;"><%= plan.name %></h2>
+            <div style="margin-bottom: 10px; opacity: .9;">السعر: <strong><%= plan.price %> <%= plan.currency %></strong> / <%= plan.durationDays %> يوم</div>
+
+            <% if (Array.isArray(plan.features) && plan.features.length) { %>
+              <ul style="margin:0; padding:0 18px 0 0; line-height: 1.9;">
+                <% plan.features.forEach(f => { %>
+                  <li><%= f %></li>
+                <% }) %>
+              </ul>
+            <% } %>
+
+            <form method="POST" action="/subscriptions/subscribe" style="margin-top: 14px;">
+              <input type="hidden" name="planId" value="<%= plan.id %>" />
+              <div class="form-group" style="margin-bottom: 10px;">
+                <label for="subCoupon_<%= plan.id %>">كوبون خصم للاشتراك (اختياري)</label>
+                <input type="text" id="subCoupon_<%= plan.id %>" name="couponCode" placeholder="مثال: SUB10">
+              </div>
+              <button type="submit" class="btn btn-primary" <%= activeSubscription ? 'disabled' : '' %>>اشترك الآن</button>
+            </form>
+          </div>
+        <% }) %>
+      </section>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

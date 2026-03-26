@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Codentra - مشاريع برمجية جاهزة</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="hero">
+    <div class="container">
+      <h1>مشاريع برمجية احترافية جاهزة</h1>
+      <p>اشترِ مشاريع ويب وتطبيقات كاملة مع الكود المصدر فورًا</p>
+    </div>
+  </main>
+
+  <section class="projects-section">
+    <div class="container">
+      <h2>المشاريع المتاحة</h2>
+      <div class="projects-grid">
+        <% projects.forEach(project => { %>
+          <div class="project-card">
+            <div class="project-image">
+              <div class="placeholder-img">
+                <span><%= project.category %></span>
+              </div>
+            </div>
+            <div class="project-info">
+              <h3><%= project.title %></h3>
+              <p class="project-desc"><%= project.description.substring(0, 100) %>...</p>
+              <div class="project-tech">
+                <% project.technologies.slice(0, 3).forEach(tech => { %>
+                  <span class="tech-tag"><%= tech %></span>
+                <% }) %>
+              </div>
+              <div class="project-footer">
+                <span class="price"><%= project.price %> جنيه</span>
+                <a href="/project/<%= project.id %>" class="btn btn-primary">تفاصيل</a>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+      
+      <% if (projects.length === 0) { %>
+        <div class="empty-state">
+          <p>لا توجد مشاريع متاحة حاليًا</p>
+        </div>
+      <% } %>
+    </div>
+  </section>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

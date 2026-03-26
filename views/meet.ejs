@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الاجتماع - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/meet.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <div id="meetConfig" data-room-id="<%= roomId %>" data-user-role="<%= user && user.role ? user.role : '' %>"></div>
+
+  <main class="meet-page">
+    <div class="container">
+      <div class="meet-header">
+        <h1>جلسة مباشرة</h1>
+        <div class="meet-room">غرفة: <span dir="ltr"><%= roomId %></span></div>
+      </div>
+
+      <div class="meet-grid">
+        <section class="meet-video-card">
+          <div class="meet-video-title">الفيديو الخاص بك</div>
+          <video id="localVideo" autoplay playsinline muted></video>
+        </section>
+
+        <section class="meet-video-card">
+          <div class="meet-video-title">الطرف الآخر</div>
+          <video id="remoteVideo" autoplay playsinline></video>
+        </section>
+      </div>
+
+      <div class="meet-controls">
+        <button type="button" class="btn btn-secondary" id="btnToggleMic">الميك</button>
+        <button type="button" class="btn btn-secondary" id="btnToggleCam">الكاميرا</button>
+        <button type="button" class="btn btn-secondary" id="btnShareScreen">مشاركة الشاشة</button>
+        <button type="button" class="btn btn-danger" id="btnEndMeeting">إنهاء الاجتماع</button>
+        <a class="btn btn-primary" href="/my-appointments">رجوع</a>
+      </div>
+
+      <div class="meet-status" id="meetStatus">جاري التحضير...</div>
+    </div>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/meet.js"></script>
+
+  <%- include('partials/footer') %>
+</body>
+</html>
