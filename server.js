@@ -19,6 +19,7 @@ const WatermarkProcessor = require('./utils/watermark');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const IS_VERCEL = Boolean(process.env.VERCEL || process.env.NOW_REGION);
+const SOCKETS_ENABLED = !IS_VERCEL;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'codentra-secret-key-2024';
 const JWT_SECRET = process.env.JWT_SECRET || 'codentra-jwt-secret-2024';
 const TRUST_PROXY = ['1', 'true', 'yes'].includes(String(process.env.TRUST_PROXY || '').toLowerCase());
@@ -37,6 +38,11 @@ app.use(async (req, res, next) => {
   } else {
     next();
   }
+});
+
+app.use((req, res, next) => {
+  res.locals.socketsEnabled = SOCKETS_ENABLED;
+  next();
 });
 
 // Initialize watermark processor

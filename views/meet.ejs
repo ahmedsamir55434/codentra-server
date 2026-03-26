@@ -43,8 +43,21 @@
     </div>
   </main>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/meet.js"></script>
+  <% if (socketsEnabled) { %>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/meet.js"></script>
+  <% } else { %>
+    <script>
+      (function () {
+        var statusEl = document.getElementById('meetStatus');
+        if (statusEl) {
+          statusEl.textContent = 'الميتنجات غير متاحة على استضافة Vercel. شغلها على VPS لتعمل.';
+        }
+        var buttons = document.querySelectorAll('.meet-controls button');
+        buttons.forEach(function (btn) { btn.disabled = true; });
+      })();
+    </script>
+  <% } %>
 
   <%- include('partials/footer') %>
 </body>

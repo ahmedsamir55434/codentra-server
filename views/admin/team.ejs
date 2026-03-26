@@ -6,7 +6,9 @@
   <title>جروب الفريق - Codentra</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin.css">
-  <script src="/socket.io/socket.io.js"></script>
+  <% if (socketsEnabled) { %>
+    <script src="/socket.io/socket.io.js"></script>
+  <% } %>
 </head>
 <body>
   <%- include('../partials/header') %>
@@ -71,6 +73,9 @@
 
       <% if (error) { %>
         <div class="error-message"><%= error %></div>
+      <% } %>
+      <% if (!socketsEnabled) { %>
+        <div class="error-message">التحديث الفوري للجروب غير متاح على Vercel. الرسائل ستظهر بعد تحديث الصفحة.</div>
       <% } %>
 
       <div class="team-toolbar">
@@ -138,91 +143,93 @@
 
   <%- include('../partials/footer') %>
 
-  <script>
-    const socket = io();
-    socket.emit('join-admin-team');
+  <% if (socketsEnabled) { %>
+    <script>
+      const socket = io();
+      socket.emit('join-admin-team');
 
-    const teamMessages = document.getElementById('teamMessages');
-    const scrollToBottom = () => {
-      if (!teamMessages) return;
-      teamMessages.scrollTop = teamMessages.scrollHeight;
-    };
-    scrollToBottom();
-
-    const renderMsg = (m) => {
-      const wrap = document.createElement('div');
-      wrap.className = 'team-msg';
-
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      const name = document.createElement('span');
-      name.className = 'name';
-      name.textContent = m.senderName || 'Admin';
-      const date = document.createElement('span');
-      date.className = 'date';
-      date.textContent = m.createdAt ? new Date(m.createdAt).toLocaleString('ar-EG') : '';
-      meta.appendChild(name);
-      meta.appendChild(date);
-
-      const bubble = document.createElement('div');
-      bubble.className = 'bubble';
-
-      if (m.type === 'text') {
-        bubble.textContent = m.content || '';
-      } else if (m.type === 'meeting') {
-        const t = document.createElement('div');
-        t.textContent = 'اجتماع جديد';
-        const a = document.createElement('a');
-        a.className = 'btn btn-secondary';
-        a.href = m.meetingLink;
-        a.target = '_blank';
-        a.textContent = 'فتح الاجتماع';
-        bubble.appendChild(t);
-        bubble.appendChild(a);
-      } else if (m.type === 'file') {
-        const row = document.createElement('div');
-        row.className = 'file-row';
-        const a = document.createElement('a');
-        a.href = '/' + (m.filePath || '');
-        a.target = '_blank';
-        a.textContent = m.originalFileName || 'ملف';
-        const d = document.createElement('a');
-        d.className = 'btn btn-secondary';
-        d.href = '/' + (m.filePath || '');
-        d.setAttribute('download', '');
-        d.textContent = 'تحميل';
-        row.appendChild(a);
-        row.appendChild(d);
-        bubble.appendChild(row);
-
-        if (m.mimeType && m.mimeType.startsWith('image/')) {
-          const img = document.createElement('img');
-          img.className = 'team-media';
-          img.src = '/' + m.filePath;
-          bubble.appendChild(img);
-        } else if (m.mimeType && m.mimeType.startsWith('video/')) {
-          const video = document.createElement('video');
-          video.className = 'team-media';
-          video.src = '/' + m.filePath;
-          video.controls = true;
-          bubble.appendChild(video);
-        }
-      }
-
-      wrap.appendChild(meta);
-      wrap.appendChild(bubble);
-      return wrap;
-    };
-
-    socket.on('admin-team-message', (m) => {
-      if (!teamMessages) return;
-
-      const empty = teamMessages.querySelector('.empty-state');
-      if (empty) empty.remove();
-
-      teamMessages.appendChild(renderMsg(m));
+      const teamMessages = document.getElementById('teamMessages');
+      const scrollToBottom = () => {
+        if (!teamMessages) return;
+        teamMessages.scrollTop = teamMessages.scrollHeight;
+      };
       scrollToBottom();
-    });
-  </script>
+
+      const renderMsg = (m) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'team-msg';
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        const name = document.createElement('span');
+        name.className = 'name';
+        name.textContent = m.senderName || 'Admin';
+        const date = document.createElement('span');
+        date.className = 'date';
+        date.textContent = m.createdAt ? new Date(m.createdAt).toLocaleString('ar-EG') : '';
+        meta.appendChild(name);
+        meta.appendChild(date);
+
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+
+        if (m.type === 'text') {
+          bubble.textContent = m.content || '';
+        } else if (m.type === 'meeting') {
+          const t = document.createElement('div');
+          t.textContent = 'اجتماع جديد';
+          const a = document.createElement('a');
+          a.className = 'btn btn-secondary';
+          a.href = m.meetingLink;
+          a.target = '_blank';
+          a.textContent = 'فتح الاجتماع';
+          bubble.appendChild(t);
+          bubble.appendChild(a);
+        } else if (m.type === 'file') {
+          const row = document.createElement('div');
+          row.className = 'file-row';
+          const a = document.createElement('a');
+          a.href = '/' + (m.filePath || '');
+          a.target = '_blank';
+          a.textContent = m.originalFileName || 'ملف';
+          const d = document.createElement('a');
+          d.className = 'btn btn-secondary';
+          d.href = '/' + (m.filePath || '');
+          d.setAttribute('download', '');
+          d.textContent = 'تحميل';
+          row.appendChild(a);
+          row.appendChild(d);
+          bubble.appendChild(row);
+
+          if (m.mimeType && m.mimeType.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.className = 'team-media';
+            img.src = '/' + m.filePath;
+            bubble.appendChild(img);
+          } else if (m.mimeType && m.mimeType.startsWith('video/')) {
+            const video = document.createElement('video');
+            video.className = 'team-media';
+            video.src = '/' + m.filePath;
+            video.controls = true;
+            bubble.appendChild(video);
+          }
+        }
+
+        wrap.appendChild(meta);
+        wrap.appendChild(bubble);
+        return wrap;
+      };
+
+      socket.on('admin-team-message', (m) => {
+        if (!teamMessages) return;
+
+        const empty = teamMessages.querySelector('.empty-state');
+        if (empty) empty.remove();
+
+        teamMessages.appendChild(renderMsg(m));
+        scrollToBottom();
+      });
+    </script>
+  <% } %>
 </body>
 </html>
