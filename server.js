@@ -203,7 +203,10 @@ const getPool = () => {
     const sslRequired = String(process.env.DATABASE_URL || '').includes('sslmode=require');
     dbPool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: sslRequired ? { rejectUnauthorized: false } : undefined
+      ssl: sslRequired ? { rejectUnauthorized: false } : undefined,
+      max: 2,
+      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 5000
     });
   }
   return dbPool;
@@ -276,31 +279,7 @@ const ensureDatabase = async () => {
       'CREATE TABLE IF NOT EXISTS data_store (name TEXT PRIMARY KEY, data JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())'
     );
 
-    for (const def of DATASET_DEFS) {
-      const res = await pool.query('SELECT data FROM data_store WHERE name = $1', [def.name]);
-      if (res.rowCount === 0) {
-        const seedData = readJsonFile(def.file, def.fallback);
-        await pool.query('INSERT INTO data_store (name, data) VALUES ($1, $2)', [def.name, seedData]);
-      }
-    }
-
-    const userRes = await pool.query('SELECT data FROM data_store WHERE name = $1', ['users']);
-    const users = userRes.rowCount ? userRes.rows[0].data : [];
-    if (Array.isArray(users) && !users.find(u => u && u.email === 'admin@codentra.com')) {
-      users.push({
-        id: uuidv4(),
-        name: 'Admin',
-        email: 'admin@codentra.com',
-        password: bcrypt.hashSync('admin123', 10),
-        role: 'admin',
-        isSuperAdmin: true,
-        createdAt: new Date().toISOString()
-      });
-      await pool.query(
-        'INSERT INTO data_store (name, data, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (name) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()',
-        ['users', users]
-      );
-    }
+    // Table exists; seeding happens lazily per dataset in readData/writeData.
   })();
   return dbInitPromise;
 };
@@ -316,7 +295,19 @@ const readData = async (name) => {
   const pool = getPool();
   const res = await pool.query('SELECT data FROM data_store WHERE name = $1', [name]);
   if (res.rowCount === 0) {
-    const seedData = readJsonFile(def.file, def.fallback);
+    let seedData = readJsonFile(def.file, def.fallback);
+    if (name === 'users' && Array.isArray(seedData) && !seedData.find(u => u && u.email === 'admin@codentra.com')) {
+      seedData = [...seedData];
+      seedData.push({
+        id: uuidv4(),
+        name: 'Admin',
+        email: 'admin@codentra.com',
+        password: bcrypt.hashSync('admin123', 10),
+        role: 'admin',
+        isSuperAdmin: true,
+        createdAt: new Date().toISOString()
+      });
+    }
     await pool.query('INSERT INTO data_store (name, data) VALUES ($1, $2)', [name, seedData]);
     return cloneJson(seedData);
   }
