@@ -284,6 +284,12 @@ const ensureDatabase = async () => {
     await pool.query(
       'CREATE TABLE IF NOT EXISTS data_store (name TEXT PRIMARY KEY, data JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())'
     );
+    await pool.query(
+      'CREATE TABLE IF NOT EXISTS meeting_signals (id BIGSERIAL PRIMARY KEY, room_id TEXT NOT NULL, sender_id TEXT, payload JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())'
+    );
+    await pool.query(
+      'CREATE INDEX IF NOT EXISTS meeting_signals_room_id_idx ON meeting_signals (room_id, id)'
+    );
 
     // Table exists; seeding happens lazily per dataset in readData/writeData.
   })();
@@ -1143,8 +1149,26 @@ app.post('/register', async (req, res) => {
 });
 
 app.get('/logout', async (req, res) => {
-  req.session.destroy();
-  res.redirect('/');
+  const clearOptions = {
+    path: '/',
+    sameSite: 'lax',
+    secure: COOKIE_SECURE,
+    domain: COOKIE_DOMAIN
+  };
+
+  const finish = () => {
+    res.clearCookie('codentra', clearOptions);
+    res.clearCookie('connect.sid', clearOptions);
+    res.redirect('/');
+  };
+
+  if (req.session) {
+    if (typeof req.session.destroy === 'function') {
+      return req.session.destroy(() => finish());
+    }
+    req.session = null;
+  }
+  finish();
 });
 
 // API Routes for Mobile App
@@ -2289,6 +2313,18 @@ const buildMeetingRoomId = ({ adminId, userId, slotId }) => {
   return `codentra-${safe(adminId)}-${safe(userId)}-${safe(slotId)}`;
 };
 
+const canAccessMeetingRoom = async ({ roomId, sessionUser }) => {
+  if (!roomId || !sessionUser || !sessionUser.id) return false;
+  if (typeof roomId === 'string' && roomId.startsWith('team-')) {
+    return sessionUser.role === 'admin';
+  }
+  const data = await migrateAppointmentsBookingsMeetingLinks();
+  const bookings = Array.isArray(data.bookings) ? data.bookings : [];
+  const booking = bookings.find(b => b && b.roomId === roomId) || null;
+  if (!booking) return false;
+  return booking.userId === sessionUser.id || booking.adminId === sessionUser.id;
+};
+
 const migrateAppointmentsBookingsMeetingLinks = async () => {
   const data = await db.appointments();
   const timeSlots = Array.isArray(data.timeSlots) ? data.timeSlots : [];
@@ -2509,6 +2545,47 @@ app.get('/meet/:roomId', requireAuth, async (req, res) => {
   if (!isAllowed) return res.status(403).send('Not allowed');
 
   res.render('meet', { user: req.session.user, roomId });
+});
+
+app.post('/meet/:roomId/signal', requireAuth, async (req, res) => {
+  if (!USE_DATABASE) return res.status(400).json({ ok: false, error: 'Database required' });
+  const roomId = req.params.roomId;
+  const isAllowed = await canAccessMeetingRoom({ roomId, sessionUser: req.session.user });
+  if (!isAllowed) return res.status(403).json({ ok: false, error: 'Not allowed' });
+
+  const payload = req.body && req.body.payload ? req.body.payload : req.body;
+  if (!payload || typeof payload !== 'object' || !payload.type) {
+    return res.status(400).json({ ok: false, error: 'Invalid payload' });
+  }
+
+  await ensureDatabase();
+  const pool = getPool();
+  const senderId = req.session.user ? req.session.user.id : null;
+  const result = await pool.query(
+    'INSERT INTO meeting_signals (room_id, sender_id, payload) VALUES ($1, $2, $3::jsonb) RETURNING id',
+    [roomId, senderId, JSON.stringify(payload)]
+  );
+  res.json({ ok: true, id: result.rows[0] ? result.rows[0].id : null });
+});
+
+app.get('/meet/:roomId/signal', requireAuth, async (req, res) => {
+  if (!USE_DATABASE) return res.json({ ok: true, items: [], lastId: Number(req.query.since) || 0 });
+  const roomId = req.params.roomId;
+  const isAllowed = await canAccessMeetingRoom({ roomId, sessionUser: req.session.user });
+  if (!isAllowed) return res.status(403).json({ ok: false, error: 'Not allowed' });
+
+  const since = Math.max(parseInt(req.query.since || '0', 10) || 0, 0);
+  const limit = Math.min(Math.max(parseInt(req.query.limit || '50', 10) || 50, 1), 200);
+
+  await ensureDatabase();
+  const pool = getPool();
+  const result = await pool.query(
+    'SELECT id, sender_id, payload FROM meeting_signals WHERE room_id = $1 AND id > $2 ORDER BY id ASC LIMIT $3',
+    [roomId, since, limit]
+  );
+  const rows = result.rows || [];
+  const lastId = rows.length ? rows[rows.length - 1].id : since;
+  res.json({ ok: true, items: rows, lastId });
 });
 
 app.post('/meet/:roomId/recording', requireAdmin, meetingRecordingUpload.single('recording'), async (req, res) => {
