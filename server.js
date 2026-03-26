@@ -25,7 +25,6 @@ const TRUST_PROXY = ['1', 'true', 'yes'].includes(String(process.env.TRUST_PROXY
 const COOKIE_SECURE = ['1', 'true', 'yes'].includes(String(process.env.COOKIE_SECURE || '').toLowerCase());
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
-const APPOINTMENTS_DISABLED = ['1', 'true', 'yes'].includes(String(process.env.APPOINTMENTS_DISABLED || '').toLowerCase()) || IS_VERCEL;
 const USE_DATABASE = Boolean(process.env.DATABASE_URL);
 
 // CORS middleware
@@ -2322,9 +2321,6 @@ const migrateAppointmentsBookingsMeetingLinks = async () => {
 
 // User - Browse available admin slots
 app.get('/appointments', requireAuth, async (req, res) => {
-  if (APPOINTMENTS_DISABLED) {
-    return res.redirect('/');
-  }
   const admins = await getAdminUsers();
   const data = await migrateAppointmentsBookingsMeetingLinks();
 
@@ -2356,9 +2352,6 @@ app.get('/appointments', requireAuth, async (req, res) => {
 
 // User - Book a slot
 app.post('/appointments/book', requireAuth, async (req, res) => {
-  if (APPOINTMENTS_DISABLED) {
-    return res.redirect('/');
-  }
   const { slotId, notes } = req.body;
   if (!slotId) return res.redirect('/appointments?error=اختر ميعاد للحجز');
 
@@ -2402,9 +2395,6 @@ app.post('/appointments/book', requireAuth, async (req, res) => {
 
 // User - View my appointments
 app.get('/my-appointments', requireAuth, async (req, res) => {
-  if (APPOINTMENTS_DISABLED) {
-    return res.redirect('/');
-  }
   const data = await migrateAppointmentsBookingsMeetingLinks();
   const myBookings = (data.bookings || [])
     .filter(b => b && b.userId === req.session.user.id)
