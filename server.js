@@ -20,6 +20,7 @@ const PORT = process.env.PORT || 3000;
 const IS_VERCEL = Boolean(process.env.VERCEL || process.env.NOW_REGION);
 const SESSION_SECRET = process.env.SESSION_SECRET || 'codentra-secret-key-2024';
 const JWT_SECRET = process.env.JWT_SECRET || 'codentra-jwt-secret-2024';
+const TRUST_PROXY = ['1', 'true', 'yes'].includes(String(process.env.TRUST_PROXY || '').toLowerCase());
 const COOKIE_SECURE = ['1', 'true', 'yes'].includes(String(process.env.COOKIE_SECURE || '').toLowerCase());
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
@@ -607,6 +608,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(UPLOADS_DIR));
 if (IS_VERCEL) {
   app.use('/uploads', express.static(BUNDLED_UPLOADS_DIR));
+}
+
+if (TRUST_PROXY) {
+  app.set('trust proxy', 1);
 }
 
 if (IS_VERCEL) {
