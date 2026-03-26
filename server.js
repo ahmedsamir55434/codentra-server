@@ -9,6 +9,7 @@ const path = require('path');
 const fs = require('fs');
 const http = require('http');
 const crypto = require('crypto');
+const { Pool } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 const { Server } = require('socket.io');
 const PDFDocument = require('pdfkit');
@@ -24,9 +25,10 @@ const TRUST_PROXY = ['1', 'true', 'yes'].includes(String(process.env.TRUST_PROXY
 const COOKIE_SECURE = ['1', 'true', 'yes'].includes(String(process.env.COOKIE_SECURE || '').toLowerCase());
 const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7;
+const USE_DATABASE = Boolean(process.env.DATABASE_URL);
 
 // CORS middleware
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
@@ -102,7 +104,7 @@ const verifyToken = (token) => {
   }
 };
 
-const requireApiUserAuth = (req, res, next) => {
+const requireApiUserAuth = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing or invalid token' });
@@ -193,6 +195,20 @@ seedRuntimeData();
 
 // JSON storage helpers
 const JSON_CACHE = new Map();
+const DATA_CACHE = new Map();
+let dbPool;
+let dbInitPromise = null;
+
+const getPool = () => {
+  if (!dbPool) {
+    const sslRequired = String(process.env.DATABASE_URL || '').includes('sslmode=require');
+    dbPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: sslRequired ? { rejectUnauthorized: false } : undefined
+    });
+  }
+  return dbPool;
+};
 
 const cloneJson = (value) => {
   if (value === null || value === undefined) return value;
@@ -224,48 +240,156 @@ const writeJsonFile = (fileName, data) => {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 };
 
+const DATASET_DEFS = [
+  { name: 'users', file: 'users.json', fallback: [] },
+  { name: 'projects', file: 'projects.json', fallback: [] },
+  { name: 'purchases', file: 'purchases.json', fallback: [] },
+  { name: 'modifications', file: 'modifications.json', fallback: [] },
+  { name: 'coupons', file: 'coupons.json', fallback: [] },
+  { name: 'referrals', file: 'referrals.json', fallback: [] },
+  { name: 'walletCodes', file: 'wallet-codes.json', fallback: [] },
+  { name: 'appointments', file: 'appointments.json', fallback: () => ({ timeSlots: [], bookings: [] }) },
+  { name: 'reviews', file: 'reviews.json', fallback: [] },
+  { name: 'messages', file: 'messages.json', fallback: [] },
+  { name: 'adminTeamMessages', file: 'admin-team-messages.json', fallback: [] },
+  { name: 'carts', file: 'carts.json', fallback: [] },
+  { name: 'invoices', file: 'invoices.json', fallback: [] },
+  { name: 'meetingRecordings', file: 'meeting-recordings.json', fallback: [] },
+  { name: 'subscriptionPlans', file: 'subscription-plans.json', fallback: [] },
+  { name: 'subscriptions', file: 'subscriptions.json', fallback: [] },
+  { name: 'subscriptionPayments', file: 'subscription-payments.json', fallback: [] },
+  { name: 'subscriptionCoupons', file: 'subscription-coupons.json', fallback: [] },
+  {
+    name: 'loyaltySettings',
+    file: 'loyalty-settings.json',
+    fallback: () => ({ enabled: true, pointsPerEGP: 0.1, redeem: { enabled: true, pointsToEGP: 0.1, minPoints: 100 } })
+  }
+];
+
+const DATASET_MAP = new Map(DATASET_DEFS.map((def) => [def.name, def]));
+
+const ensureDatabase = async () => {
+  if (!USE_DATABASE) return;
+  if (dbInitPromise) return dbInitPromise;
+  dbInitPromise = (async () => {
+    const pool = getPool();
+    await pool.query(
+      'CREATE TABLE IF NOT EXISTS data_store (name TEXT PRIMARY KEY, data JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())'
+    );
+
+    for (const def of DATASET_DEFS) {
+      const res = await pool.query('SELECT data FROM data_store WHERE name = $1', [def.name]);
+      if (res.rowCount === 0) {
+        const seedData = readJsonFile(def.file, def.fallback);
+        await pool.query('INSERT INTO data_store (name, data) VALUES ($1, $2)', [def.name, seedData]);
+        DATA_CACHE.set(def.name, seedData);
+      } else {
+        DATA_CACHE.set(def.name, res.rows[0].data);
+      }
+    }
+
+    const users = Array.isArray(DATA_CACHE.get('users')) ? DATA_CACHE.get('users') : [];
+    if (!users.find(u => u && u.email === 'admin@codentra.com')) {
+      users.push({
+        id: uuidv4(),
+        name: 'Admin',
+        email: 'admin@codentra.com',
+        password: bcrypt.hashSync('admin123', 10),
+        role: 'admin',
+        isSuperAdmin: true,
+        createdAt: new Date().toISOString()
+      });
+      DATA_CACHE.set('users', users);
+      await pool.query(
+        'INSERT INTO data_store (name, data, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (name) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()',
+        ['users', users]
+      );
+    }
+  })();
+  return dbInitPromise;
+};
+
+const readData = async (name) => {
+  const def = DATASET_MAP.get(name);
+  if (!def) throw new Error(`Unknown dataset: ${name}`);
+  if (!USE_DATABASE) {
+    return readJsonFile(def.file, def.fallback);
+  }
+
+  await ensureDatabase();
+  if (DATA_CACHE.has(name)) {
+    return cloneJson(DATA_CACHE.get(name));
+  }
+
+  const pool = getPool();
+  const res = await pool.query('SELECT data FROM data_store WHERE name = $1', [name]);
+  if (res.rowCount === 0) {
+    const seedData = readJsonFile(def.file, def.fallback);
+    await pool.query('INSERT INTO data_store (name, data) VALUES ($1, $2)', [name, seedData]);
+    DATA_CACHE.set(name, seedData);
+    return cloneJson(seedData);
+  }
+
+  DATA_CACHE.set(name, res.rows[0].data);
+  return cloneJson(res.rows[0].data);
+};
+
+const writeData = async (name, data) => {
+  const def = DATASET_MAP.get(name);
+  if (!def) throw new Error(`Unknown dataset: ${name}`);
+  if (!USE_DATABASE) {
+    writeJsonFile(def.file, data);
+    return;
+  }
+
+  await ensureDatabase();
+  DATA_CACHE.set(name, data);
+  const pool = getPool();
+  await pool.query(
+    'INSERT INTO data_store (name, data, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (name) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()',
+    [name, data]
+  );
+};
+
 const db = {
-  users: () => readJsonFile('users.json', []),
-  projects: () => readJsonFile('projects.json', []),
-  purchases: () => readJsonFile('purchases.json', []),
-  modifications: () => readJsonFile('modifications.json', []),
-  coupons: () => readJsonFile('coupons.json', []),
-  referrals: () => readJsonFile('referrals.json', []),
-  walletCodes: () => readJsonFile('wallet-codes.json', []),
-  appointments: () => readJsonFile('appointments.json', () => ({ timeSlots: [], bookings: [] })),
-  saveUsers: (data) => writeJsonFile('users.json', data),
-  saveProjects: (data) => writeJsonFile('projects.json', data),
-  savePurchases: (data) => writeJsonFile('purchases.json', data),
-  saveModifications: (data) => writeJsonFile('modifications.json', data),
-  saveCoupons: (data) => writeJsonFile('coupons.json', data),
-  saveReferrals: (data) => writeJsonFile('referrals.json', data),
-  saveWalletCodes: (data) => writeJsonFile('wallet-codes.json', data),
-  reviews: () => readJsonFile('reviews.json', []),
-  saveReviews: (data) => writeJsonFile('reviews.json', data),
-  messages: () => readJsonFile('messages.json', []),
-  saveMessages: (data) => writeJsonFile('messages.json', data),
-  adminTeamMessages: () => readJsonFile('admin-team-messages.json', []),
-  saveAdminTeamMessages: (data) => writeJsonFile('admin-team-messages.json', data),
-  carts: () => readJsonFile('carts.json', []),
-  saveCarts: (data) => writeJsonFile('carts.json', data),
-  invoices: () => readJsonFile('invoices.json', []),
-  saveInvoices: (data) => writeJsonFile('invoices.json', data),
-  saveAppointments: (data) => writeJsonFile('appointments.json', data),
-  meetingRecordings: () => readJsonFile('meeting-recordings.json', []),
-  saveMeetingRecordings: (data) => writeJsonFile('meeting-recordings.json', data),
-  subscriptionPlans: () => readJsonFile('subscription-plans.json', []),
-  subscriptions: () => readJsonFile('subscriptions.json', []),
-  subscriptionPayments: () => readJsonFile('subscription-payments.json', []),
-  saveSubscriptionPlans: (data) => writeJsonFile('subscription-plans.json', data),
-  saveSubscriptions: (data) => writeJsonFile('subscriptions.json', data),
-  saveSubscriptionPayments: (data) => writeJsonFile('subscription-payments.json', data),
-  subscriptionCoupons: () => readJsonFile('subscription-coupons.json', []),
-  saveSubscriptionCoupons: (data) => writeJsonFile('subscription-coupons.json', data),
-  loyaltySettings: () => readJsonFile(
-    'loyalty-settings.json',
-    () => ({ enabled: true, pointsPerEGP: 0.1, redeem: { enabled: true, pointsToEGP: 0.1, minPoints: 100 } })
-  ),
-  saveLoyaltySettings: (data) => writeJsonFile('loyalty-settings.json', data)
+  users: () => readData('users'),
+  projects: () => readData('projects'),
+  purchases: () => readData('purchases'),
+  modifications: () => readData('modifications'),
+  coupons: () => readData('coupons'),
+  referrals: () => readData('referrals'),
+  walletCodes: () => readData('walletCodes'),
+  appointments: () => readData('appointments'),
+  saveUsers: (data) => writeData('users', data),
+  saveProjects: (data) => writeData('projects', data),
+  savePurchases: (data) => writeData('purchases', data),
+  saveModifications: (data) => writeData('modifications', data),
+  saveCoupons: (data) => writeData('coupons', data),
+  saveReferrals: (data) => writeData('referrals', data),
+  saveWalletCodes: (data) => writeData('walletCodes', data),
+  reviews: () => readData('reviews'),
+  saveReviews: (data) => writeData('reviews', data),
+  messages: () => readData('messages'),
+  saveMessages: (data) => writeData('messages', data),
+  adminTeamMessages: () => readData('adminTeamMessages'),
+  saveAdminTeamMessages: (data) => writeData('adminTeamMessages', data),
+  carts: () => readData('carts'),
+  saveCarts: (data) => writeData('carts', data),
+  invoices: () => readData('invoices'),
+  saveInvoices: (data) => writeData('invoices', data),
+  saveAppointments: (data) => writeData('appointments', data),
+  meetingRecordings: () => readData('meetingRecordings'),
+  saveMeetingRecordings: (data) => writeData('meetingRecordings', data),
+  subscriptionPlans: () => readData('subscriptionPlans'),
+  subscriptions: () => readData('subscriptions'),
+  subscriptionPayments: () => readData('subscriptionPayments'),
+  saveSubscriptionPlans: (data) => writeData('subscriptionPlans', data),
+  saveSubscriptions: (data) => writeData('subscriptions', data),
+  saveSubscriptionPayments: (data) => writeData('subscriptionPayments', data),
+  subscriptionCoupons: () => readData('subscriptionCoupons'),
+  saveSubscriptionCoupons: (data) => writeData('subscriptionCoupons', data),
+  loyaltySettings: () => readData('loyaltySettings'),
+  saveLoyaltySettings: (data) => writeData('loyaltySettings', data)
 };
 
 const normalizeCouponCode = (code) => {
@@ -320,8 +444,8 @@ const normalizeLoyaltyPoints = (value) => {
   return Math.floor(n);
 };
 
-const getLoyaltyEarnedPointsForPurchase = ({ amountEGP }) => {
-  const settings = db.loyaltySettings();
+const getLoyaltyEarnedPointsForPurchase = async ({ amountEGP }) => {
+  const settings = await db.loyaltySettings();
   if (!settings || !settings.enabled) return 0;
   const rate = Number(settings.pointsPerEGP || 0);
   if (!Number.isFinite(rate) || rate <= 0) return 0;
@@ -357,9 +481,9 @@ const getCouponEligibility = (coupon) => {
   return { eligible: true, reason: null };
 };
 
-const getActiveSubscriptionForUser = ({ userId }) => {
+const getActiveSubscriptionForUser = async ({ userId }) => {
   if (!userId) return null;
-  const subs = db.subscriptions();
+  const subs = await db.subscriptions();
   const now = new Date();
   const active = subs
     .filter(s => s && s.userId === userId && s.status === 'active' && s.currentPeriodEnd)
@@ -371,9 +495,9 @@ const getActiveSubscriptionForUser = ({ userId }) => {
   return active[0] || null;
 };
 
-const getSubscriptionPlanById = ({ planId }) => {
+const getSubscriptionPlanById = async ({ planId }) => {
   if (!planId) return null;
-  const plans = db.subscriptionPlans();
+  const plans = await db.subscriptionPlans();
   return plans.find(p => p && p.id === planId && p.active) || null;
 };
 
@@ -404,8 +528,8 @@ const getSubscriberDiscountPercent = ({ sessionUser }) => {
   return 0;
 };
 
-const getOrCreateCartForUser = ({ userId }) => {
-  const carts = db.carts();
+const getOrCreateCartForUser = async ({ userId }) => {
+  const carts = await db.carts();
   const idx = carts.findIndex(c => c && c.userId === userId);
   if (idx !== -1) {
     const cart = carts[idx];
@@ -417,7 +541,7 @@ const getOrCreateCartForUser = ({ userId }) => {
   return { carts, cart, cartIndex: carts.length - 1 };
 };
 
-const summarizeCart = ({ cart, couponCode, sessionUser }) => {
+const summarizeCart = async ({ cart, couponCode, sessionUser }) => {
   const items = (cart && Array.isArray(cart.items)) ? cart.items : [];
   const totalBefore = Math.round(items.reduce((sum, it) => sum + Number(it.price || 0), 0) * 100) / 100;
 
@@ -425,7 +549,7 @@ const summarizeCart = ({ cart, couponCode, sessionUser }) => {
   let couponDiscount = 0;
   if (couponCode) {
     const normalized = normalizeCouponCode(couponCode);
-    const coupons = db.coupons();
+    const coupons = await db.coupons();
     const coupon = coupons.find(c => normalizeCouponCode(c.code) === normalized) || null;
     const eligibility = getCouponEligibility(coupon);
     if (eligibility.eligible) {
@@ -539,28 +663,33 @@ const getDownloadFileName = ({ originalFileName, projectTitle, filePath }) => {
   return `${projectTitle || 'project'}.zip`;
 };
 
-// Initialize empty JSON files if they don't exist
-['users.json', 'projects.json', 'purchases.json', 'modifications.json', 'messages.json', 'admin-team-messages.json', 'carts.json', 'invoices.json', 'reviews.json', 'coupons.json', 'referrals.json', 'wallet-codes.json'].forEach(file => {
-  const filePath = path.join(DATA_DIR, file);
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, '[]');
-  }
-});
-
-// Create default admin user if none exists
-const users = db.users();
-if (!users.find(u => u.email === 'admin@codentra.com')) {
-  users.push({
-    id: uuidv4(),
-    name: 'Admin',
-    email: 'admin@codentra.com',
-    password: bcrypt.hashSync('admin123', 10),
-    role: 'admin',
-    isSuperAdmin: true,
-    createdAt: new Date().toISOString()
+const ensureLocalJsonFiles = () => {
+  ['users.json', 'projects.json', 'purchases.json', 'modifications.json', 'messages.json', 'admin-team-messages.json', 'carts.json', 'invoices.json', 'reviews.json', 'coupons.json', 'referrals.json', 'wallet-codes.json'].forEach(file => {
+    const filePath = path.join(DATA_DIR, file);
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, '[]');
+    }
   });
-  db.saveUsers(users);
-}
+};
+
+const ensureLocalAdminUser = () => {
+  const users = readJsonFile('users.json', []);
+  if (!users.find(u => u && u.email === 'admin@codentra.com')) {
+    users.push({
+      id: uuidv4(),
+      name: 'Admin',
+      email: 'admin@codentra.com',
+      password: bcrypt.hashSync('admin123', 10),
+      role: 'admin',
+      isSuperAdmin: true,
+      createdAt: new Date().toISOString()
+    });
+    writeJsonFile('users.json', users);
+  }
+};
+
+ensureLocalJsonFiles();
+ensureLocalAdminUser();
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
@@ -623,7 +752,7 @@ const getBlockedMessage = (u) => {
   return `${reason} (حظر دائم)`;
 };
 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   try {
     if (!req.session || !req.session.user || !req.session.user.id) return next();
 
@@ -637,7 +766,7 @@ app.use((req, res, next) => {
       req.path.startsWith('/uploads/')
     );
 
-    const users = db.users();
+    const users = await db.users();
     const idx = users.findIndex(u => u && u.id === req.session.user.id);
     if (idx === -1) return next();
 
@@ -646,7 +775,7 @@ app.use((req, res, next) => {
     if (isBlockedExpired(fullUser)) {
       unblockUserInPlace(fullUser);
       users[idx] = fullUser;
-      db.saveUsers(users);
+      await db.saveUsers(users);
     }
 
     if (fullUser.isBlocked) {
@@ -782,17 +911,17 @@ const projectUpload = multer({
 ]);
 
 // Auth middleware
-const requireAuth = (req, res, next) => {
+const requireAuth = async (req, res, next) => {
   if (!req.session.user) return res.redirect('/login');
   next();
 };
 
-const requireAdmin = (req, res, next) => {
+const requireAdmin = async (req, res, next) => {
   if (!req.session.user || req.session.user.role !== 'admin') return res.redirect('/');
   next();
 };
 
-const requireSuperAdmin = (req, res, next) => {
+const requireSuperAdmin = async (req, res, next) => {
   if (!req.session.user || req.session.user.role !== 'admin' || !req.session.user.isSuperAdmin) return res.redirect('/');
   next();
 };
@@ -825,7 +954,7 @@ const hasAdminPermission = ({ sessionUser, permission }) => {
 };
 
 const requireAdminPermission = (permission) => {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (!req.session.user || req.session.user.role !== 'admin') return res.redirect('/');
     if (!hasAdminPermission({ sessionUser: req.session.user, permission })) {
       return res.redirect('/admin?error=' + encodeURIComponent('ليس لديك صلاحية لهذه الصفحة'));
@@ -837,23 +966,23 @@ const requireAdminPermission = (permission) => {
 // Routes
 
 // Home - Projects listing
-app.get('/', (req, res) => {
-  const projects = db.projects().filter(p => isProjectVisibleToUser({ project: p, sessionUser: req.session.user }));
+app.get('/', async (req, res) => {
+  const projects = (await db.projects()).filter(p => isProjectVisibleToUser({ project: p, sessionUser: req.session.user }));
   res.render('index', { projects, user: req.session.user });
 });
 
 // Auth routes
-app.get('/login', (req, res) => {
+app.get('/login', async (req, res) => {
   if (req.session.user) return res.redirect('/');
   res.render('login', { error: req.query.error || null, user: null });
 });
 
-app.get('/blocked', (req, res) => {
+app.get('/blocked', async (req, res) => {
   try {
     if (!req.session || !req.session.user || !req.session.user.id) {
       return res.redirect('/login');
     }
-    const users = db.users();
+    const users = await db.users();
     const u = users.find(x => x && x.id === req.session.user.id);
     if (!u) return res.redirect('/login');
 
@@ -861,7 +990,7 @@ app.get('/blocked', (req, res) => {
       const idx = users.findIndex(x => x && x.id === u.id);
       unblockUserInPlace(u);
       if (idx !== -1) users[idx] = u;
-      db.saveUsers(users);
+      await db.saveUsers(users);
       return res.redirect('/');
     }
 
@@ -877,9 +1006,9 @@ app.get('/blocked', (req, res) => {
   }
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
   const { email, password } = req.body;
-  const users = db.users();
+  const users = await db.users();
   const user = users.find(u => u.email === email);
   
   if (!user || !bcrypt.compareSync(password, user.password)) {
@@ -890,7 +1019,7 @@ app.post('/login', (req, res) => {
     unblockUserInPlace(user);
     const idx = users.findIndex(u => u && u.id === user.id);
     if (idx !== -1) users[idx] = user;
-    db.saveUsers(users);
+    await db.saveUsers(users);
   }
 
   if (user.isBlocked) {
@@ -934,11 +1063,11 @@ app.post('/login', (req, res) => {
   if (shouldSaveUsers) {
     const idx = users.findIndex(u => u.id === user.id);
     if (idx !== -1) users[idx] = user;
-    db.saveUsers(users);
+    await db.saveUsers(users);
   }
 
   const activeSubscription = user.role === 'user'
-    ? getActiveSubscriptionForUser({ userId: user.id })
+    ? await getActiveSubscriptionForUser({ userId: user.id })
     : null;
   
   req.session.user = {
@@ -959,15 +1088,15 @@ app.post('/login', (req, res) => {
   res.redirect(user.role === 'admin' ? '/admin' : '/');
 });
 
-app.get('/register', (req, res) => {
+app.get('/register', async (req, res) => {
   if (req.session.user) return res.redirect('/');
   res.render('register', { error: null, user: null, referralPrefill: req.query.ref || '' });
 });
 
-app.post('/register', (req, res) => {
+app.post('/register', async (req, res) => {
   const { name, email, password } = req.body;
   const referralInput = normalizeReferralCode(req.body.referralCode);
-  const users = db.users();
+  const users = await db.users();
   
   if (users.find(u => u.email === email)) {
     return res.render('register', { error: 'Email already registered', user: null, referralPrefill: referralInput });
@@ -998,7 +1127,7 @@ app.post('/register', (req, res) => {
   };
 
   if (newUser.referredBy) {
-    const referrals = db.referrals();
+    const referrals = await db.referrals();
     referrals.push({
       id: uuidv4(),
       code: newUser.referredBy.code,
@@ -1010,11 +1139,11 @@ app.post('/register', (req, res) => {
       rewardedAt: null,
       rewardPurchaseId: null
     });
-    db.saveReferrals(referrals);
+    await db.saveReferrals(referrals);
   }
   
   users.push(newUser);
-  db.saveUsers(users);
+  await db.saveUsers(users);
   
   req.session.user = {
     id: newUser.id,
@@ -1027,15 +1156,15 @@ app.post('/register', (req, res) => {
   res.redirect('/');
 });
 
-app.get('/logout', (req, res) => {
+app.get('/logout', async (req, res) => {
   req.session.destroy();
   res.redirect('/');
 });
 
 // API Routes for Mobile App
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
-  const users = db.users();
+  const users = await db.users();
   const user = users.find(u => u.email === email);
   
   if (!user || !bcrypt.compareSync(password, user.password)) {
@@ -1046,20 +1175,20 @@ app.post('/api/auth/login', (req, res) => {
   res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
 });
 
-app.get('/api/me', requireApiUserAuth, (req, res) => {
-  const users = db.users();
+app.get('/api/me', requireApiUserAuth, async (req, res) => {
+  const users = await db.users();
   const user = users.find(u => u.id === req.apiUser.id);
   if (!user) return res.status(404).json({ error: 'User not found' });
   res.json({ user: { id: user.id, name: user.name, email: user.email, role: user.role, walletBalance: Number(user.walletBalance || 0) } });
 });
 
-app.get('/api/projects', requireApiUserAuth, (req, res) => {
-  const projects = db.projects().filter(p => isProjectVisibleToUser({ project: p, sessionUser: { role: 'user', id: req.apiUser.id } }));
+app.get('/api/projects', requireApiUserAuth, async (req, res) => {
+  const projects = (await db.projects()).filter(p => isProjectVisibleToUser({ project: p, sessionUser: { role: 'user', id: req.apiUser.id } }));
   res.json({ projects });
 });
 
-app.get('/api/projects/:id', requireApiUserAuth, (req, res) => {
-  const projects = db.projects();
+app.get('/api/projects/:id', requireApiUserAuth, async (req, res) => {
+  const projects = await db.projects();
   const project = projects.find(p => p.id === req.params.id);
   if (!project) return res.status(404).json({ error: 'Project not found' });
   if (!isProjectVisibleToUser({ project, sessionUser: { role: 'user', id: req.apiUser.id } })) {
@@ -1068,34 +1197,34 @@ app.get('/api/projects/:id', requireApiUserAuth, (req, res) => {
   res.json({ project });
 });
 
-app.get('/api/cart', requireApiUserAuth, (req, res) => {
-  const { cart } = getOrCreateCartForUser({ userId: req.apiUser.id });
+app.get('/api/cart', requireApiUserAuth, async (req, res) => {
+  const { cart } = await getOrCreateCartForUser({ userId: req.apiUser.id });
   res.json({ cart });
 });
 
-app.get('/api/cart/summary', requireApiUserAuth, (req, res) => {
-  const { cart } = getOrCreateCartForUser({ userId: req.apiUser.id });
+app.get('/api/cart/summary', requireApiUserAuth, async (req, res) => {
+  const { cart } = await getOrCreateCartForUser({ userId: req.apiUser.id });
   const couponCode = normalizeCouponCode(req.query.couponCode);
-  const summary = summarizeCart({ cart, couponCode, sessionUser: { role: 'user', id: req.apiUser.id } });
+  const summary = await summarizeCart({ cart, couponCode, sessionUser: { role: 'user', id: req.apiUser.id } });
   res.json({ summary });
 });
 
-app.post('/api/cart/add', requireApiUserAuth, (req, res) => {
+app.post('/api/cart/add', requireApiUserAuth, async (req, res) => {
   const { projectId } = req.body;
   if (!projectId) return res.status(400).json({ error: 'Missing projectId' });
   
-  const projects = db.projects();
+  const projects = await db.projects();
   const project = projects.find(p => p && p.id === projectId);
   if (!project) return res.status(404).json({ error: 'Project not found' });
   if (!isProjectVisibleToUser({ project, sessionUser: { role: 'user', id: req.apiUser.id } })) {
     return res.status(403).json({ error: 'Not allowed' });
   }
 
-  const purchases = db.purchases();
+  const purchases = await db.purchases();
   const alreadyPurchased = purchases.some(p => p.userId === req.apiUser.id && p.projectId === projectId);
   if (alreadyPurchased) return res.status(400).json({ error: 'Already purchased' });
 
-  const { carts, cart, cartIndex } = getOrCreateCartForUser({ userId: req.apiUser.id });
+  const { carts, cart, cartIndex } = await getOrCreateCartForUser({ userId: req.apiUser.id });
   const items = Array.isArray(cart.items) ? cart.items : [];
   const exists = items.some(it => it && it.projectId === projectId);
   if (!exists) {
@@ -1107,36 +1236,36 @@ app.post('/api/cart/add', requireApiUserAuth, (req, res) => {
     });
   }
   carts[cartIndex] = { ...cart, items, updatedAt: new Date().toISOString() };
-  db.saveCarts(carts);
+  await db.saveCarts(carts);
   res.json({ cart: carts[cartIndex] });
 });
 
-app.post('/api/cart/remove', requireApiUserAuth, (req, res) => {
+app.post('/api/cart/remove', requireApiUserAuth, async (req, res) => {
   const { projectId } = req.body;
   if (!projectId) return res.status(400).json({ error: 'Missing projectId' });
   
-  const { carts, cart, cartIndex } = getOrCreateCartForUser({ userId: req.apiUser.id });
+  const { carts, cart, cartIndex } = await getOrCreateCartForUser({ userId: req.apiUser.id });
   const nextItems = (Array.isArray(cart.items) ? cart.items : []).filter(it => it && it.projectId !== projectId);
   carts[cartIndex] = { ...cart, items: nextItems, updatedAt: new Date().toISOString() };
-  db.saveCarts(carts);
+  await db.saveCarts(carts);
   res.json({ cart: carts[cartIndex] });
 });
 
-app.post('/api/cart/checkout', requireApiUserAuth, (req, res) => {
-  const { carts, cart, cartIndex } = getOrCreateCartForUser({ userId: req.apiUser.id });
+app.post('/api/cart/checkout', requireApiUserAuth, async (req, res) => {
+  const { carts, cart, cartIndex } = await getOrCreateCartForUser({ userId: req.apiUser.id });
   const items = (cart && Array.isArray(cart.items)) ? cart.items : [];
   if (items.length === 0) return res.status(400).json({ error: 'Cart empty' });
 
-  const users = db.users();
+  const users = await db.users();
   const currentUserIndex = users.findIndex(u => u.id === req.apiUser.id);
   const currentUser = currentUserIndex !== -1 ? users[currentUserIndex] : null;
   if (!currentUser) return res.status(404).json({ error: 'User not found' });
 
-  const projects = db.projects();
-  const purchases = db.purchases();
+  const projects = await db.projects();
+  const purchases = await db.purchases();
 
   const couponCode = normalizeCouponCode(req.body.couponCode);
-  const summary = summarizeCart({ cart, couponCode, sessionUser: { role: 'user', id: req.apiUser.id } });
+  const summary = await summarizeCart({ cart, couponCode, sessionUser: { role: 'user', id: req.apiUser.id } });
   const totalAfter = Number(summary.totalAfter || 0);
   if (!(totalAfter > 0)) return res.status(400).json({ error: 'Invalid total' });
 
@@ -1157,23 +1286,23 @@ app.post('/api/cart/checkout', requireApiUserAuth, (req, res) => {
   // debit wallet once
   currentUser.walletBalance = Math.round((walletBalance - totalAfter) * 100) / 100;
 
-  const earnedPoints = getLoyaltyEarnedPointsForPurchase({ amountEGP: totalAfter });
+  const earnedPoints = await getLoyaltyEarnedPointsForPurchase({ amountEGP: totalAfter });
   if (earnedPoints > 0) {
     currentUser.loyaltyPoints = normalizeLoyaltyPoints(currentUser.loyaltyPoints) + earnedPoints;
   }
 
   // increment coupon usage (if valid)
   if (summary.appliedCoupon) {
-    const coupons = db.coupons();
+    const coupons = await db.coupons();
     const idx = coupons.findIndex(c => c && normalizeCouponCode(c.code) === normalizeCouponCode(summary.appliedCoupon.code));
     if (idx !== -1) {
       coupons[idx].usedCount = Number(coupons[idx].usedCount || 0) + 1;
-      db.saveCoupons(coupons);
+      await db.saveCoupons(coupons);
     }
   }
 
   users[currentUserIndex] = currentUser;
-  db.saveUsers(users);
+  await db.saveUsers(users);
 
   const orderId = uuidv4();
   const totalBefore = Number(summary.totalBefore || 0);
@@ -1203,20 +1332,20 @@ app.post('/api/cart/checkout', requireApiUserAuth, (req, res) => {
     });
   }
 
-  db.savePurchases(purchases);
+  await db.savePurchases(purchases);
   carts[cartIndex] = { ...cart, items: [], updatedAt: new Date().toISOString() };
-  db.saveCarts(carts);
+  await db.saveCarts(carts);
   res.json({ orderId, message: 'Order created' });
 });
 
-app.get('/api/purchases', requireApiUserAuth, (req, res) => {
-  const purchases = db.purchases().filter(p => p.userId === req.apiUser.id);
-  const invoices = db.invoices();
+app.get('/api/purchases', requireApiUserAuth, async (req, res) => {
+  const purchases = (await db.purchases()).filter(p => p.userId === req.apiUser.id);
+  const invoices = await db.invoices();
   res.json({ purchases, invoices });
 });
 
 // Mobile API - Invoice PDF
-app.get('/api/invoice/:orderId.pdf', (req, res) => {
+app.get('/api/invoice/:orderId.pdf', async (req, res) => {
   // Get token from header or query param
   const authHeader = req.headers.authorization;
   const tokenFromQuery = req.query.token;
@@ -1235,7 +1364,7 @@ app.get('/api/invoice/:orderId.pdf', (req, res) => {
   }
   
   const orderId = req.params.orderId;
-  const invoices = db.invoices();
+  const invoices = await db.invoices();
   const inv = invoices.find(i => i && i.orderId === orderId && i.userId === decoded.id) || null;
   if (!inv) return res.status(404).send('Invoice not found');
 
@@ -1258,7 +1387,7 @@ app.get('/api/invoice/:orderId.pdf', (req, res) => {
   doc.fontSize(14).text('Items:', { underline: true });
   doc.moveDown(0.5);
 
-  const purchases = db.purchases().filter(p => p.orderId === orderId || p.id === orderId);
+  const purchases = (await db.purchases()).filter(p => p.orderId === orderId || p.id === orderId);
   purchases.forEach((p, idx) => {
     doc.fontSize(12).text(`${idx + 1}. ${p.projectTitle || 'Project'} - $${p.price || 0}`);
   });
@@ -1273,24 +1402,24 @@ app.get('/api/invoice/:orderId.pdf', (req, res) => {
 });
 
 // Mobile API - Subscriptions
-app.get('/api/subscriptions/plans', requireApiUserAuth, (req, res) => {
-  const plans = db.subscriptionPlans().filter(p => p && p.active);
-  const coupons = db.subscriptionCoupons().filter(c => c && c.active);
-  const activeSubscription = getActiveSubscriptionForUser({ userId: req.apiUser.id });
+app.get('/api/subscriptions/plans', requireApiUserAuth, async (req, res) => {
+  const plans = (await db.subscriptionPlans()).filter(p => p && p.active);
+  const coupons = (await db.subscriptionCoupons()).filter(c => c && c.active);
+  const activeSubscription = await getActiveSubscriptionForUser({ userId: req.apiUser.id });
   res.json({ plans, coupons, activeSubscription });
 });
 
-app.post('/api/subscriptions/subscribe', requireApiUserAuth, (req, res) => {
+app.post('/api/subscriptions/subscribe', requireApiUserAuth, async (req, res) => {
   const { planId, couponCode } = req.body;
   
-  const plans = db.subscriptionPlans().filter(p => p && p.active);
+  const plans = (await db.subscriptionPlans()).filter(p => p && p.active);
   const plan = plans.find(p => p.id === planId);
   if (!plan) return res.status(400).json({ error: 'الخطة غير صحيحة' });
 
-  const existing = getActiveSubscriptionForUser({ userId: req.apiUser.id });
+  const existing = await getActiveSubscriptionForUser({ userId: req.apiUser.id });
   if (existing) return res.status(400).json({ error: 'لديك اشتراك نشط بالفعل' });
 
-  const users = db.users();
+  const users = await db.users();
   const idx = users.findIndex(u => u.id === req.apiUser.id);
   if (idx === -1) return res.status(404).json({ error: 'المستخدم غير موجود' });
 
@@ -1307,7 +1436,7 @@ app.post('/api/subscriptions/subscribe', requireApiUserAuth, (req, res) => {
   let coupons = null;
   let couponIndex = -1;
   if (normalizedCoupon) {
-    coupons = db.subscriptionCoupons();
+    coupons = await db.subscriptionCoupons();
     couponIndex = coupons.findIndex(c => normalizeCouponCode(c.code) === normalizedCoupon);
     const coupon = couponIndex !== -1 ? coupons[couponIndex] : null;
     const eligibility = getSubscriptionCouponEligibility(coupon);
@@ -1328,18 +1457,18 @@ app.post('/api/subscriptions/subscribe', requireApiUserAuth, (req, res) => {
   }
 
   users[idx].walletBalance = Math.round((bal - Number(priceAfterDiscount || 0)) * 100) / 100;
-  db.saveUsers(users);
+  await db.saveUsers(users);
 
   if (appliedCoupon && coupons && couponIndex !== -1) {
     coupons[couponIndex].usedCount = Number(coupons[couponIndex].usedCount || 0) + 1;
     coupons[couponIndex].lastUsedAt = new Date().toISOString();
-    db.saveSubscriptionCoupons(coupons);
+    await db.saveSubscriptionCoupons(coupons);
   }
 
   const now = new Date();
   const end = new Date(now.getTime() + (Number(plan.durationDays || 30) * 24 * 60 * 60 * 1000));
 
-  const subs = db.subscriptions();
+  const subs = await db.subscriptions();
   const sub = {
     id: uuidv4(),
     userId: req.apiUser.id,
@@ -1351,9 +1480,9 @@ app.post('/api/subscriptions/subscribe', requireApiUserAuth, (req, res) => {
     createdAt: now.toISOString()
   };
   subs.push(sub);
-  db.saveSubscriptions(subs);
+  await db.saveSubscriptions(subs);
 
-  const payments = db.subscriptionPayments();
+  const payments = await db.subscriptionPayments();
   payments.push({
     id: uuidv4(),
     subscriptionId: sub.id,
@@ -1367,14 +1496,14 @@ app.post('/api/subscriptions/subscribe', requireApiUserAuth, (req, res) => {
     couponCode: appliedCoupon ? normalizeCouponCode(appliedCoupon.code) : null,
     createdAt: now.toISOString()
   });
-  db.saveSubscriptionPayments(payments);
+  await db.saveSubscriptionPayments(payments);
 
   res.json({ success: true, subscription: sub, newBalance: users[idx].walletBalance });
 });
 
-app.post('/api/subscriptions/cancel', requireApiUserAuth, (req, res) => {
-  const subs = db.subscriptions();
-  const active = getActiveSubscriptionForUser({ userId: req.apiUser.id });
+app.post('/api/subscriptions/cancel', requireApiUserAuth, async (req, res) => {
+  const subs = await db.subscriptions();
+  const active = await getActiveSubscriptionForUser({ userId: req.apiUser.id });
   if (!active) return res.status(400).json({ error: 'لا يوجد اشتراك نشط' });
 
   const idx = subs.findIndex(s => s.id === active.id);
@@ -1382,17 +1511,17 @@ app.post('/api/subscriptions/cancel', requireApiUserAuth, (req, res) => {
 
   subs[idx].status = 'canceled';
   subs[idx].canceledAt = new Date().toISOString();
-  db.saveSubscriptions(subs);
+  await db.saveSubscriptions(subs);
 
   res.json({ success: true });
 });
 
 // Mobile API - Wallet Code Redeem
-app.post('/api/wallet/redeem', requireApiUserAuth, (req, res) => {
+app.post('/api/wallet/redeem', requireApiUserAuth, async (req, res) => {
   const code = normalizeWalletCode(req.body.code);
   if (!code) return res.status(400).json({ error: 'الكود مطلوب' });
 
-  const walletCodes = db.walletCodes();
+  const walletCodes = await db.walletCodes();
   const idx = walletCodes.findIndex(c => normalizeWalletCode(c.code) === code);
   if (idx === -1) {
     return res.status(400).json({ error: 'الكود غير صحيح' });
@@ -1408,16 +1537,16 @@ app.post('/api/wallet/redeem', requireApiUserAuth, (req, res) => {
     return res.status(400).json({ error: 'قيمة الكود غير صحيحة' });
   }
 
-  const users = db.users();
+  const users = await db.users();
   const userIndex = users.findIndex(u => u.id === req.apiUser.id);
   if (userIndex === -1) return res.status(404).json({ error: 'User not found' });
 
   users[userIndex].walletBalance = Number(users[userIndex].walletBalance || 0) + amount;
-  db.saveUsers(users);
+  await db.saveUsers(users);
 
   walletCodes[idx].usedCount = Number(walletCodes[idx].usedCount || 0) + 1;
   walletCodes[idx].lastUsedAt = new Date().toISOString();
-  db.saveWalletCodes(walletCodes);
+  await db.saveWalletCodes(walletCodes);
 
   res.json({ 
     success: true, 
@@ -1428,8 +1557,8 @@ app.post('/api/wallet/redeem', requireApiUserAuth, (req, res) => {
 });
 
 // Project detail
-app.get('/project/:id', (req, res) => {
-  const projects = db.projects();
+app.get('/project/:id', async (req, res) => {
+  const projects = await db.projects();
   const project = projects.find(p => p.id === req.params.id);
   if (!project) return res.status(404).send('Project not found');
 
@@ -1441,16 +1570,16 @@ app.get('/project/:id', (req, res) => {
   let canReview = false;
   let existingReview = null;
   if (req.session.user) {
-    const purchases = db.purchases();
+    const purchases = await db.purchases();
     hasPurchased = purchases.some(p => p.userId === req.session.user.id && p.projectId === project.id);
 
     const hasApprovedPurchase = purchases.some(p => p.userId === req.session.user.id && p.projectId === project.id && p.status === 'approved');
-    const reviews = db.reviews();
+    const reviews = await db.reviews();
     existingReview = reviews.find(r => r.userId === req.session.user.id && r.projectId === project.id) || null;
     canReview = hasApprovedPurchase && !existingReview;
   }
 
-  const projectReviews = db.reviews().filter(r => r.projectId === project.id);
+  const projectReviews = (await db.reviews()).filter(r => r.projectId === project.id);
   const avgRating = projectReviews.length
     ? (projectReviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / projectReviews.length)
     : 0;
@@ -1458,9 +1587,9 @@ app.get('/project/:id', (req, res) => {
   let canApplyReferral = false;
   let referralPrefill = '';
   if (req.session.user) {
-    const users = db.users();
+    const users = await db.users();
     const currentUser = users.find(u => u.id === req.session.user.id);
-    const purchases = db.purchases();
+    const purchases = await db.purchases();
     const hasAnyPurchase = purchases.some(p => p.userId === req.session.user.id);
     canApplyReferral = !!currentUser && !currentUser.referredBy && !hasAnyPurchase;
     referralPrefill = req.query.ref || '';
@@ -1481,8 +1610,8 @@ app.get('/project/:id', (req, res) => {
   });
 });
 
-app.post('/project/:id/reviews', requireAuth, (req, res) => {
-  const projects = db.projects();
+app.post('/project/:id/reviews', requireAuth, async (req, res) => {
+  const projects = await db.projects();
   const project = projects.find(p => p.id === req.params.id);
   if (!project) return res.status(404).send('Project not found');
 
@@ -1497,7 +1626,7 @@ app.post('/project/:id/reviews', requireAuth, (req, res) => {
     return res.status(400).send('Comment is required');
   }
 
-  const purchases = db.purchases();
+  const purchases = await db.purchases();
   const hasApprovedPurchase = purchases.some(
     p => p.userId === req.session.user.id && p.projectId === project.id && p.status === 'approved'
   );
@@ -1506,7 +1635,7 @@ app.post('/project/:id/reviews', requireAuth, (req, res) => {
     return res.status(403).send('You can review only after an approved purchase');
   }
 
-  const reviews = db.reviews();
+  const reviews = await db.reviews();
   const alreadyReviewed = reviews.some(r => r.userId === req.session.user.id && r.projectId === project.id);
   if (alreadyReviewed) {
     return res.status(400).send('You already reviewed this project');
@@ -1523,13 +1652,13 @@ app.post('/project/:id/reviews', requireAuth, (req, res) => {
     createdAt: new Date().toISOString()
   });
 
-  db.saveReviews(reviews);
+  await db.saveReviews(reviews);
   res.redirect(`/project/${project.id}`);
 });
 
 // Purchase - creates pending purchase request
-app.post('/purchase/:id', requireAuth, (req, res) => {
-  const projects = db.projects();
+app.post('/purchase/:id', requireAuth, async (req, res) => {
+  const projects = await db.projects();
   const project = projects.find(p => p.id === req.params.id);
   if (!project) return res.status(404).send('Project not found');
 
@@ -1537,14 +1666,14 @@ app.post('/purchase/:id', requireAuth, (req, res) => {
     return res.status(403).send('Not allowed');
   }
   
-  const purchases = db.purchases();
+  const purchases = await db.purchases();
   const alreadyPurchased = purchases.find(p => p.userId === req.session.user.id && p.projectId === project.id);
   
   if (alreadyPurchased) {
     return res.redirect('/my-purchases');
   }
 
-  const users = db.users();
+  const users = await db.users();
   const currentUserIndex = users.findIndex(u => u.id === req.session.user.id);
   const currentUser = currentUserIndex !== -1 ? users[currentUserIndex] : null;
   if (!currentUser) return res.status(404).send('User not found');
@@ -1568,9 +1697,9 @@ app.post('/purchase/:id', requireAuth, (req, res) => {
       rewardedAt: null
     };
     users[currentUserIndex] = currentUser;
-    db.saveUsers(users);
+    await db.saveUsers(users);
 
-    const referrals = db.referrals();
+    const referrals = await db.referrals();
     const alreadyRecorded = referrals.some(r => r.referredUserId === currentUser.id);
     if (!alreadyRecorded) {
       referrals.push({
@@ -1584,7 +1713,7 @@ app.post('/purchase/:id', requireAuth, (req, res) => {
         rewardedAt: null,
         rewardPurchaseId: null
       });
-      db.saveReferrals(referrals);
+      await db.saveReferrals(referrals);
     }
   }
 
@@ -1597,7 +1726,7 @@ app.post('/purchase/:id', requireAuth, (req, res) => {
   let couponIndex = -1;
 
   if (couponCode) {
-    coupons = db.coupons();
+    coupons = await db.coupons();
     couponIndex = coupons.findIndex(c => normalizeCouponCode(c.code) === couponCode);
     const coupon = couponIndex !== -1 ? coupons[couponIndex] : null;
     const eligibility = getCouponEligibility(coupon);
@@ -1629,13 +1758,13 @@ app.post('/purchase/:id', requireAuth, (req, res) => {
 
   currentUser.walletBalance = Math.round((walletBalance - Number(priceAfterDiscount || 0)) * 100) / 100;
 
-  const earnedPoints = getLoyaltyEarnedPointsForPurchase({ amountEGP: Number(priceAfterDiscount || 0) });
+  const earnedPoints = await getLoyaltyEarnedPointsForPurchase({ amountEGP: Number(priceAfterDiscount || 0) });
   if (earnedPoints > 0) {
     currentUser.loyaltyPoints = normalizeLoyaltyPoints(currentUser.loyaltyPoints) + earnedPoints;
   }
 
   users[currentUserIndex] = currentUser;
-  db.saveUsers(users);
+  await db.saveUsers(users);
 
   req.session.user = {
     ...req.session.user,
@@ -1644,7 +1773,7 @@ app.post('/purchase/:id', requireAuth, (req, res) => {
 
   if (appliedCoupon && coupons && couponIndex !== -1) {
     coupons[couponIndex].usedCount = Number(coupons[couponIndex].usedCount || 0) + 1;
-    db.saveCoupons(coupons);
+    await db.saveCoupons(coupons);
   }
   
   purchases.push({
@@ -1665,15 +1794,15 @@ app.post('/purchase/:id', requireAuth, (req, res) => {
     originalFileName: project.originalFileName || null
   });
   
-  db.savePurchases(purchases);
+  await db.savePurchases(purchases);
   res.redirect('/my-purchases');
 });
 
 // Cart
-app.get('/cart', requireAuth, (req, res) => {
+app.get('/cart', requireAuth, async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
 
-  const users = db.users();
+  const users = await db.users();
   const currentUser = users.find(u => u.id === req.session.user.id);
   if (currentUser) {
     req.session.user = {
@@ -1682,12 +1811,12 @@ app.get('/cart', requireAuth, (req, res) => {
     };
   }
 
-  const { carts, cart, cartIndex } = getOrCreateCartForUser({ userId: req.session.user.id });
+  const { carts, cart, cartIndex } = await getOrCreateCartForUser({ userId: req.session.user.id });
   carts[cartIndex] = { ...cart, updatedAt: new Date().toISOString() };
-  db.saveCarts(carts);
+  await db.saveCarts(carts);
 
   const couponCode = (req.query.couponCode || '').toString();
-  const summary = summarizeCart({ cart, couponCode, sessionUser: req.session.user });
+  const summary = await summarizeCart({ cart, couponCode, sessionUser: req.session.user });
 
   res.render('cart', {
     user: req.session.user,
@@ -1698,23 +1827,23 @@ app.get('/cart', requireAuth, (req, res) => {
   });
 });
 
-app.post('/cart/add', requireAuth, (req, res) => {
+app.post('/cart/add', requireAuth, async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
   const projectId = (req.body.projectId || '').toString();
   if (!projectId) return res.redirect('/?error=' + encodeURIComponent('مشروع غير صحيح'));
 
-  const projects = db.projects();
+  const projects = await db.projects();
   const project = projects.find(p => p && p.id === projectId);
   if (!project) return res.status(404).send('Project not found');
   if (!isProjectVisibleToUser({ project, sessionUser: req.session.user })) {
     return res.status(403).send('Not allowed');
   }
 
-  const purchases = db.purchases();
+  const purchases = await db.purchases();
   const alreadyPurchased = purchases.some(p => p.userId === req.session.user.id && p.projectId === projectId);
   if (alreadyPurchased) return res.redirect(`/project/${projectId}`);
 
-  const { carts, cart, cartIndex } = getOrCreateCartForUser({ userId: req.session.user.id });
+  const { carts, cart, cartIndex } = await getOrCreateCartForUser({ userId: req.session.user.id });
   const items = Array.isArray(cart.items) ? cart.items : [];
   const exists = items.some(it => it && it.projectId === projectId);
   if (!exists) {
@@ -1727,45 +1856,45 @@ app.post('/cart/add', requireAuth, (req, res) => {
   }
 
   carts[cartIndex] = { ...cart, items, updatedAt: new Date().toISOString() };
-  db.saveCarts(carts);
+  await db.saveCarts(carts);
   res.redirect('/cart');
 });
 
-app.post('/cart/remove', requireAuth, (req, res) => {
+app.post('/cart/remove', requireAuth, async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
   const projectId = (req.body.projectId || '').toString();
-  const { carts, cart, cartIndex } = getOrCreateCartForUser({ userId: req.session.user.id });
+  const { carts, cart, cartIndex } = await getOrCreateCartForUser({ userId: req.session.user.id });
   const nextItems = (Array.isArray(cart.items) ? cart.items : []).filter(it => it && it.projectId !== projectId);
   carts[cartIndex] = { ...cart, items: nextItems, updatedAt: new Date().toISOString() };
-  db.saveCarts(carts);
+  await db.saveCarts(carts);
   res.redirect('/cart');
 });
 
-app.post('/cart/clear', requireAuth, (req, res) => {
+app.post('/cart/clear', requireAuth, async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
-  const { carts, cart, cartIndex } = getOrCreateCartForUser({ userId: req.session.user.id });
+  const { carts, cart, cartIndex } = await getOrCreateCartForUser({ userId: req.session.user.id });
   carts[cartIndex] = { ...cart, items: [], updatedAt: new Date().toISOString() };
-  db.saveCarts(carts);
+  await db.saveCarts(carts);
   res.redirect('/cart');
 });
 
-app.post('/cart/checkout', requireAuth, (req, res) => {
+app.post('/cart/checkout', requireAuth, async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
 
-  const { carts, cart, cartIndex } = getOrCreateCartForUser({ userId: req.session.user.id });
+  const { carts, cart, cartIndex } = await getOrCreateCartForUser({ userId: req.session.user.id });
   const items = (cart && Array.isArray(cart.items)) ? cart.items : [];
   if (items.length === 0) return res.redirect('/cart?error=' + encodeURIComponent('السلة فارغة'));
 
-  const users = db.users();
+  const users = await db.users();
   const currentUserIndex = users.findIndex(u => u.id === req.session.user.id);
   const currentUser = currentUserIndex !== -1 ? users[currentUserIndex] : null;
   if (!currentUser) return res.status(404).send('User not found');
 
-  const projects = db.projects();
-  const purchases = db.purchases();
+  const projects = await db.projects();
+  const purchases = await db.purchases();
 
   const couponCode = normalizeCouponCode(req.body.couponCode);
-  const summary = summarizeCart({ cart, couponCode, sessionUser: req.session.user });
+  const summary = await summarizeCart({ cart, couponCode, sessionUser: req.session.user });
   const totalAfter = Number(summary.totalAfter || 0);
   if (!(totalAfter > 0)) return res.redirect('/cart?error=' + encodeURIComponent('إجمالي غير صحيح'));
 
@@ -1788,23 +1917,23 @@ app.post('/cart/checkout', requireAuth, (req, res) => {
   // debit wallet once
   currentUser.walletBalance = Math.round((walletBalance - totalAfter) * 100) / 100;
 
-  const earnedPoints = getLoyaltyEarnedPointsForPurchase({ amountEGP: totalAfter });
+  const earnedPoints = await getLoyaltyEarnedPointsForPurchase({ amountEGP: totalAfter });
   if (earnedPoints > 0) {
     currentUser.loyaltyPoints = normalizeLoyaltyPoints(currentUser.loyaltyPoints) + earnedPoints;
   }
 
   // increment coupon usage (if valid)
   if (summary.appliedCoupon) {
-    const coupons = db.coupons();
+    const coupons = await db.coupons();
     const idx = coupons.findIndex(c => c && normalizeCouponCode(c.code) === normalizeCouponCode(summary.appliedCoupon.code));
     if (idx !== -1) {
       coupons[idx].usedCount = Number(coupons[idx].usedCount || 0) + 1;
-      db.saveCoupons(coupons);
+      await db.saveCoupons(coupons);
     }
   }
 
   users[currentUserIndex] = currentUser;
-  db.saveUsers(users);
+  await db.saveUsers(users);
   req.session.user = { ...req.session.user, walletBalance: Number(currentUser.walletBalance || 0) };
 
   const orderId = uuidv4();
@@ -1835,18 +1964,18 @@ app.post('/cart/checkout', requireAuth, (req, res) => {
     });
   }
 
-  db.savePurchases(purchases);
+  await db.savePurchases(purchases);
 
   // clear cart
   carts[cartIndex] = { ...cart, items: [], updatedAt: new Date().toISOString() };
-  db.saveCarts(carts);
+  await db.saveCarts(carts);
 
   res.redirect('/my-purchases');
 });
 
 // My purchases
-app.get('/my-purchases', requireAuth, (req, res) => {
-  const users = db.users();
+app.get('/my-purchases', requireAuth, async (req, res) => {
+  const users = await db.users();
   const currentUser = users.find(u => u.id === req.session.user.id);
   if (currentUser) {
     req.session.user = {
@@ -1856,11 +1985,11 @@ app.get('/my-purchases', requireAuth, (req, res) => {
       loyaltyPoints: normalizeLoyaltyPoints(currentUser.loyaltyPoints)
     };
   }
-  const purchases = db.purchases().filter(p => p.userId === req.session.user.id);
-  const invoices = db.invoices().filter(i => i && i.userId === req.session.user.id);
-  const subscriptionPlans = db.subscriptionPlans();
-  const subscriptions = db.subscriptions().filter(s => s && s.userId === req.session.user.id);
-  const subscriptionPayments = db.subscriptionPayments().filter(p => p && p.userId === req.session.user.id);
+  const purchases = (await db.purchases()).filter(p => p.userId === req.session.user.id);
+  const invoices = (await db.invoices()).filter(i => i && i.userId === req.session.user.id);
+  const subscriptionPlans = await db.subscriptionPlans();
+  const subscriptions = (await db.subscriptions()).filter(s => s && s.userId === req.session.user.id);
+  const subscriptionPayments = (await db.subscriptionPayments()).filter(p => p && p.userId === req.session.user.id);
   res.render('my-purchases', {
     purchases,
     invoices,
@@ -1873,14 +2002,14 @@ app.get('/my-purchases', requireAuth, (req, res) => {
   });
 });
 
-app.get('/loyalty', requireAuth, (req, res) => {
+app.get('/loyalty', requireAuth, async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
 
-  const users = db.users();
+  const users = await db.users();
   const currentUser = users.find(u => u.id === req.session.user.id);
   if (!currentUser) return res.redirect('/?error=' + encodeURIComponent('المستخدم غير موجود'));
 
-  const settings = db.loyaltySettings();
+  const settings = await db.loyaltySettings();
   const redeem = (settings && settings.redeem) ? settings.redeem : {};
   const minPoints = normalizeLoyaltyPoints(redeem.minPoints);
   const pointsToEGP = Number(redeem.pointsToEGP || 0);
@@ -1901,14 +2030,14 @@ app.get('/loyalty', requireAuth, (req, res) => {
   });
 });
 
-app.post('/loyalty/redeem', requireAuth, (req, res) => {
+app.post('/loyalty/redeem', requireAuth, async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
 
-  const users = db.users();
+  const users = await db.users();
   const idx = users.findIndex(u => u.id === req.session.user.id);
   if (idx === -1) return res.redirect('/loyalty?error=' + encodeURIComponent('المستخدم غير موجود'));
 
-  const settings = db.loyaltySettings();
+  const settings = await db.loyaltySettings();
   if (!settings || !settings.enabled) return res.redirect('/loyalty?error=' + encodeURIComponent('النظام غير متاح حالياً'));
   const redeem = settings.redeem || {};
   if (!redeem.enabled) return res.redirect('/loyalty?error=' + encodeURIComponent('الاستبدال غير متاح حالياً'));
@@ -1929,7 +2058,7 @@ app.post('/loyalty/redeem', requireAuth, (req, res) => {
 
   users[idx].loyaltyPoints = currentPoints - pointsRequested;
   users[idx].walletBalance = Math.round((Number(users[idx].walletBalance || 0) + credit) * 100) / 100;
-  db.saveUsers(users);
+  await db.saveUsers(users);
 
   req.session.user = {
     ...req.session.user,
@@ -1941,11 +2070,11 @@ app.post('/loyalty/redeem', requireAuth, (req, res) => {
 });
 
 // Wallet - redeem top-up code
-app.post('/wallet/redeem', requireAuth, (req, res) => {
+app.post('/wallet/redeem', requireAuth, async (req, res) => {
   const code = normalizeWalletCode(req.body.code);
   if (!code) return res.redirect(`/my-purchases?redeemError=${encodeURIComponent('الكود مطلوب')}`);
 
-  const walletCodes = db.walletCodes();
+  const walletCodes = await db.walletCodes();
   const idx = walletCodes.findIndex(c => normalizeWalletCode(c.code) === code);
   if (idx === -1) {
     return res.redirect(`/my-purchases?redeemError=${encodeURIComponent('الكود غير صحيح')}`);
@@ -1961,16 +2090,16 @@ app.post('/wallet/redeem', requireAuth, (req, res) => {
     return res.redirect(`/my-purchases?redeemError=${encodeURIComponent('قيمة الكود غير صحيحة')}`);
   }
 
-  const users = db.users();
+  const users = await db.users();
   const userIndex = users.findIndex(u => u.id === req.session.user.id);
   if (userIndex === -1) return res.status(404).send('User not found');
 
   users[userIndex].walletBalance = Number(users[userIndex].walletBalance || 0) + amount;
-  db.saveUsers(users);
+  await db.saveUsers(users);
 
   walletCodes[idx].usedCount = Number(walletCodes[idx].usedCount || 0) + 1;
   walletCodes[idx].lastUsedAt = new Date().toISOString();
-  db.saveWalletCodes(walletCodes);
+  await db.saveWalletCodes(walletCodes);
 
   req.session.user = {
     ...req.session.user,
@@ -1981,8 +2110,8 @@ app.post('/wallet/redeem', requireAuth, (req, res) => {
 });
 
 // Protected download - only approved purchases can download
-app.get('/download/:purchaseId', requireAuth, (req, res) => {
-  const purchases = db.purchases();
+app.get('/download/:purchaseId', requireAuth, async (req, res) => {
+  const purchases = await db.purchases();
   const purchase = purchases.find(p => p.id === req.params.purchaseId && p.userId === req.session.user.id);
   
   if (!purchase || !purchase.filePath) {
@@ -2003,10 +2132,10 @@ app.get('/download/:purchaseId', requireAuth, (req, res) => {
 });
 
 // Admin Dashboard
-app.get('/admin', requireAdmin, (req, res) => {
-  const users = db.users();
-  const projects = db.projects();
-  const purchases = db.purchases();
+app.get('/admin', requireAdmin, async (req, res) => {
+  const users = await db.users();
+  const projects = await db.projects();
+  const purchases = await db.purchases();
 
   const now = new Date();
   const startOfDay = new Date(now);
@@ -2075,18 +2204,18 @@ app.get('/admin', requireAdmin, (req, res) => {
 });
 
 // Admin Team - Group chat for admins
-app.get('/admin/team', requireAdmin, (req, res) => {
-  const messages = db.adminTeamMessages()
+app.get('/admin/team', requireAdmin, async (req, res) => {
+  const messages = await db.adminTeamMessages()
     .slice()
     .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
   res.render('admin/team', { user: req.session.user, messages, error: req.query.error || null });
 });
 
-app.post('/admin/team/message', requireAdmin, (req, res) => {
+app.post('/admin/team/message', requireAdmin, async (req, res) => {
   const content = (req.body.content || '').toString().trim();
   if (!content) return res.redirect('/admin/team?error=' + encodeURIComponent('اكتب رسالة'));
 
-  const messages = db.adminTeamMessages();
+  const messages = await db.adminTeamMessages();
   const msg = {
     id: uuidv4(),
     type: 'text',
@@ -2096,17 +2225,17 @@ app.post('/admin/team/message', requireAdmin, (req, res) => {
     createdAt: new Date().toISOString()
   };
   messages.push(msg);
-  db.saveAdminTeamMessages(messages);
+  await db.saveAdminTeamMessages(messages);
 
   io.to('admin-team').emit('admin-team-message', msg);
   res.redirect('/admin/team');
 });
 
-app.post('/admin/team/upload', requireAdmin, adminTeamUpload.single('file'), (req, res) => {
+app.post('/admin/team/upload', requireAdmin, adminTeamUpload.single('file'), async (req, res) => {
   if (!req.file) return res.redirect('/admin/team?error=' + encodeURIComponent('لم يتم رفع الملف'));
 
   const storedPath = `uploads/admin-team/${req.file.filename}`;
-  const messages = db.adminTeamMessages();
+  const messages = await db.adminTeamMessages();
 
   const msg = {
     id: uuidv4(),
@@ -2120,17 +2249,17 @@ app.post('/admin/team/upload', requireAdmin, adminTeamUpload.single('file'), (re
     createdAt: new Date().toISOString()
   };
   messages.push(msg);
-  db.saveAdminTeamMessages(messages);
+  await db.saveAdminTeamMessages(messages);
 
   io.to('admin-team').emit('admin-team-message', msg);
   res.redirect('/admin/team');
 });
 
-app.post('/admin/team/meeting', requireAdmin, (req, res) => {
+app.post('/admin/team/meeting', requireAdmin, async (req, res) => {
   const roomId = `${uuidv4()}`;
   const meetingLink = `/meet/${roomId}`;
 
-  const messages = db.adminTeamMessages();
+  const messages = await db.adminTeamMessages();
   const msg = {
     id: uuidv4(),
     type: 'meeting',
@@ -2141,7 +2270,7 @@ app.post('/admin/team/meeting', requireAdmin, (req, res) => {
     createdAt: new Date().toISOString()
   };
   messages.push(msg);
-  db.saveAdminTeamMessages(messages);
+  await db.saveAdminTeamMessages(messages);
 
   io.to('admin-team').emit('admin-team-message', msg);
   res.redirect('/admin/team');
@@ -2154,8 +2283,8 @@ const isValidFutureSlot = (slot) => {
   return startAt.getTime() > Date.now();
 };
 
-const getAdminUsers = () => {
-  return db.users().filter(u => u.role === 'admin');
+const getAdminUsers = async () => {
+  return (await db.users()).filter(u => u.role === 'admin');
 };
 
 const formatSlotLabel = (slot) => {
@@ -2174,8 +2303,8 @@ const buildMeetingRoomId = ({ adminId, userId, slotId }) => {
   return `codentra-${safe(adminId)}-${safe(userId)}-${safe(slotId)}`;
 };
 
-const migrateAppointmentsBookingsMeetingLinks = () => {
-  const data = db.appointments();
+const migrateAppointmentsBookingsMeetingLinks = async () => {
+  const data = await db.appointments();
   const timeSlots = Array.isArray(data.timeSlots) ? data.timeSlots : [];
   const bookings = Array.isArray(data.bookings) ? data.bookings : [];
 
@@ -2202,7 +2331,7 @@ const migrateAppointmentsBookingsMeetingLinks = () => {
   });
 
   if (changed) {
-    db.saveAppointments({ timeSlots, bookings: nextBookings });
+    await db.saveAppointments({ timeSlots, bookings: nextBookings });
     return { timeSlots, bookings: nextBookings };
   }
   return { timeSlots, bookings };
@@ -2211,9 +2340,9 @@ const migrateAppointmentsBookingsMeetingLinks = () => {
 // ========== APPOINTMENTS SYSTEM ==========
 
 // User - Browse available admin slots
-app.get('/appointments', requireAuth, (req, res) => {
-  const admins = getAdminUsers();
-  const data = migrateAppointmentsBookingsMeetingLinks();
+app.get('/appointments', requireAuth, async (req, res) => {
+  const admins = await getAdminUsers();
+  const data = await migrateAppointmentsBookingsMeetingLinks();
 
   const availableSlots = (data.timeSlots || [])
     .filter(s => s && s.status === 'available')
@@ -2242,14 +2371,14 @@ app.get('/appointments', requireAuth, (req, res) => {
 });
 
 // User - Book a slot
-app.post('/appointments/book', requireAuth, (req, res) => {
+app.post('/appointments/book', requireAuth, async (req, res) => {
   const { slotId, notes } = req.body;
   if (!slotId) return res.redirect('/appointments?error=اختر ميعاد للحجز');
 
-  const admins = getAdminUsers();
+  const admins = await getAdminUsers();
   const adminsById = new Map(admins.map(a => [a.id, a]));
 
-  const data = db.appointments();
+  const data = await db.appointments();
   const timeSlots = Array.isArray(data.timeSlots) ? data.timeSlots : [];
   const bookings = Array.isArray(data.bookings) ? data.bookings : [];
 
@@ -2280,13 +2409,13 @@ app.post('/appointments/book', requireAuth, (req, res) => {
   };
   bookings.push(booking);
 
-  db.saveAppointments({ timeSlots, bookings });
+  await db.saveAppointments({ timeSlots, bookings });
   res.redirect('/my-appointments?success=تم الحجز بنجاح');
 });
 
 // User - View my appointments
-app.get('/my-appointments', requireAuth, (req, res) => {
-  const data = migrateAppointmentsBookingsMeetingLinks();
+app.get('/my-appointments', requireAuth, async (req, res) => {
+  const data = await migrateAppointmentsBookingsMeetingLinks();
   const myBookings = (data.bookings || [])
     .filter(b => b && b.userId === req.session.user.id)
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
@@ -2300,8 +2429,8 @@ app.get('/my-appointments', requireAuth, (req, res) => {
 });
 
 // Admin - Manage availability and see bookings
-app.get('/admin/appointments', requireAdminPermission(ADMIN_PERMISSIONS.appointments), (req, res) => {
-  const data = migrateAppointmentsBookingsMeetingLinks();
+app.get('/admin/appointments', requireAdminPermission(ADMIN_PERMISSIONS.appointments), async (req, res) => {
+  const data = await migrateAppointmentsBookingsMeetingLinks();
   const adminId = req.session.user.id;
 
   const mySlots = (data.timeSlots || [])
@@ -2323,7 +2452,7 @@ app.get('/admin/appointments', requireAdminPermission(ADMIN_PERMISSIONS.appointm
 });
 
 // Admin - Create available slot
-app.post('/admin/appointments/slots', requireAdminPermission(ADMIN_PERMISSIONS.appointments), (req, res) => {
+app.post('/admin/appointments/slots', requireAdminPermission(ADMIN_PERMISSIONS.appointments), async (req, res) => {
   const { date, time, durationMinutes } = req.body;
   if (!date || !time) return res.redirect('/admin/appointments?error=أدخل التاريخ والوقت');
 
@@ -2336,7 +2465,7 @@ app.post('/admin/appointments/slots', requireAdminPermission(ADMIN_PERMISSIONS.a
   if (Number.isNaN(startAt.getTime())) return res.redirect('/admin/appointments?error=التاريخ أو الوقت غير صحيح');
   if (startAt.getTime() <= Date.now() + 60 * 1000) return res.redirect('/admin/appointments?error=اختر وقت في المستقبل');
 
-  const data = db.appointments();
+  const data = await db.appointments();
   const timeSlots = Array.isArray(data.timeSlots) ? data.timeSlots : [];
   const bookings = Array.isArray(data.bookings) ? data.bookings : [];
 
@@ -2353,14 +2482,14 @@ app.post('/admin/appointments/slots', requireAdminPermission(ADMIN_PERMISSIONS.a
     createdAt: new Date().toISOString()
   });
 
-  db.saveAppointments({ timeSlots, bookings });
+  await db.saveAppointments({ timeSlots, bookings });
   res.redirect('/admin/appointments?success=تم إضافة الموعد');
 });
 
 // Admin - Delete available slot
-app.post('/admin/appointments/slots/:id/delete', requireAdminPermission(ADMIN_PERMISSIONS.appointments), (req, res) => {
+app.post('/admin/appointments/slots/:id/delete', requireAdminPermission(ADMIN_PERMISSIONS.appointments), async (req, res) => {
   const slotId = req.params.id;
-  const data = db.appointments();
+  const data = await db.appointments();
   const timeSlots = Array.isArray(data.timeSlots) ? data.timeSlots : [];
   const bookings = Array.isArray(data.bookings) ? data.bookings : [];
 
@@ -2372,11 +2501,11 @@ app.post('/admin/appointments/slots/:id/delete', requireAdminPermission(ADMIN_PE
   if (slot.status !== 'available') return res.redirect('/admin/appointments?error=لا يمكن حذف موعد محجوز');
 
   timeSlots.splice(slotIndex, 1);
-  db.saveAppointments({ timeSlots, bookings });
+  await db.saveAppointments({ timeSlots, bookings });
   res.redirect('/admin/appointments?success=تم حذف الموعد');
 });
 
-app.get('/meet/:roomId', requireAuth, (req, res) => {
+app.get('/meet/:roomId', requireAuth, async (req, res) => {
   const roomId = req.params.roomId;
   if (typeof roomId === 'string' && roomId.startsWith('team-')) {
     if (!req.session.user || req.session.user.role !== 'admin') {
@@ -2384,7 +2513,7 @@ app.get('/meet/:roomId', requireAuth, (req, res) => {
     }
     return res.render('meet', { user: req.session.user, roomId });
   }
-  const data = migrateAppointmentsBookingsMeetingLinks();
+  const data = await migrateAppointmentsBookingsMeetingLinks();
   const bookings = Array.isArray(data.bookings) ? data.bookings : [];
   const booking = bookings.find(b => b && b.roomId === roomId) || null;
   if (!booking) return res.status(404).send('Meeting not found');
@@ -2396,9 +2525,9 @@ app.get('/meet/:roomId', requireAuth, (req, res) => {
   res.render('meet', { user: req.session.user, roomId });
 });
 
-app.post('/meet/:roomId/recording', requireAdmin, meetingRecordingUpload.single('recording'), (req, res) => {
+app.post('/meet/:roomId/recording', requireAdmin, meetingRecordingUpload.single('recording'), async (req, res) => {
   const roomId = req.params.roomId;
-  const data = migrateAppointmentsBookingsMeetingLinks();
+  const data = await migrateAppointmentsBookingsMeetingLinks();
   const bookings = Array.isArray(data.bookings) ? data.bookings : [];
   const booking = bookings.find(b => b && b.roomId === roomId) || null;
   if (!booking) return res.status(404).json({ ok: false, error: 'Meeting not found' });
@@ -2419,7 +2548,7 @@ app.post('/meet/:roomId/recording', requireAdmin, meetingRecordingUpload.single(
   }
 
   const storedPath = `uploads/meeting-recordings/${req.file.filename}`;
-  const recordings = db.meetingRecordings();
+  const recordings = await db.meetingRecordings();
   recordings.push({
     id: uuidv4(),
     roomId,
@@ -2437,21 +2566,21 @@ app.post('/meet/:roomId/recording', requireAdmin, meetingRecordingUpload.single(
     sha256,
     createdAt: new Date().toISOString()
   });
-  db.saveMeetingRecordings(recordings);
+  await db.saveMeetingRecordings(recordings);
 
   res.json({ ok: true });
 });
 
-app.get('/admin/meeting-recordings', requireSuperAdmin, (req, res) => {
-  const recordings = db.meetingRecordings()
+app.get('/admin/meeting-recordings', requireSuperAdmin, async (req, res) => {
+  const recordings = await db.meetingRecordings()
     .slice()
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   res.render('admin/meeting-recordings', { user: req.session.user, recordings });
 });
 
-app.get('/admin/meeting-recordings/:id/verify', requireSuperAdmin, (req, res) => {
+app.get('/admin/meeting-recordings/:id/verify', requireSuperAdmin, async (req, res) => {
   const id = req.params.id;
-  const recordings = db.meetingRecordings();
+  const recordings = await db.meetingRecordings();
   const rec = recordings.find(r => r && r.id === id);
   if (!rec) return res.redirect('/admin/meeting-recordings');
 
@@ -2482,8 +2611,8 @@ app.get('/admin/meeting-recordings/:id/verify', requireSuperAdmin, (req, res) =>
 });
 
 // Super Admin - Admins management
-app.get('/admin/admins', requireSuperAdmin, (req, res) => {
-  const users = db.users();
+app.get('/admin/admins', requireSuperAdmin, async (req, res) => {
+  const users = await db.users();
   const admins = users.filter(u => u.role === 'admin');
   res.render('admin/admins', {
     admins,
@@ -2493,12 +2622,12 @@ app.get('/admin/admins', requireSuperAdmin, (req, res) => {
   });
 });
 
-app.post('/admin/admins', requireSuperAdmin, (req, res) => {
+app.post('/admin/admins', requireSuperAdmin, async (req, res) => {
   const name = (req.body.name || '').trim();
   const email = (req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
 
-  const users = db.users();
+  const users = await db.users();
 
   if (!name || !email || !password) {
     return res.redirect(`/admin/admins?error=${encodeURIComponent('جميع الحقول مطلوبة')}`);
@@ -2537,14 +2666,14 @@ app.post('/admin/admins', requireSuperAdmin, (req, res) => {
     adminPermissions,
     createdAt: new Date().toISOString()
   });
-  db.saveUsers(users);
+  await db.saveUsers(users);
 
   return res.redirect(`/admin/admins?success=${encodeURIComponent('تم إضافة الأدمن بنجاح')}`);
 });
 
-app.post('/admin/admins/:id/permissions', requireSuperAdmin, (req, res) => {
+app.post('/admin/admins/:id/permissions', requireSuperAdmin, async (req, res) => {
   const adminId = req.params.id;
-  const users = db.users();
+  const users = await db.users();
   const idx = users.findIndex(u => u && u.id === adminId && u.role === 'admin');
   if (idx === -1) return res.redirect(`/admin/admins?error=${encodeURIComponent('الأدمن غير موجود')}`);
   if (users[idx].isSuperAdmin) return res.redirect(`/admin/admins?error=${encodeURIComponent('لا يمكن تعديل صلاحيات السوبر أدمن')}`);
@@ -2566,7 +2695,7 @@ app.post('/admin/admins/:id/permissions', requireSuperAdmin, (req, res) => {
     [ADMIN_PERMISSIONS.subscriptionReports]: Boolean(req.body.perm_subscriptionReports)
   };
 
-  db.saveUsers(users);
+  await db.saveUsers(users);
 
   if (req.session.user && req.session.user.id === users[idx].id) {
     req.session.user.adminPermissions = users[idx].adminPermissions;
@@ -2576,7 +2705,7 @@ app.post('/admin/admins/:id/permissions', requireSuperAdmin, (req, res) => {
 });
 
 // Admin - Add Project
-app.get('/admin/projects/new', requireAdminPermission(ADMIN_PERMISSIONS.projects), (req, res) => {
+app.get('/admin/projects/new', requireAdminPermission(ADMIN_PERMISSIONS.projects), async (req, res) => {
   res.render('admin/project-form', { project: null, user: req.session.user });
 });
 
@@ -2585,7 +2714,7 @@ app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), 
     const { title, description, price, category, technologies } = req.body;
     const visibility = (req.body.visibility || 'public').trim();
     
-    const projects = db.projects();
+    const projects = await db.projects();
     
     // Handle images with watermark
     let images = [];
@@ -2617,7 +2746,7 @@ app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), 
     };
     
     projects.push(newProject);
-    db.saveProjects(projects);
+    await db.saveProjects(projects);
     
     res.redirect('/admin');
   } catch (error) {
@@ -2631,8 +2760,8 @@ app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), 
 });
 
 // Admin - Edit Project
-app.get('/admin/projects/:id/edit', requireAdminPermission(ADMIN_PERMISSIONS.projects), (req, res) => {
-  const projects = db.projects();
+app.get('/admin/projects/:id/edit', requireAdminPermission(ADMIN_PERMISSIONS.projects), async (req, res) => {
+  const projects = await db.projects();
   const project = projects.find(p => p.id === req.params.id);
   if (!project) return res.status(404).send('Project not found');
   res.render('admin/project-form', { project, user: req.session.user });
@@ -2641,7 +2770,7 @@ app.get('/admin/projects/:id/edit', requireAdminPermission(ADMIN_PERMISSIONS.pro
 app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.projects), projectUpload, async (req, res) => {
   try {
     const { title, description, price, category, technologies } = req.body;
-    const projects = db.projects();
+    const projects = await db.projects();
     const index = projects.findIndex(p => p.id === req.params.id);
     
     if (index === -1) return res.status(404).send('Project not found');
@@ -2694,11 +2823,11 @@ app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.project
       images: images
     };
     
-    db.saveProjects(projects);
+    await db.saveProjects(projects);
     res.redirect('/admin');
   } catch (error) {
     console.error('Error updating project:', error);
-    const projects = db.projects();
+    const projects = await db.projects();
     const project = projects.find(p => p.id === req.params.id);
     res.status(500).render('admin/project-form', { 
       project, 
@@ -2709,8 +2838,8 @@ app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.project
 });
 
 // Admin - Delete Project
-app.post('/admin/projects/:id/delete', requireAdminPermission(ADMIN_PERMISSIONS.projects), (req, res) => {
-  const projects = db.projects();
+app.post('/admin/projects/:id/delete', requireAdminPermission(ADMIN_PERMISSIONS.projects), async (req, res) => {
+  const projects = await db.projects();
   const project = projects.find(p => p.id === req.params.id);
   
   if (project) {
@@ -2731,38 +2860,38 @@ app.post('/admin/projects/:id/delete', requireAdminPermission(ADMIN_PERMISSIONS.
     }
   }
   
-  db.saveProjects(projects.filter(p => p.id !== req.params.id));
+  await db.saveProjects(projects.filter(p => p.id !== req.params.id));
   res.redirect('/admin');
 });
 
 // Admin - View all purchases
-app.get('/admin/purchases', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
-  const purchases = db.purchases();
-  const users = db.users();
-  const projects = db.projects();
+app.get('/admin/purchases', requireAdminPermission(ADMIN_PERMISSIONS.purchases), async (req, res) => {
+  const purchases = await db.purchases();
+  const users = await db.users();
+  const projects = await db.projects();
   res.render('admin/purchases', { purchases, users, projects, user: req.session.user });
 });
 
 // Admin - Coupons
-app.get('/admin/coupons', requireAdminPermission(ADMIN_PERMISSIONS.coupons), (req, res) => {
-  const coupons = db.coupons();
+app.get('/admin/coupons', requireAdminPermission(ADMIN_PERMISSIONS.coupons), async (req, res) => {
+  const coupons = await db.coupons();
   res.render('admin/coupons', { coupons, user: req.session.user, error: null });
 });
 
 // Admin - Subscription Coupons
-app.get('/admin/subscription-coupons', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionCoupons), (req, res) => {
-  const coupons = db.subscriptionCoupons();
+app.get('/admin/subscription-coupons', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionCoupons), async (req, res) => {
+  const coupons = await db.subscriptionCoupons();
   res.render('admin/subscription-coupons', { coupons, user: req.session.user, error: null });
 });
 
-app.post('/admin/subscription-coupons', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionCoupons), (req, res) => {
+app.post('/admin/subscription-coupons', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionCoupons), async (req, res) => {
   const code = normalizeCouponCode(req.body.code);
   const type = (req.body.type || '').trim();
   const value = Number(req.body.value);
   const usageLimit = req.body.usageLimit ? Number(req.body.usageLimit) : null;
   const expiresAt = parseOptionalIsoDate(req.body.expiresAt);
 
-  const coupons = db.subscriptionCoupons();
+  const coupons = await db.subscriptionCoupons();
 
   if (!code) {
     return res.render('admin/subscription-coupons', { coupons, user: req.session.user, error: 'كود الكوبون مطلوب' });
@@ -2796,30 +2925,30 @@ app.post('/admin/subscription-coupons', requireAdminPermission(ADMIN_PERMISSIONS
     lastUsedAt: null
   });
 
-  db.saveSubscriptionCoupons(coupons);
+  await db.saveSubscriptionCoupons(coupons);
   res.redirect('/admin/subscription-coupons');
 });
 
-app.post('/admin/subscription-coupons/:id/toggle', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionCoupons), (req, res) => {
-  const coupons = db.subscriptionCoupons();
+app.post('/admin/subscription-coupons/:id/toggle', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionCoupons), async (req, res) => {
+  const coupons = await db.subscriptionCoupons();
   const idx = coupons.findIndex(c => c.id === req.params.id);
   if (idx === -1) return res.status(404).send('Coupon not found');
   coupons[idx].active = !coupons[idx].active;
-  db.saveSubscriptionCoupons(coupons);
+  await db.saveSubscriptionCoupons(coupons);
   res.redirect('/admin/subscription-coupons');
 });
 
-app.post('/admin/subscription-coupons/:id/delete', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionCoupons), (req, res) => {
-  const coupons = db.subscriptionCoupons();
-  db.saveSubscriptionCoupons(coupons.filter(c => c.id !== req.params.id));
+app.post('/admin/subscription-coupons/:id/delete', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionCoupons), async (req, res) => {
+  const coupons = await db.subscriptionCoupons();
+  await db.saveSubscriptionCoupons(coupons.filter(c => c.id !== req.params.id));
   res.redirect('/admin/subscription-coupons');
 });
 
 // Admin - Subscription Reports
-app.get('/admin/subscription-reports', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionReports), (req, res) => {
-  const users = db.users();
-  const plans = db.subscriptionPlans();
-  const paymentsAll = db.subscriptionPayments();
+app.get('/admin/subscription-reports', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionReports), async (req, res) => {
+  const users = await db.users();
+  const plans = await db.subscriptionPlans();
+  const paymentsAll = await db.subscriptionPayments();
 
   const fromStr = (req.query.from || '').trim();
   const toStr = (req.query.to || '').trim();
@@ -2886,8 +3015,8 @@ app.get('/admin/subscription-reports', requireAdminPermission(ADMIN_PERMISSIONS.
 });
 
 // Admin - Subscription Plans
-app.get('/admin/subscription-plans', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionPlans), (req, res) => {
-  const plans = db.subscriptionPlans();
+app.get('/admin/subscription-plans', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionPlans), async (req, res) => {
+  const plans = await db.subscriptionPlans();
   res.render('admin/subscription-plans', {
     user: req.session.user,
     plans,
@@ -2896,8 +3025,8 @@ app.get('/admin/subscription-plans', requireAdminPermission(ADMIN_PERMISSIONS.su
   });
 });
 
-app.post('/admin/subscription-plans/:id', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionPlans), (req, res) => {
-  const plans = db.subscriptionPlans();
+app.post('/admin/subscription-plans/:id', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionPlans), async (req, res) => {
+  const plans = await db.subscriptionPlans();
   const idx = plans.findIndex(p => p && p.id === req.params.id);
   if (idx === -1) return res.redirect('/admin/subscription-plans?error=' + encodeURIComponent('الخطة غير موجودة'));
 
@@ -2925,27 +3054,27 @@ app.post('/admin/subscription-plans/:id', requireAdminPermission(ADMIN_PERMISSIO
     features
   };
 
-  db.saveSubscriptionPlans(plans);
+  await db.saveSubscriptionPlans(plans);
   res.redirect('/admin/subscription-plans?success=' + encodeURIComponent('تم حفظ الخطة'));
 });
 
-app.post('/admin/subscription-plans/:id/toggle', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionPlans), (req, res) => {
-  const plans = db.subscriptionPlans();
+app.post('/admin/subscription-plans/:id/toggle', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionPlans), async (req, res) => {
+  const plans = await db.subscriptionPlans();
   const idx = plans.findIndex(p => p && p.id === req.params.id);
   if (idx === -1) return res.redirect('/admin/subscription-plans?error=' + encodeURIComponent('الخطة غير موجودة'));
   plans[idx].active = !plans[idx].active;
-  db.saveSubscriptionPlans(plans);
+  await db.saveSubscriptionPlans(plans);
   res.redirect('/admin/subscription-plans?success=' + encodeURIComponent('تم تحديث حالة الخطة'));
 });
 
-app.post('/admin/coupons', requireAdminPermission(ADMIN_PERMISSIONS.coupons), (req, res) => {
+app.post('/admin/coupons', requireAdminPermission(ADMIN_PERMISSIONS.coupons), async (req, res) => {
   const code = normalizeCouponCode(req.body.code);
   const type = (req.body.type || '').trim();
   const value = Number(req.body.value);
   const expiresAt = parseOptionalIsoDate(req.body.expiresAt);
   const usageLimit = req.body.usageLimit ? Number(req.body.usageLimit) : null;
 
-  const coupons = db.coupons();
+  const coupons = await db.coupons();
 
   if (!code) {
     return res.render('admin/coupons', { coupons, user: req.session.user, error: 'كود الكوبون مطلوب' });
@@ -2978,45 +3107,45 @@ app.post('/admin/coupons', requireAdminPermission(ADMIN_PERMISSIONS.coupons), (r
     createdAt: new Date().toISOString()
   });
 
-  db.saveCoupons(coupons);
+  await db.saveCoupons(coupons);
   res.redirect('/admin/coupons');
 });
 
-app.post('/admin/coupons/:id/toggle', requireAdminPermission(ADMIN_PERMISSIONS.coupons), (req, res) => {
-  const coupons = db.coupons();
+app.post('/admin/coupons/:id/toggle', requireAdminPermission(ADMIN_PERMISSIONS.coupons), async (req, res) => {
+  const coupons = await db.coupons();
   const idx = coupons.findIndex(c => c.id === req.params.id);
   if (idx === -1) return res.status(404).send('Coupon not found');
   coupons[idx].active = !coupons[idx].active;
-  db.saveCoupons(coupons);
+  await db.saveCoupons(coupons);
   res.redirect('/admin/coupons');
 });
 
-app.post('/admin/coupons/:id/delete', requireAdminPermission(ADMIN_PERMISSIONS.coupons), (req, res) => {
-  const coupons = db.coupons();
-  db.saveCoupons(coupons.filter(c => c.id !== req.params.id));
+app.post('/admin/coupons/:id/delete', requireAdminPermission(ADMIN_PERMISSIONS.coupons), async (req, res) => {
+  const coupons = await db.coupons();
+  await db.saveCoupons(coupons.filter(c => c.id !== req.params.id));
   res.redirect('/admin/coupons');
 });
 
-app.get('/admin/reviews', requireAdminPermission(ADMIN_PERMISSIONS.reviews), (req, res) => {
-  const reviews = db.reviews();
-  const users = db.users();
-  const projects = db.projects();
+app.get('/admin/reviews', requireAdminPermission(ADMIN_PERMISSIONS.reviews), async (req, res) => {
+  const reviews = await db.reviews();
+  const users = await db.users();
+  const projects = await db.projects();
   res.render('admin/reviews', { reviews, users, projects, user: req.session.user });
 });
 
-app.post('/admin/reviews/:id/delete', requireAdmin, (req, res) => {
-  const reviews = db.reviews();
-  db.saveReviews(reviews.filter(r => r.id !== req.params.id));
+app.post('/admin/reviews/:id/delete', requireAdmin, async (req, res) => {
+  const reviews = await db.reviews();
+  await db.saveReviews(reviews.filter(r => r.id !== req.params.id));
   res.redirect('/admin/reviews');
 });
 
 // Admin - View all users
-app.get('/admin/users', requireAdminPermission(ADMIN_PERMISSIONS.users), (req, res) => {
-  const users = db.users();
+app.get('/admin/users', requireAdminPermission(ADMIN_PERMISSIONS.users), async (req, res) => {
+  const users = await db.users();
   res.render('admin/users', { users, user: req.session.user, success: req.query.success || null, error: req.query.error || null });
 });
 
-app.post('/admin/users/:id/block', requireAdminPermission(ADMIN_PERMISSIONS.users), (req, res) => {
+app.post('/admin/users/:id/block', requireAdminPermission(ADMIN_PERMISSIONS.users), async (req, res) => {
   try {
     const targetId = req.params.id;
     const { blockType, duration, blockReason } = req.body;
@@ -3028,7 +3157,7 @@ app.post('/admin/users/:id/block', requireAdminPermission(ADMIN_PERMISSIONS.user
       return res.redirect('/admin/users?error=اكتب سبب الحظر');
     }
 
-    const users = db.users();
+    const users = await db.users();
     const idx = users.findIndex(u => u && u.id === targetId);
     if (idx === -1) return res.redirect('/admin/users?error=المستخدم غير موجود');
 
@@ -3053,17 +3182,17 @@ app.post('/admin/users/:id/block', requireAdminPermission(ADMIN_PERMISSIONS.user
       users[idx].blockedUntil = null;
     }
 
-    db.saveUsers(users);
+    await db.saveUsers(users);
     return res.redirect('/admin/users?success=تم حظر المستخدم بنجاح');
   } catch (e) {
     return res.redirect('/admin/users?error=حدث خطأ أثناء حظر المستخدم');
   }
 });
 
-app.post('/admin/users/:id/unblock', requireAdminPermission(ADMIN_PERMISSIONS.users), (req, res) => {
+app.post('/admin/users/:id/unblock', requireAdminPermission(ADMIN_PERMISSIONS.users), async (req, res) => {
   try {
     const targetId = req.params.id;
-    const users = db.users();
+    const users = await db.users();
     const idx = users.findIndex(u => u && u.id === targetId);
     if (idx === -1) return res.redirect('/admin/users?error=المستخدم غير موجود');
 
@@ -3075,7 +3204,7 @@ app.post('/admin/users/:id/unblock', requireAdminPermission(ADMIN_PERMISSIONS.us
 
     unblockUserInPlace(target);
     users[idx] = target;
-    db.saveUsers(users);
+    await db.saveUsers(users);
     return res.redirect('/admin/users?success=تم فك الحظر بنجاح');
   } catch (e) {
     return res.redirect('/admin/users?error=حدث خطأ أثناء فك الحظر');
@@ -3083,25 +3212,25 @@ app.post('/admin/users/:id/unblock', requireAdminPermission(ADMIN_PERMISSIONS.us
 });
 
 // Admin - Wallet Balances
-app.get('/admin/wallet-balances', requireAdminPermission(ADMIN_PERMISSIONS.walletBalances), (req, res) => {
-  const users = db.users();
+app.get('/admin/wallet-balances', requireAdminPermission(ADMIN_PERMISSIONS.walletBalances), async (req, res) => {
+  const users = await db.users();
   res.render('admin/wallet-balances', { users, user: req.session.user, error: null, success: null });
 });
 
-app.post('/admin/wallet-balances/:userId', requireAdminPermission(ADMIN_PERMISSIONS.walletBalances), (req, res) => {
+app.post('/admin/wallet-balances/:userId', requireAdminPermission(ADMIN_PERMISSIONS.walletBalances), async (req, res) => {
   const { action } = req.body;
   const amount = Number(req.body.amount);
 
   if (!['set', 'add', 'subtract'].includes(action)) {
-    const users = db.users();
+    const users = await db.users();
     return res.render('admin/wallet-balances', { users, user: req.session.user, error: 'عملية غير صحيحة', success: null });
   }
   if (!Number.isFinite(amount) || amount < 0) {
-    const users = db.users();
+    const users = await db.users();
     return res.render('admin/wallet-balances', { users, user: req.session.user, error: 'قيمة الرصيد غير صحيحة', success: null });
   }
 
-  const users = db.users();
+  const users = await db.users();
   const idx = users.findIndex(u => u.id === req.params.userId);
   if (idx === -1) {
     return res.status(404).send('User not found');
@@ -3119,28 +3248,28 @@ app.post('/admin/wallet-balances/:userId', requireAdminPermission(ADMIN_PERMISSI
   }
 
   users[idx].walletBalance = Math.round(next * 100) / 100;
-  db.saveUsers(users);
+  await db.saveUsers(users);
   return res.render('admin/wallet-balances', { users, user: req.session.user, error: null, success: 'تم تحديث الرصيد بنجاح' });
 });
 
 // Admin - Approve/Reject purchase
-app.post('/admin/purchases/:id/approve', requireAdmin, (req, res) => {
-  const purchases = db.purchases();
+app.post('/admin/purchases/:id/approve', requireAdmin, async (req, res) => {
+  const purchases = await db.purchases();
   const index = purchases.findIndex(p => p.id === req.params.id);
   if (index === -1) return res.status(404).send('Purchase not found');
   
   purchases[index].status = 'approved';
   purchases[index].approvedAt = new Date().toISOString();
-  db.savePurchases(purchases);
+  await db.savePurchases(purchases);
 
   const approvedPurchase = purchases[index];
   // Create invoice after approval (only once per order)
   try {
-    const invoices = db.invoices();
+    const invoices = await db.invoices();
     const orderId = approvedPurchase.orderId || approvedPurchase.id;
     const already = invoices.some(inv => inv && inv.orderId === orderId);
     if (!already) {
-      const users = db.users();
+      const users = await db.users();
       const buyer = users.find(u => u && u.id === approvedPurchase.userId) || null;
 
       const orderPurchases = approvedPurchase.orderId
@@ -3176,38 +3305,38 @@ app.post('/admin/purchases/:id/approve', requireAdmin, (req, res) => {
         totalAfter,
         createdAt: new Date().toISOString()
       });
-      db.saveInvoices(invoices);
+      await db.saveInvoices(invoices);
     }
   } catch (e) {
     // ignore invoice errors
   }
-  const referrals = db.referrals();
+  const referrals = await db.referrals();
   const pendingReferralIndex = referrals.findIndex(
     r => r.referredUserId === approvedPurchase.userId && r.status === 'pending'
   );
   if (pendingReferralIndex !== -1) {
     const referral = referrals[pendingReferralIndex];
-    const users = db.users();
+    const users = await db.users();
     const referrerIndex = users.findIndex(u => u.id === referral.referrerUserId);
     if (referrerIndex !== -1) {
       users[referrerIndex].walletBalance = Number(users[referrerIndex].walletBalance || 0) + Number(referral.rewardAmount || 0);
-      db.saveUsers(users);
+      await db.saveUsers(users);
     }
 
     referrals[pendingReferralIndex].status = 'rewarded';
     referrals[pendingReferralIndex].rewardedAt = new Date().toISOString();
     referrals[pendingReferralIndex].rewardPurchaseId = approvedPurchase.id;
-    db.saveReferrals(referrals);
+    await db.saveReferrals(referrals);
   }
 
   res.redirect('/admin/purchases');
 });
 
 // Invoice PDF (available after approval)
-app.get('/invoice/:orderId.pdf', requireAuth, (req, res) => {
+app.get('/invoice/:orderId.pdf', requireAuth, async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
   const orderId = req.params.orderId;
-  const invoices = db.invoices();
+  const invoices = await db.invoices();
   const inv = invoices.find(i => i && i.orderId === orderId && i.userId === req.session.user.id) || null;
   if (!inv) return res.status(404).send('Invoice not found');
 
@@ -3245,14 +3374,14 @@ app.get('/invoice/:orderId.pdf', requireAuth, (req, res) => {
 });
 
 // Admin - Referrals
-app.get('/admin/referrals', requireAdminPermission(ADMIN_PERMISSIONS.referrals), (req, res) => {
-  const referrals = db.referrals();
-  const users = db.users();
+app.get('/admin/referrals', requireAdminPermission(ADMIN_PERMISSIONS.referrals), async (req, res) => {
+  const referrals = await db.referrals();
+  const users = await db.users();
   res.render('admin/referrals', { referrals, users, user: req.session.user });
 });
 
-app.post('/admin/purchases/:id/reject', requireAdmin, (req, res) => {
-  const purchases = db.purchases();
+app.post('/admin/purchases/:id/reject', requireAdmin, async (req, res) => {
+  const purchases = await db.purchases();
   const index = purchases.findIndex(p => p.id === req.params.id);
   if (index === -1) return res.status(404).send('Purchase not found');
 
@@ -3260,11 +3389,11 @@ app.post('/admin/purchases/:id/reject', requireAdmin, (req, res) => {
   if (purchase.status !== 'rejected') {
     const refundAmount = calculateRefundForRejectedItem({ rejectedPurchase: purchase, allPurchases: purchases });
     if (refundAmount > 0 && !purchase.walletRefundedAt) {
-      const users = db.users();
+      const users = await db.users();
       const userIndex = users.findIndex(u => u.id === purchase.userId);
       if (userIndex !== -1) {
         users[userIndex].walletBalance = Math.round((Number(users[userIndex].walletBalance || 0) + refundAmount) * 100) / 100;
-        db.saveUsers(users);
+        await db.saveUsers(users);
       }
       purchases[index].walletRefundedAt = new Date().toISOString();
       purchases[index].walletRefundAmount = refundAmount;
@@ -3272,23 +3401,23 @@ app.post('/admin/purchases/:id/reject', requireAdmin, (req, res) => {
   }
 
   purchases[index].status = 'rejected';
-  db.savePurchases(purchases);
+  await db.savePurchases(purchases);
   res.redirect('/admin/purchases');
 });
 
 // Admin - Wallet Codes
-app.get('/admin/wallet-codes', requireAdminPermission(ADMIN_PERMISSIONS.walletCodes), (req, res) => {
-  const walletCodes = db.walletCodes();
+app.get('/admin/wallet-codes', requireAdminPermission(ADMIN_PERMISSIONS.walletCodes), async (req, res) => {
+  const walletCodes = await db.walletCodes();
   res.render('admin/wallet-codes', { walletCodes, user: req.session.user, error: null });
 });
 
-app.post('/admin/wallet-codes', requireAdminPermission(ADMIN_PERMISSIONS.walletCodes), (req, res) => {
+app.post('/admin/wallet-codes', requireAdminPermission(ADMIN_PERMISSIONS.walletCodes), async (req, res) => {
   const code = normalizeWalletCode(req.body.code);
   const amount = Number(req.body.amount);
   const expiresAt = parseOptionalIsoDate(req.body.expiresAt);
   const usageLimit = req.body.usageLimit ? Number(req.body.usageLimit) : null;
 
-  const walletCodes = db.walletCodes();
+  const walletCodes = await db.walletCodes();
 
   if (!code) {
     return res.render('admin/wallet-codes', { walletCodes, user: req.session.user, error: 'الكود مطلوب' });
@@ -3315,41 +3444,41 @@ app.post('/admin/wallet-codes', requireAdminPermission(ADMIN_PERMISSIONS.walletC
     lastUsedAt: null
   });
 
-  db.saveWalletCodes(walletCodes);
+  await db.saveWalletCodes(walletCodes);
   return res.redirect('/admin/wallet-codes');
 });
 
-app.post('/admin/wallet-codes/:id/toggle', requireAdmin, (req, res) => {
-  const walletCodes = db.walletCodes();
+app.post('/admin/wallet-codes/:id/toggle', requireAdmin, async (req, res) => {
+  const walletCodes = await db.walletCodes();
   const idx = walletCodes.findIndex(c => c.id === req.params.id);
   if (idx === -1) return res.status(404).send('Code not found');
   walletCodes[idx].active = !walletCodes[idx].active;
-  db.saveWalletCodes(walletCodes);
+  await db.saveWalletCodes(walletCodes);
   return res.redirect('/admin/wallet-codes');
 });
 
-app.post('/admin/wallet-codes/:id/delete', requireAdmin, (req, res) => {
-  const walletCodes = db.walletCodes();
-  db.saveWalletCodes(walletCodes.filter(c => c.id !== req.params.id));
+app.post('/admin/wallet-codes/:id/delete', requireAdmin, async (req, res) => {
+  const walletCodes = await db.walletCodes();
+  await db.saveWalletCodes(walletCodes.filter(c => c.id !== req.params.id));
   return res.redirect('/admin/wallet-codes');
 });
 
 // Modification Request - User requests custom changes
-app.get('/request-modification/:purchaseId', requireAuth, (req, res) => {
-  const purchases = db.purchases();
+app.get('/request-modification/:purchaseId', requireAuth, async (req, res) => {
+  const purchases = await db.purchases();
   const purchase = purchases.find(p => p.id === req.params.purchaseId && p.userId === req.session.user.id);
   if (!purchase) return res.status(404).send('Purchase not found');
   
   res.render('request-modification', { purchase, user: req.session.user, error: null });
 });
 
-app.post('/request-modification/:purchaseId', requireAuth, (req, res) => {
+app.post('/request-modification/:purchaseId', requireAuth, async (req, res) => {
   const { description } = req.body;
-  const purchases = db.purchases();
+  const purchases = await db.purchases();
   const purchase = purchases.find(p => p.id === req.params.purchaseId && p.userId === req.session.user.id);
   if (!purchase) return res.status(404).send('Purchase not found');
   
-  const modifications = db.modifications();
+  const modifications = await db.modifications();
   modifications.push({
     id: uuidv4(),
     purchaseId: purchase.id,
@@ -3361,28 +3490,28 @@ app.post('/request-modification/:purchaseId', requireAuth, (req, res) => {
     createdAt: new Date().toISOString()
   });
   
-  db.saveModifications(modifications);
+  await db.saveModifications(modifications);
   res.redirect('/my-purchases');
 });
 
 // Admin - View modification requests
-app.get('/admin/modifications', requireAdminPermission(ADMIN_PERMISSIONS.modifications), (req, res) => {
-  const modifications = db.modifications();
-  const users = db.users();
-  const purchases = db.purchases();
+app.get('/admin/modifications', requireAdminPermission(ADMIN_PERMISSIONS.modifications), async (req, res) => {
+  const modifications = await db.modifications();
+  const users = await db.users();
+  const purchases = await db.purchases();
   res.render('admin/modifications', { modifications, users, purchases, user: req.session.user });
 });
 
 // Admin - Complete modification request
-app.post('/admin/modifications/:id/complete', requireAdminPermission(ADMIN_PERMISSIONS.modifications), upload.single('modifiedFile'), (req, res) => {
-  const modifications = db.modifications();
+app.post('/admin/modifications/:id/complete', requireAdminPermission(ADMIN_PERMISSIONS.modifications), upload.single('modifiedFile'), async (req, res) => {
+  const modifications = await db.modifications();
   const modIndex = modifications.findIndex(m => m.id === req.params.id);
   if (modIndex === -1) return res.status(404).send('Modification request not found');
   
   const modification = modifications[modIndex];
   
   // Update the purchase with the modified file
-  const purchases = db.purchases();
+  const purchases = await db.purchases();
   const purchaseIndex = purchases.findIndex(p => p.id === modification.purchaseId);
   
   if (purchaseIndex !== -1 && req.file) {
@@ -3390,31 +3519,31 @@ app.post('/admin/modifications/:id/complete', requireAdminPermission(ADMIN_PERMI
     purchases[purchaseIndex].originalFileName = req.file.originalname;
     purchases[purchaseIndex].isModified = true;
     purchases[purchaseIndex].modificationNote = req.body.note || 'Project modified as requested';
-    db.savePurchases(purchases);
+    await db.savePurchases(purchases);
   }
   
   modifications[modIndex].status = 'completed';
   modifications[modIndex].completedAt = new Date().toISOString();
-  db.saveModifications(modifications);
+  await db.saveModifications(modifications);
   
   res.redirect('/admin/modifications');
 });
 // ========== MESSAGING SYSTEM ==========
 
 // User - View chat with admin
-app.get('/messages', requireAuth, (req, res) => {
-  const messages = db.messages().filter(m => 
+app.get('/messages', requireAuth, async (req, res) => {
+  const messages = (await db.messages()).filter(m => 
     (m.senderId === req.session.user.id && m.receiverId === 'admin') ||
     (m.senderId === 'admin' && m.receiverId === req.session.user.id)
   );
   res.render('messages', { messages, user: req.session.user });
 });
 
-app.get('/subscriptions', requireAuth, (req, res) => {
+app.get('/subscriptions', requireAuth, async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
 
-  const plans = db.subscriptionPlans().filter(p => p && p.active);
-  const activeSubscription = getActiveSubscriptionForUser({ userId: req.session.user.id });
+  const plans = (await db.subscriptionPlans()).filter(p => p && p.active);
+  const activeSubscription = await getActiveSubscriptionForUser({ userId: req.session.user.id });
   const activePlan = activeSubscription ? plans.find(p => p.id === activeSubscription.planId) : null;
 
   res.render('subscriptions', {
@@ -3427,18 +3556,18 @@ app.get('/subscriptions', requireAuth, (req, res) => {
   });
 });
 
-app.post('/subscriptions/subscribe', requireAuth, (req, res) => {
+app.post('/subscriptions/subscribe', requireAuth, async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
 
   const planId = req.body.planId;
-  const plans = db.subscriptionPlans().filter(p => p && p.active);
+  const plans = (await db.subscriptionPlans()).filter(p => p && p.active);
   const plan = plans.find(p => p.id === planId);
   if (!plan) return res.redirect('/subscriptions?error=' + encodeURIComponent('الخطة غير صحيحة'));
 
-  const existing = getActiveSubscriptionForUser({ userId: req.session.user.id });
+  const existing = await getActiveSubscriptionForUser({ userId: req.session.user.id });
   if (existing) return res.redirect('/subscriptions?error=' + encodeURIComponent('لديك اشتراك نشط بالفعل'));
 
-  const users = db.users();
+  const users = await db.users();
   const idx = users.findIndex(u => u.id === req.session.user.id);
   if (idx === -1) return res.redirect('/subscriptions?error=' + encodeURIComponent('المستخدم غير موجود'));
 
@@ -3455,7 +3584,7 @@ app.post('/subscriptions/subscribe', requireAuth, (req, res) => {
   let coupons = null;
   let couponIndex = -1;
   if (couponCode) {
-    coupons = db.subscriptionCoupons();
+    coupons = await db.subscriptionCoupons();
     couponIndex = coupons.findIndex(c => normalizeCouponCode(c.code) === couponCode);
     const coupon = couponIndex !== -1 ? coupons[couponIndex] : null;
     const eligibility = getSubscriptionCouponEligibility(coupon);
@@ -3476,18 +3605,18 @@ app.post('/subscriptions/subscribe', requireAuth, (req, res) => {
   }
 
   users[idx].walletBalance = Math.round((bal - Number(priceAfterDiscount || 0)) * 100) / 100;
-  db.saveUsers(users);
+  await db.saveUsers(users);
 
   if (appliedCoupon && coupons && couponIndex !== -1) {
     coupons[couponIndex].usedCount = Number(coupons[couponIndex].usedCount || 0) + 1;
     coupons[couponIndex].lastUsedAt = new Date().toISOString();
-    db.saveSubscriptionCoupons(coupons);
+    await db.saveSubscriptionCoupons(coupons);
   }
 
   const now = new Date();
   const end = new Date(now.getTime() + (Number(plan.durationDays || 30) * 24 * 60 * 60 * 1000));
 
-  const subs = db.subscriptions();
+  const subs = await db.subscriptions();
   const sub = {
     id: uuidv4(),
     userId: req.session.user.id,
@@ -3499,9 +3628,9 @@ app.post('/subscriptions/subscribe', requireAuth, (req, res) => {
     createdAt: now.toISOString()
   };
   subs.push(sub);
-  db.saveSubscriptions(subs);
+  await db.saveSubscriptions(subs);
 
-  const payments = db.subscriptionPayments();
+  const payments = await db.subscriptionPayments();
   payments.push({
     id: uuidv4(),
     subscriptionId: sub.id,
@@ -3515,7 +3644,7 @@ app.post('/subscriptions/subscribe', requireAuth, (req, res) => {
     couponCode: appliedCoupon ? normalizeCouponCode(appliedCoupon.code) : null,
     createdAt: now.toISOString()
   });
-  db.saveSubscriptionPayments(payments);
+  await db.saveSubscriptionPayments(payments);
 
   req.session.user.walletBalance = Number(users[idx].walletBalance || 0);
   req.session.user.subscription = {
@@ -3527,11 +3656,11 @@ app.post('/subscriptions/subscribe', requireAuth, (req, res) => {
   res.redirect('/subscriptions?success=' + encodeURIComponent('تم الاشتراك بنجاح'));
 });
 
-app.post('/subscriptions/cancel', requireAuth, (req, res) => {
+app.post('/subscriptions/cancel', requireAuth, async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
 
-  const subs = db.subscriptions();
-  const active = getActiveSubscriptionForUser({ userId: req.session.user.id });
+  const subs = await db.subscriptions();
+  const active = await getActiveSubscriptionForUser({ userId: req.session.user.id });
   if (!active) return res.redirect('/subscriptions?error=' + encodeURIComponent('لا يوجد اشتراك نشط'));
 
   const idx = subs.findIndex(s => s.id === active.id);
@@ -3539,17 +3668,17 @@ app.post('/subscriptions/cancel', requireAuth, (req, res) => {
 
   subs[idx].status = 'canceled';
   subs[idx].canceledAt = new Date().toISOString();
-  db.saveSubscriptions(subs);
+  await db.saveSubscriptions(subs);
 
   req.session.user.subscription = null;
   res.redirect('/subscriptions?success=' + encodeURIComponent('تم إلغاء الاشتراك'));
 });
 
 // User - Send message to admin
-app.post('/messages', requireAuth, (req, res) => {
+app.post('/messages', requireAuth, async (req, res) => {
   const { content, purchaseId } = req.body;
   
-  const messages = db.messages();
+  const messages = await db.messages();
   messages.push({
     id: uuidv4(),
     senderId: req.session.user.id,
@@ -3561,14 +3690,14 @@ app.post('/messages', requireAuth, (req, res) => {
     createdAt: new Date().toISOString()
   });
   
-  db.saveMessages(messages);
+  await db.saveMessages(messages);
   res.redirect('/messages');
 });
 
 // Admin - View all conversations
-app.get('/admin/messages', requireAdminPermission(ADMIN_PERMISSIONS.messages), (req, res) => {
-  const messages = db.messages();
-  const users = db.users();
+app.get('/admin/messages', requireAdminPermission(ADMIN_PERMISSIONS.messages), async (req, res) => {
+  const messages = await db.messages();
+  const users = await db.users();
   
   // Group messages by user
   const conversations = {};
@@ -3584,32 +3713,32 @@ app.get('/admin/messages', requireAdminPermission(ADMIN_PERMISSIONS.messages), (
 });
 
 // Admin - View specific conversation
-app.get('/admin/messages/:userId', requireAdmin, (req, res) => {
-  const messages = db.messages().filter(m => 
+app.get('/admin/messages/:userId', requireAdmin, async (req, res) => {
+  const messages = (await db.messages()).filter(m => 
     (m.senderId === req.params.userId && m.receiverId === 'admin') ||
     (m.senderId === 'admin' && m.receiverId === req.params.userId)
   );
   
-  const users = db.users();
+  const users = await db.users();
   const chatUser = users.find(u => u.id === req.params.userId);
   
   // Mark messages as read
-  const allMessages = db.messages();
+  const allMessages = await db.messages();
   allMessages.forEach(m => {
     if (m.senderId === req.params.userId && m.receiverId === 'admin') {
       m.read = true;
     }
   });
-  db.saveMessages(allMessages);
+  await db.saveMessages(allMessages);
   
   res.render('admin/conversation', { messages, chatUser, user: req.session.user });
 });
 
 // Admin - Reply to user
-app.post('/admin/messages/:userId', requireAdmin, (req, res) => {
+app.post('/admin/messages/:userId', requireAdmin, async (req, res) => {
   const { content } = req.body;
   
-  const messages = db.messages();
+  const messages = await db.messages();
   messages.push({
     id: uuidv4(),
     senderId: 'admin',
@@ -3620,7 +3749,7 @@ app.post('/admin/messages/:userId', requireAdmin, (req, res) => {
     createdAt: new Date().toISOString()
   });
   
-  db.saveMessages(messages);
+  await db.saveMessages(messages);
   res.redirect(`/admin/messages/${req.params.userId}`);
 });
 
