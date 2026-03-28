@@ -13,6 +13,7 @@ const { Pool } = require('pg');
 const { v4: uuidv4 } = require('uuid');
 const { Server } = require('socket.io');
 const PDFDocument = require('pdfkit');
+const https = require('https');
 const jwt = require('jsonwebtoken');
 const WatermarkProcessor = require('./utils/watermark');
 
@@ -87,6 +88,112 @@ const buildInvoiceNumber = () => {
   const dd = String(d.getDate()).padStart(2, '0');
   const stamp = `${yyyy}${mm}${dd}`;
   return `INV-${stamp}-${String(Date.now()).slice(-6)}`;
+};
+
+const ARABIC_FONT_URL = process.env.ARABIC_FONT_URL || 'https://raw.githubusercontent.com/google/fonts/main/ofl/notonaskharabic/NotoNaskhArabic-Regular.ttf';
+const ARABIC_FONT_PATH = path.join(RUNTIME_ROOT_DIR, 'fonts', 'NotoNaskhArabic-Regular.ttf');
+const ARABIC_FONT_NAME = 'NotoNaskhArabic';
+const ARABIC_CHAR_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
+let arabicFontPromise = null;
+
+const downloadFile = (url, destination, redirects = 0) => new Promise((resolve, reject) => {
+  https.get(url, (res) => {
+    if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects < 5) {
+      res.resume();
+      return resolve(downloadFile(res.headers.location, destination, redirects + 1));
+    }
+    if (res.statusCode !== 200) {
+      res.resume();
+      return reject(new Error(`Failed to download font (HTTP ${res.statusCode})`));
+    }
+    const file = fs.createWriteStream(destination);
+    res.pipe(file);
+    file.on('finish', () => file.close(() => resolve(destination)));
+    file.on('error', reject);
+  }).on('error', reject);
+});
+
+const ensureArabicFont = async () => {
+  try {
+    if (fs.existsSync(ARABIC_FONT_PATH)) return ARABIC_FONT_PATH;
+    if (arabicFontPromise) return arabicFontPromise;
+    arabicFontPromise = (async () => {
+      fs.mkdirSync(path.dirname(ARABIC_FONT_PATH), { recursive: true });
+      await downloadFile(ARABIC_FONT_URL, ARABIC_FONT_PATH);
+      return ARABIC_FONT_PATH;
+    })();
+    return arabicFontPromise;
+  } catch (e) {
+    return null;
+  }
+};
+
+const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, includeCoupon = false }) => {
+  const doc = new PDFDocument({ size: 'A4', margin: 50 });
+  doc.pipe(res);
+
+  const arabicFontPath = await ensureArabicFont();
+  const hasArabicFont = Boolean(arabicFontPath);
+  if (hasArabicFont) {
+    try {
+      doc.registerFont(ARABIC_FONT_NAME, arabicFontPath);
+    } catch (e) {
+      // ignore font registration issues and continue with default font
+    }
+  }
+
+  const writeLine = (text, options = {}) => {
+    const content = text === null || text === undefined ? '-' : String(text);
+    const isArabic = hasArabicFont && ARABIC_CHAR_REGEX.test(content);
+    const { size, ...rest } = options;
+    if (size) doc.fontSize(size);
+    doc.font(isArabic ? ARABIC_FONT_NAME : 'Helvetica');
+    const align = rest.align || (isArabic ? 'right' : 'left');
+    doc.text(content, { ...rest, align });
+  };
+
+  writeLine('Codentra - Invoice', { size: 18, align: 'center' });
+  doc.moveDown(0.5);
+  writeLine(`Invoice: ${inv.invoiceNumber || '-'}`, { size: 12 });
+  writeLine(`Date: ${inv.createdAt ? new Date(inv.createdAt).toLocaleString('en-GB') : '-'}`, { size: 12 });
+  doc.moveDown(0.5);
+
+  writeLine('Customer:', { size: 12 });
+  writeLine(inv.userName || '-', { size: 12 });
+  if (includeEmail && inv.userEmail) {
+    writeLine('Email:', { size: 12 });
+    writeLine(inv.userEmail, { size: 12 });
+  }
+  if (includeCoupon && inv.couponCode) {
+    writeLine('Coupon:', { size: 12 });
+    writeLine(inv.couponCode, { size: 12 });
+  }
+  doc.moveDown(1);
+
+  writeLine('Items:', { size: 14, underline: true });
+  doc.moveDown(0.5);
+
+  items.forEach((it, idx) => {
+    const title = it.projectTitle || it.projectId || 'Project';
+    writeLine(`${idx + 1}. ${title}`, { size: 11 });
+    if (typeof it.priceBefore !== 'undefined') {
+      writeLine(`   Before: ${formatMoney(it.priceBefore)} EGP | Discount: ${formatMoney(it.discountAmount)} EGP | After: ${formatMoney(it.priceAfter)} EGP`, { size: 10 });
+      doc.moveDown(0.2);
+      return;
+    }
+    if (typeof it.price !== 'undefined') {
+      writeLine(`   Price: $${it.price || 0}`, { size: 10 });
+      doc.moveDown(0.2);
+    }
+  });
+
+  doc.moveDown(1);
+  writeLine('Summary:', { size: 14, underline: true });
+  writeLine(`Total Before: ${formatMoney(inv.totalBefore || 0)} EGP`, { size: 12 });
+  writeLine(`Total Discount: ${formatMoney(inv.totalDiscount || 0)} EGP`, { size: 12 });
+  writeLine(`Total After: ${formatMoney(inv.totalAfter || 0)} EGP`, { size: 14 });
+
+  doc.end();
 };
 
 // JWT Helpers
@@ -2611,7 +2718,8 @@ app.post('/meet/:roomId/recording', requireAdmin, meetingRecordingUpload.single(
   }
 
   const storedPath = `uploads/meeting-recordings/${req.file.filename}`;
-  const recordings = await db.meetingRecordings();
+  const recordingsRaw = await db.meetingRecordings();
+  const recordings = Array.isArray(recordingsRaw) ? recordingsRaw : [];
   recordings.push({
     id: uuidv4(),
     roomId,
@@ -2635,15 +2743,16 @@ app.post('/meet/:roomId/recording', requireAdmin, meetingRecordingUpload.single(
 });
 
 app.get('/admin/meeting-recordings', requireSuperAdmin, async (req, res) => {
-  const recordings = await db.meetingRecordings()
-    .slice()
-    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  const recordingsRaw = await db.meetingRecordings();
+  const recordings = (Array.isArray(recordingsRaw) ? recordingsRaw.slice() : []);
+  recordings.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   res.render('admin/meeting-recordings', { user: req.session.user, recordings });
 });
 
 app.get('/admin/meeting-recordings/:id/verify', requireSuperAdmin, async (req, res) => {
   const id = req.params.id;
-  const recordings = await db.meetingRecordings();
+  const recordingsRaw = await db.meetingRecordings();
+  const recordings = Array.isArray(recordingsRaw) ? recordingsRaw : [];
   const rec = recordings.find(r => r && r.id === id);
   if (!rec) return res.redirect('/admin/meeting-recordings');
 
