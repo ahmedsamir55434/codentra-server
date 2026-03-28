@@ -14,7 +14,7 @@
     <div class="container">
       <h1>مشترياتي</h1>
 
-      <% if (user && (user.referralCode || Number(user.walletBalance || 0) > 0)) { %>
+      <% if (user) { %>
         <div class="wallet-balance-card" style="margin-bottom: 16px;">
           <div class="wallet-balance-label">المحفظة</div>
           <div class="wallet-balance-amount">
@@ -26,9 +26,42 @@
             <% if (user.referralCode) { %>
               <div class="wallet-balance-chip">كود الإحالة: <strong><%= user.referralCode %></strong></div>
             <% } %>
+            <% if (walletCardNumber) { %>
+              <div class="wallet-balance-chip">رقم البطاقة: <strong dir="ltr"><%= walletCardNumber %></strong></div>
+            <% } %>
+            <div class="wallet-balance-chip">
+              كلمة مرور البطاقة:
+              <strong><%= hasWalletPaymentPassword ? 'مفعلة' : 'غير مضبوطة' %></strong>
+            </div>
           </div>
         </div>
       <% } %>
+
+      <div class="purchase-card" style="margin-bottom: 16px;">
+        <div class="purchase-info">
+          <h3 style="margin-top: 0;">أمان البطاقة</h3>
+          <p class="modification-note" style="margin-top: 0;">
+            يتم طلب كود تحقق لكل عملية دفع، وإذا كانت العملية أكبر من <strong>5000</strong> جنيه يتم طلب كلمة مرور البطاقة أيضًا.
+          </p>
+          <% if (walletCardError) { %>
+            <div class="error-message"><%= walletCardError %></div>
+          <% } %>
+          <% if (walletCardSuccess) { %>
+            <div class="success-message"><%= walletCardSuccess %></div>
+          <% } %>
+          <form action="/wallet-card/password" method="POST" style="margin-top: 10px;">
+            <div class="form-group">
+              <label for="walletPassword">كلمة مرور البطاقة</label>
+              <input type="password" id="walletPassword" name="password" placeholder="4 أحرف أو أرقام على الأقل" minlength="4" required>
+            </div>
+            <div class="form-group">
+              <label for="walletPasswordConfirm">تأكيد كلمة المرور</label>
+              <input type="password" id="walletPasswordConfirm" name="confirmPassword" placeholder="أعد إدخال كلمة المرور" minlength="4" required>
+            </div>
+            <button type="submit" class="btn btn-primary"><%= hasWalletPaymentPassword ? 'تحديث كلمة مرور البطاقة' : 'حفظ كلمة مرور البطاقة' %></button>
+          </form>
+        </div>
+      </div>
 
       <div class="purchase-card" style="margin-bottom: 16px;">
         <div class="purchase-info">

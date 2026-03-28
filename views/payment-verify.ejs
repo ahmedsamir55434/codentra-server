@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تأكيد الدفع - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/purchases.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="purchases-page">
+    <div class="container" style="max-width: 760px;">
+      <h1>تأكيد الدفع</h1>
+      <p style="opacity: .9; margin-bottom: 20px;">راجع البطاقة وأدخل كود التحقق لإتمام العملية.</p>
+
+      <% if (error) { %>
+        <div class="error-message"><%= error %></div>
+      <% } %>
+      <% if (success) { %>
+        <div class="success-message"><%= success %></div>
+      <% } %>
+
+      <div class="wallet-balance-card" style="margin-bottom: 18px;">
+        <div class="wallet-balance-label">بطاقة Codentra</div>
+        <div class="wallet-balance-amount">
+          <span class="wallet-balance-number" style="font-size: 1.6rem;" dir="ltr"><%= walletCardNumber %></span>
+        </div>
+        <div class="wallet-balance-meta">
+          <div class="wallet-balance-chip">قيمة العملية: <strong><%= Number(attempt.amount || 0) %></strong> جنيه</div>
+          <div class="wallet-balance-chip">نوع العملية: <strong><%= attempt.kind === 'cart' ? 'سلة مشتريات' : 'شراء مشروع' %></strong></div>
+          <div class="wallet-balance-chip">ينتهي الكود خلال 10 دقائق</div>
+        </div>
+      </div>
+
+      <% if (debugCode) { %>
+        <div class="success-message">
+          لم يتم ضبط بريد الإرسال بعد، لذلك يظهر كود التحقق هنا مؤقتًا: <strong dir="ltr"><%= debugCode %></strong>
+        </div>
+      <% } else { %>
+        <div class="success-message">تم إرسال كود التحقق إلى البريد الإلكتروني المرتبط بحسابك.</div>
+      <% } %>
+
+      <% if (attempt.requiresPassword) { %>
+        <div class="error-message">
+          هذه العملية أكبر من <strong><%= highValueThreshold %></strong> جنيه، لذلك يلزم إدخال كلمة مرور البطاقة أيضًا.
+        </div>
+      <% } %>
+
+      <div class="purchase-card">
+        <div class="purchase-info" style="width: 100%;">
+          <form action="/payment/verify/<%= attempt.id %>" method="POST">
+            <div class="form-group">
+              <label for="verificationCode">كود التحقق</label>
+              <input type="text" id="verificationCode" name="verificationCode" inputmode="numeric" minlength="6" maxlength="6" placeholder="أدخل كود التحقق" required>
+            </div>
+
+            <% if (attempt.requiresPassword) { %>
+              <div class="form-group">
+                <label for="walletPassword">كلمة مرور البطاقة</label>
+                <input type="password" id="walletPassword" name="walletPassword" minlength="4" placeholder="كلمة مرور البطاقة" required>
+              </div>
+            <% } %>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="submit" class="btn btn-primary">تأكيد الدفع</button>
+              <a href="/my-purchases" class="btn btn-secondary">إلغاء</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>
