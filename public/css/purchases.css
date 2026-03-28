@@ -113,6 +113,101 @@
   gap: 8px;
 }
 
+.wallet-balance-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.2), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
+
+.wallet-balance-card::before,
+.wallet-balance-card::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.wallet-balance-card::before {
+  width: 180px;
+  height: 180px;
+  top: -85px;
+  left: -50px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.wallet-balance-card::after {
+  width: 130px;
+  height: 130px;
+  bottom: -70px;
+  right: -30px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.wallet-balance-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.wallet-balance-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.wallet-balance-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.wallet-balance-number {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.wallet-balance-currency {
+  font-size: 1rem;
+  color: var(--text-secondary);
+}
+
+.wallet-balance-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.wallet-balance-chip {
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-primary);
+  font-size: 0.92rem;
+}
+
+.wallet-balance-chip strong {
+  color: var(--text-primary);
+}
+
 @media (max-width: 768px) {
   .purchase-card {
     flex-direction: column;
@@ -131,6 +226,10 @@
 
   .purchase-actions .btn {
     width: 100%;
+  }
+
+  .wallet-balance-card {
+    padding: 20px;
   }
 }
 

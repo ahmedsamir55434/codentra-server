@@ -22,13 +22,16 @@
         <div class="success-message"><%= success %></div>
       <% } %>
 
-      <section class="purchase-card" style="margin-bottom: 18px;">
-        <h2 style="margin-bottom: 8px;">ملخص</h2>
-        <div style="display:flex; flex-direction:column; gap:6px;">
-          <div>نقاطك الحالية: <strong><%= points %></strong></div>
-          <div>رصيد المحفظة: <strong><%= Number(user.walletBalance || 0) %></strong> جنيه</div>
-          <div style="opacity:.9;">الحد الأدنى للاستبدال: <strong><%= minPoints %></strong> نقطة</div>
-          <div style="opacity:.9;">قيمة النقاط: <strong><%= pointsToEGP %></strong> جنيه لكل نقطة</div>
+      <section class="wallet-balance-card" style="margin-bottom: 18px;">
+        <div class="wallet-balance-label">المحفظة والنقاط</div>
+        <div class="wallet-balance-amount">
+          <span class="wallet-balance-number"><%= Number(user.walletBalance || 0) %></span>
+          <span class="wallet-balance-currency">جنيه</span>
+        </div>
+        <div class="wallet-balance-meta" style="margin-bottom: 14px;">
+          <div class="wallet-balance-chip">نقاطك الحالية: <strong><%= points %></strong></div>
+          <div class="wallet-balance-chip">الحد الأدنى للاستبدال: <strong><%= minPoints %></strong> نقطة</div>
+          <div class="wallet-balance-chip">قيمة النقاط: <strong><%= pointsToEGP %></strong> جنيه لكل نقطة</div>
         </div>
 
         <form method="POST" action="/loyalty/redeem" style="margin-top: 12px; display:flex; gap:10px; align-items:end; flex-wrap:wrap;">

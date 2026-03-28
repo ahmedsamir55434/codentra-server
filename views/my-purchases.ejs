@@ -15,12 +15,17 @@
       <h1>مشترياتي</h1>
 
       <% if (user && (user.referralCode || Number(user.walletBalance || 0) > 0)) { %>
-        <div class="purchase-card" style="margin-bottom: 16px;">
-          <div class="purchase-info">
+        <div class="wallet-balance-card" style="margin-bottom: 16px;">
+          <div class="wallet-balance-label">المحفظة</div>
+          <div class="wallet-balance-amount">
+            <span class="wallet-balance-number"><%= Number(user.walletBalance || 0) %></span>
+            <span class="wallet-balance-currency">جنيه</span>
+          </div>
+          <div class="wallet-balance-meta">
+            <div class="wallet-balance-chip">الرصيد المتاح للشراء من المشاريع</div>
             <% if (user.referralCode) { %>
-              <p style="margin: 0 0 8px;">كود الإحالة الخاص بك: <strong><%= user.referralCode %></strong></p>
+              <div class="wallet-balance-chip">كود الإحالة: <strong><%= user.referralCode %></strong></div>
             <% } %>
-            <p style="margin: 0;">رصيد المحفظة: <strong><%= Number(user.walletBalance || 0) %></strong> جنيه</p>
           </div>
         </div>
       <% } %>
