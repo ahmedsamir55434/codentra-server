@@ -90,14 +90,6 @@ const buildInvoiceNumber = () => {
   return `INV-${stamp}-${String(Date.now()).slice(-6)}`;
 };
 
-const PROJECT_REQUEST_STATUSES = {
-  pending: { label: 'قيد المراجعة', class: 'pending' },
-  priced: { label: 'تم تحديد السعر', class: 'priced' },
-  approved: { label: 'موافق عليه', class: 'approved' },
-  rejected: { label: 'مرفوض', class: 'rejected' },
-  info_requested: { label: 'يحتاج معلومات إضافية', class: 'info' }
-};
-
 const ARABIC_FONT_URL = process.env.ARABIC_FONT_URL || 'https://raw.githubusercontent.com/google/fonts/main/ofl/notonaskharabic/NotoNaskhArabic-Regular.ttf';
 const ARABIC_FONT_PATH = path.join(RUNTIME_ROOT_DIR, 'fonts', 'NotoNaskhArabic-Regular.ttf');
 const ARABIC_FONT_NAME = 'NotoNaskhArabic';
@@ -298,8 +290,7 @@ const seedRuntimeData = () => {
     'subscriptions.json',
     'subscription-payments.json',
     'subscription-coupons.json',
-    'loyalty-settings.json',
-    'project_requests.json'
+    'loyalty-settings.json'
   ];
 
   seedFiles.forEach((file) => {
@@ -378,7 +369,6 @@ const DATASET_DEFS = [
   { name: 'carts', file: 'carts.json', fallback: [] },
   { name: 'invoices', file: 'invoices.json', fallback: [] },
   { name: 'meetingRecordings', file: 'meeting-recordings.json', fallback: [] },
-  { name: 'projectRequests', file: 'project-requests.json', fallback: [] },
   { name: 'subscriptionPlans', file: 'subscription-plans.json', fallback: [] },
   { name: 'subscriptions', file: 'subscriptions.json', fallback: [] },
   { name: 'subscriptionPayments', file: 'subscription-payments.json', fallback: [] },
@@ -488,8 +478,6 @@ const db = {
   saveAppointments: (data) => writeData('appointments', data),
   meetingRecordings: () => readData('meetingRecordings'),
   saveMeetingRecordings: (data) => writeData('meetingRecordings', data),
-  projectRequests: () => readData('projectRequests'),
-  saveProjectRequests: (data) => writeData('projectRequests', data),
   subscriptionPlans: () => readData('subscriptionPlans'),
   subscriptions: () => readData('subscriptions'),
   subscriptionPayments: () => readData('subscriptionPayments'),
@@ -1040,7 +1028,6 @@ const ADMIN_PERMISSIONS = {
   projects: 'projects',
   purchases: 'purchases',
   modifications: 'modifications',
-  projectRequests: 'projectRequests',
   messages: 'messages',
   reviews: 'reviews',
   coupons: 'coupons',
@@ -2827,7 +2814,6 @@ app.post('/admin/admins', requireSuperAdmin, async (req, res) => {
     [ADMIN_PERMISSIONS.projects]: Boolean(req.body.perm_projects),
     [ADMIN_PERMISSIONS.purchases]: Boolean(req.body.perm_purchases),
     [ADMIN_PERMISSIONS.modifications]: Boolean(req.body.perm_modifications),
-    [ADMIN_PERMISSIONS.projectRequests]: Boolean(req.body.perm_projectRequests),
     [ADMIN_PERMISSIONS.messages]: Boolean(req.body.perm_messages),
     [ADMIN_PERMISSIONS.reviews]: Boolean(req.body.perm_reviews),
     [ADMIN_PERMISSIONS.coupons]: Boolean(req.body.perm_coupons),
@@ -2867,7 +2853,6 @@ app.post('/admin/admins/:id/permissions', requireSuperAdmin, async (req, res) =>
     [ADMIN_PERMISSIONS.projects]: Boolean(req.body.perm_projects),
     [ADMIN_PERMISSIONS.purchases]: Boolean(req.body.perm_purchases),
     [ADMIN_PERMISSIONS.modifications]: Boolean(req.body.perm_modifications),
-    [ADMIN_PERMISSIONS.projectRequests]: Boolean(req.body.perm_projectRequests),
     [ADMIN_PERMISSIONS.messages]: Boolean(req.body.perm_messages),
     [ADMIN_PERMISSIONS.reviews]: Boolean(req.body.perm_reviews),
     [ADMIN_PERMISSIONS.coupons]: Boolean(req.body.perm_coupons),
@@ -3681,105 +3666,19 @@ app.post('/request-modification/:purchaseId', requireAuth, async (req, res) => {
 });
 
 app.get('/project-request', requireAuth, async (req, res) => {
-  res.render('project-request', {
-    user: req.session.user,
-    success: req.query.success || null,
-    error: null,
-    values: { title: '', description: '', requirements: '' }
-  });
+  res.redirect('/?info=' + encodeURIComponent('تم إيقاف ميزة طلب الموقع المخصص حالياً'));
 });
 
 app.post('/project-request', requireAuth, async (req, res) => {
-  const title = (req.body.title || '').trim();
-  const description = (req.body.description || '').trim();
-  const requirements = (req.body.requirements || '').trim();
-
-  if (!title || !description) {
-    return res.render('project-request', {
-      user: req.session.user,
-      error: 'تأكد من إدخال العنوان والوصف',
-      success: null,
-      values: { title, description, requirements }
-    });
-  }
-
-  const requestsRaw = await db.projectRequests();
-  const requests = Array.isArray(requestsRaw) ? requestsRaw : [];
-  const now = new Date().toISOString();
-  requests.unshift({
-    id: uuidv4(),
-    userId: req.session.user.id,
-    userName: req.session.user.name,
-    userEmail: req.session.user.email,
-    title,
-    description,
-    requirements,
-    status: 'pending',
-    price: null,
-    adminNotes: '',
-    requestedInfo: '',
-    adminId: null,
-    adminName: null,
-    createdAt: now,
-    updatedAt: now
-  });
-
-  await db.saveProjectRequests(requests);
-
-  res.render('project-request', {
-    user: req.session.user,
-    success: 'تم تسليم الطلب، سيقوم الأدمن بالرد قريبًا',
-    error: null,
-    values: { title: '', description: '', requirements: '' }
-  });
+  res.redirect('/?info=' + encodeURIComponent('تم إيقاف ميزة طلب الموقع المخصص حالياً'));
 });
 
-app.get('/admin/project-requests', requireAdminPermission(ADMIN_PERMISSIONS.projectRequests), async (req, res) => {
-  const requestsRaw = await db.projectRequests();
-  const requests = Array.isArray(requestsRaw) ? [...requestsRaw] : [];
-  requests.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime());
-
-  const users = await db.users();
-
-  res.render('admin/project-requests', {
-    user: req.session.user,
-    requests,
-    users,
-    statuses: PROJECT_REQUEST_STATUSES,
-    formatMoney,
-    success: req.query.success || null,
-    error: req.query.error || null
-  });
+app.get('/admin/project-requests', requireAdmin, async (req, res) => {
+  res.redirect('/admin?info=' + encodeURIComponent('تم إيقاف ميزة طلب الموقع المخصص حالياً'));
 });
 
-app.post('/admin/project-requests/:id', requireAdminPermission(ADMIN_PERMISSIONS.projectRequests), async (req, res) => {
-  const requestsRaw = await db.projectRequests();
-  const requests = Array.isArray(requestsRaw) ? requestsRaw : [];
-  const idx = requests.findIndex(r => r && r.id === req.params.id);
-  if (idx === -1) {
-    return res.redirect(`/admin/project-requests?error=${encodeURIComponent('الطلب غير موجود')}`);
-  }
-
-  const request = requests[idx];
-  const status = req.body.status;
-  if (status && PROJECT_REQUEST_STATUSES[status]) {
-    request.status = status;
-  }
-
-  if ('price' in req.body) {
-    const parsed = parseFloat(String(req.body.price || '').trim());
-    request.price = Number.isFinite(parsed) ? parsed : null;
-  }
-
-  request.requestedInfo = (req.body.requestedInfo || '').trim();
-  request.adminNotes = (req.body.adminNotes || '').trim();
-  request.adminId = req.session.user.id;
-  request.adminName = req.session.user.name;
-  request.updatedAt = new Date().toISOString();
-
-  await db.saveProjectRequests(requests);
-
-  res.redirect(`/admin/project-requests?success=${encodeURIComponent('تم حفظ التحديث')}`);
+app.post('/admin/project-requests/:id', requireAdmin, async (req, res) => {
+  res.redirect('/admin?info=' + encodeURIComponent('تم إيقاف ميزة طلب الموقع المخصص حالياً'));
 });
 
 // Admin - View modification requests
