@@ -178,7 +178,7 @@ const getMailTransporter = () => {
 const sendPaymentVerificationCode = async ({ user, buyerUser, amount, code, maskedCardNumber }) => {
   const transporter = getMailTransporter();
   if (!transporter || !user || !user.email) {
-    return { delivered: false };
+    return { delivered: false, reason: 'تعذر الوصول إلى بريد صاحب البطاقة أو إعدادات الإرسال غير مكتملة' };
   }
 
   try {
@@ -200,7 +200,7 @@ const sendPaymentVerificationCode = async ({ user, buyerUser, amount, code, mask
     });
     return { delivered: true };
   } catch (error) {
-    return { delivered: false, error };
+    return { delivered: false, error, reason: 'تعذر إرسال كود التحقق إلى بريد صاحب البطاقة' };
   }
 };
 
@@ -1227,6 +1227,7 @@ const createWalletPaymentAttempt = async ({ req, buyerUser, payerUser, amount, k
     amount: Math.round(Number(amount || 0) * 100) / 100,
     requiresPassword: Number(amount || 0) > HIGH_VALUE_PAYMENT_THRESHOLD,
     payerCardLast4: normalizeWalletCardNumber(payerUser.walletCardNumber).slice(-4),
+    ownerVisibleCode: code,
     codeHash: hashPaymentVerificationCode(code),
     expiresAt: new Date(Date.now() + PAYMENT_VERIFICATION_TTL_MS).toISOString(),
     createdAt: new Date().toISOString(),
@@ -1235,25 +1236,7 @@ const createWalletPaymentAttempt = async ({ req, buyerUser, payerUser, amount, k
 
   attempts.push(attempt);
   await db.saveWalletPaymentAttempts(attempts);
-
-  const emailDelivery = await sendPaymentVerificationCode({
-    user: payerUser,
-    buyerUser,
-    amount: attempt.amount,
-    code,
-    maskedCardNumber: maskWalletCardNumber(payerUser.walletCardNumber)
-  });
-  if (!emailDelivery.delivered) {
-    req.session.walletPaymentDebugCode = {
-      attemptId: attempt.id,
-      code,
-      createdAt: new Date().toISOString()
-    };
-  } else {
-    req.session.walletPaymentDebugCode = null;
-  }
-
-  return { attempt, emailDelivered: emailDelivery.delivered, debugCode: emailDelivery.delivered ? null : code };
+  return { attempt };
 };
 
 const getWalletPaymentAttemptById = async ({ attemptId, userId }) => {
@@ -2352,18 +2335,23 @@ app.post('/purchase/:id', requireAuth, async (req, res) => {
     return res.redirect(`/project/${project.id}?couponError=${encodeURIComponent('صاحب البطاقة لم يضبط كلمة مرور البطاقة بعد')}`);
   }
 
-  const { attempt } = await createWalletPaymentAttempt({
-    req,
-    buyerUser: currentUser,
-    payerUser,
-    amount: priceAfterDiscount,
-    kind: 'single',
-    payload: {
-      projectId: project.id,
-      couponCode,
-      referralCode: normalizeReferralCode(req.body.referralCode)
-    }
-  });
+  let attempt = null;
+  try {
+    ({ attempt } = await createWalletPaymentAttempt({
+      req,
+      buyerUser: currentUser,
+      payerUser,
+      amount: priceAfterDiscount,
+      kind: 'single',
+      payload: {
+        projectId: project.id,
+        couponCode,
+        referralCode: normalizeReferralCode(req.body.referralCode)
+      }
+    }));
+  } catch (error) {
+    return res.redirect(`/project/${project.id}?couponError=${encodeURIComponent(error.message || 'تعذر إرسال كود التحقق إلى صاحب البطاقة')}`);
+  }
 
   req.session.user = {
     ...req.session.user,
@@ -2503,17 +2491,22 @@ app.post('/cart/checkout', requireAuth, async (req, res) => {
     return res.redirect('/cart?error=' + encodeURIComponent('صاحب البطاقة لم يضبط كلمة مرور البطاقة بعد'));
   }
 
-  const { attempt } = await createWalletPaymentAttempt({
-    req,
-    buyerUser: currentUser,
-    payerUser,
-    amount: totalAfter,
-    kind: 'cart',
-    payload: {
-      couponCode,
-      itemsSnapshot: items
-    }
-  });
+  let attempt = null;
+  try {
+    ({ attempt } = await createWalletPaymentAttempt({
+      req,
+      buyerUser: currentUser,
+      payerUser,
+      amount: totalAfter,
+      kind: 'cart',
+      payload: {
+        couponCode,
+        itemsSnapshot: items
+      }
+    }));
+  } catch (error) {
+    return res.redirect('/cart?error=' + encodeURIComponent(error.message || 'تعذر إرسال كود التحقق إلى صاحب البطاقة'));
+  }
 
   carts[cartIndex] = { ...cart, updatedAt: new Date().toISOString() };
   await db.saveCarts(carts);
@@ -2544,19 +2537,15 @@ app.get('/payment/verify/:attemptId', requireAuth, async (req, res) => {
 
   ensureUserPaymentProfile({ users, user: currentUser });
   ensureUserPaymentProfile({ users, user: payerUser });
-  const debugCode = req.session.walletPaymentDebugCode && req.session.walletPaymentDebugCode.attemptId === attempt.id
-    ? req.session.walletPaymentDebugCode.code
-    : null;
 
   res.render('payment-verify', {
     user: req.session.user,
     attempt,
     walletCardNumber: formatWalletCardNumber(payerUser.walletCardNumber),
     payerName: payerUser.name || payerUser.email || 'صاحب البطاقة',
-    payerEmailMasked: maskEmail(payerUser.email),
+    ownerVisibleCode: attempt.payerUserId === req.session.user.id ? attempt.ownerVisibleCode : null,
     error: req.query.error || null,
     success: req.query.success || null,
-    debugCode,
     highValueThreshold: HIGH_VALUE_PAYMENT_THRESHOLD
   });
 });
@@ -2622,7 +2611,6 @@ app.post('/payment/verify/:attemptId', requireAuth, async (req, res) => {
   }
 
   await markWalletPaymentAttemptUsed({ attemptId: attempt.id });
-  req.session.walletPaymentDebugCode = null;
   return res.redirect(result.redirect || '/my-purchases');
 });
 
@@ -2651,6 +2639,22 @@ app.get('/my-purchases', requireAuth, async (req, res) => {
   const subscriptionPlans = await db.subscriptionPlans();
   const subscriptions = (await db.subscriptions()).filter(s => s && s.userId === req.session.user.id);
   const subscriptionPayments = (await db.subscriptionPayments()).filter(p => p && p.userId === req.session.user.id);
+  const walletPaymentAttempts = await getWalletPaymentAttemptsState();
+  const walletPaymentRequests = walletPaymentAttempts
+    .filter(attempt => attempt && attempt.payerUserId === req.session.user.id)
+    .map(attempt => {
+      const buyer = users.find(u => u && u.id === attempt.userId) || null;
+      return {
+        id: attempt.id,
+        code: attempt.ownerVisibleCode || null,
+        amount: Number(attempt.amount || 0),
+        requiresPassword: Boolean(attempt.requiresPassword),
+        buyerLabel: buyer ? (buyer.name || buyer.email || buyer.id) : 'مستخدم غير معروف',
+        kindLabel: attempt.kind === 'cart' ? 'سلة مشتريات' : 'شراء مشروع',
+        createdAt: attempt.createdAt
+      };
+    });
+
   res.render('my-purchases', {
     purchases,
     invoices,
@@ -2661,6 +2665,7 @@ app.get('/my-purchases', requireAuth, async (req, res) => {
     walletCardSuccess: req.query.walletCardSuccess || null,
     paymentError: req.query.paymentError || null,
     paymentSuccess: req.query.paymentSuccess || null,
+    walletPaymentRequests,
     redeemError: req.query.redeemError || null,
     redeemSuccess: req.query.redeemSuccess || null,
     subscriptionPlans,
