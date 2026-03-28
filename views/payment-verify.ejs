@@ -28,6 +28,8 @@
           <span class="wallet-balance-number" style="font-size: 1.6rem;" dir="ltr"><%= walletCardNumber %></span>
         </div>
         <div class="wallet-balance-meta">
+          <div class="wallet-balance-chip">صاحب البطاقة: <strong><%= payerName %></strong></div>
+          <div class="wallet-balance-chip">الكود أُرسل إلى: <strong dir="ltr"><%= payerEmailMasked %></strong></div>
           <div class="wallet-balance-chip">قيمة العملية: <strong><%= Number(attempt.amount || 0) %></strong> جنيه</div>
           <div class="wallet-balance-chip">نوع العملية: <strong><%= attempt.kind === 'cart' ? 'سلة مشتريات' : 'شراء مشروع' %></strong></div>
           <div class="wallet-balance-chip">ينتهي الكود خلال 10 دقائق</div>
@@ -39,7 +41,7 @@
           لم يتم ضبط بريد الإرسال بعد، لذلك يظهر كود التحقق هنا مؤقتًا: <strong dir="ltr"><%= debugCode %></strong>
         </div>
       <% } else { %>
-        <div class="success-message">تم إرسال كود التحقق إلى البريد الإلكتروني المرتبط بحسابك.</div>
+        <div class="success-message">تم إرسال كود التحقق إلى البريد الإلكتروني الخاص بصاحب البطاقة.</div>
       <% } %>
 
       <% if (attempt.requiresPassword) { %>

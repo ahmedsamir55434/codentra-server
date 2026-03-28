@@ -114,6 +114,22 @@ const maskWalletCardNumber = (value) => {
   return `**** **** **** ${digits.slice(-4)}`;
 };
 
+const maskEmail = (email) => {
+  if (!email || typeof email !== 'string' || !email.includes('@')) return 'البريد المسجل';
+  const [localPart, domainPart] = email.split('@');
+  if (!localPart || !domainPart) return 'البريد المسجل';
+  const visibleLocal = localPart.length <= 2
+    ? `${localPart[0] || '*'}*`
+    : `${localPart.slice(0, 2)}${'*'.repeat(Math.max(1, localPart.length - 2))}`;
+  const domainPieces = domainPart.split('.');
+  const domainRoot = domainPieces.shift() || '';
+  const domainTld = domainPieces.join('.');
+  const visibleDomain = domainRoot.length <= 2
+    ? `${domainRoot[0] || '*'}*`
+    : `${domainRoot.slice(0, 2)}${'*'.repeat(Math.max(1, domainRoot.length - 2))}`;
+  return `${visibleLocal}@${visibleDomain}${domainTld ? `.${domainTld}` : ''}`;
+};
+
 const createWalletCardNumber = (users, currentUserId) => {
   const used = new Set(
     (Array.isArray(users) ? users : [])
@@ -159,7 +175,7 @@ const getMailTransporter = () => {
   return smtpTransporter;
 };
 
-const sendPaymentVerificationCode = async ({ user, amount, code }) => {
+const sendPaymentVerificationCode = async ({ user, buyerUser, amount, code, maskedCardNumber }) => {
   const transporter = getMailTransporter();
   if (!transporter || !user || !user.email) {
     return { delivered: false };
@@ -173,7 +189,9 @@ const sendPaymentVerificationCode = async ({ user, amount, code }) => {
       text: [
         `Hello ${user.name || 'User'},`,
         '',
-        `Your Codentra payment verification code is: ${code}`,
+        `A Codentra payment request was created using your wallet card ${maskedCardNumber || ''}.`,
+        `Buyer account: ${(buyerUser && (buyerUser.name || buyerUser.email || buyerUser.id)) || 'Unknown user'}`,
+        `Your payment verification code is: ${code}`,
         `Amount: ${formatMoney(amount)} EGP`,
         `This code expires in ${Math.round(PAYMENT_VERIFICATION_TTL_MS / 60000)} minutes.`,
         '',
@@ -821,7 +839,7 @@ const summarizeCart = async ({ cart, couponCode, sessionUser }) => {
   };
 };
 
-const finalizeSingleProjectPurchase = async ({ req, userId, projectId, couponCode, referralCode }) => {
+const finalizeSingleProjectPurchase = async ({ req, buyerUserId, payerUserId, projectId, couponCode, referralCode }) => {
   const projects = await db.projects();
   const project = projects.find(p => p && p.id === projectId);
   if (!project) {
@@ -829,30 +847,36 @@ const finalizeSingleProjectPurchase = async ({ req, userId, projectId, couponCod
   }
 
   const users = await db.users();
-  const currentUserIndex = users.findIndex(u => u && u.id === userId);
-  const currentUser = currentUserIndex !== -1 ? users[currentUserIndex] : null;
-  if (!currentUser) {
+  const buyerIndex = users.findIndex(u => u && u.id === buyerUserId && u.role === 'user');
+  const payerIndex = users.findIndex(u => u && u.id === payerUserId && u.role === 'user');
+  const buyerUser = buyerIndex !== -1 ? users[buyerIndex] : null;
+  const payerUser = payerIndex !== -1 ? users[payerIndex] : null;
+  if (!buyerUser) {
     return { ok: false, redirect: '/login', error: 'User not found' };
   }
+  if (!payerUser) {
+    return { ok: false, redirect: '/my-purchases?walletCardError=' + encodeURIComponent('صاحب البطاقة غير موجود') };
+  }
 
-  ensureUserPaymentProfile({ users, user: currentUser });
+  ensureUserPaymentProfile({ users, user: buyerUser });
+  ensureUserPaymentProfile({ users, user: payerUser });
 
-  const activeSubscription = await getActiveSubscriptionForUser({ userId });
-  const pricingUser = buildSessionUser({ user: currentUser, activeSubscription });
+  const activeSubscription = await getActiveSubscriptionForUser({ userId: buyerUserId });
+  const pricingUser = buildSessionUser({ user: buyerUser, activeSubscription });
 
   if (!isProjectVisibleToUser({ project, sessionUser: pricingUser })) {
     return { ok: false, redirect: '/', error: 'Not allowed' };
   }
 
   const purchases = await db.purchases();
-  const alreadyPurchased = purchases.find(p => p && p.userId === userId && p.projectId === project.id);
+  const alreadyPurchased = purchases.find(p => p && p.userId === buyerUserId && p.projectId === project.id);
   if (alreadyPurchased) {
     return { ok: true, redirect: '/my-purchases' };
   }
 
   const normalizedReferral = normalizeReferralCode(referralCode);
-  const hasAnyPurchase = purchases.some(p => p && p.userId === userId);
-  const canApplyReferralNow = !currentUser.referredBy && !hasAnyPurchase;
+  const hasAnyPurchase = purchases.some(p => p && p.userId === buyerUserId);
+  const canApplyReferralNow = !buyerUser.referredBy && !hasAnyPurchase;
 
   if (normalizedReferral && !canApplyReferralNow) {
     return {
@@ -862,7 +886,7 @@ const finalizeSingleProjectPurchase = async ({ req, userId, projectId, couponCod
   }
 
   if (normalizedReferral && canApplyReferralNow) {
-    const referralCheck = validateReferralCodeForUser({ users, code: normalizedReferral, targetUserId: userId });
+    const referralCheck = validateReferralCodeForUser({ users, code: normalizedReferral, targetUserId: buyerUserId });
     if (!referralCheck.valid) {
       return {
         ok: false,
@@ -870,7 +894,7 @@ const finalizeSingleProjectPurchase = async ({ req, userId, projectId, couponCod
       };
     }
 
-    currentUser.referredBy = {
+    buyerUser.referredBy = {
       referrerUserId: referralCheck.referrerUserId,
       code: referralCheck.normalized,
       createdAt: new Date().toISOString(),
@@ -878,13 +902,13 @@ const finalizeSingleProjectPurchase = async ({ req, userId, projectId, couponCod
     };
 
     const referrals = await db.referrals();
-    const alreadyRecorded = referrals.some(r => r && r.referredUserId === currentUser.id);
+    const alreadyRecorded = referrals.some(r => r && r.referredUserId === buyerUser.id);
     if (!alreadyRecorded) {
       referrals.push({
         id: uuidv4(),
         code: referralCheck.normalized,
         referrerUserId: referralCheck.referrerUserId,
-        referredUserId: currentUser.id,
+        referredUserId: buyerUser.id,
         status: 'pending',
         rewardAmount: 100,
         createdAt: new Date().toISOString(),
@@ -929,22 +953,23 @@ const finalizeSingleProjectPurchase = async ({ req, userId, projectId, couponCod
     priceAfterDiscount = Math.round((base - subDiscount) * 100) / 100;
   }
 
-  const walletBalance = Number(currentUser.walletBalance || 0);
-  if (walletBalance < Number(priceAfterDiscount || 0)) {
+  const payerWalletBalance = Number(payerUser.walletBalance || 0);
+  if (payerWalletBalance < Number(priceAfterDiscount || 0)) {
     return {
       ok: false,
-      redirect: `/project/${project.id}?couponError=${encodeURIComponent('رصيد المحفظة غير كافٍ')}`
+      redirect: `/project/${project.id}?couponError=${encodeURIComponent('رصيد البطاقة غير كافٍ')}`
     };
   }
 
-  currentUser.walletBalance = Math.round((walletBalance - Number(priceAfterDiscount || 0)) * 100) / 100;
+  payerUser.walletBalance = Math.round((payerWalletBalance - Number(priceAfterDiscount || 0)) * 100) / 100;
 
   const earnedPoints = await getLoyaltyEarnedPointsForPurchase({ amountEGP: Number(priceAfterDiscount || 0) });
   if (earnedPoints > 0) {
-    currentUser.loyaltyPoints = normalizeLoyaltyPoints(currentUser.loyaltyPoints) + earnedPoints;
+    buyerUser.loyaltyPoints = normalizeLoyaltyPoints(buyerUser.loyaltyPoints) + earnedPoints;
   }
 
-  users[currentUserIndex] = currentUser;
+  users[buyerIndex] = buyerUser;
+  users[payerIndex] = payerUser;
   await db.saveUsers(users);
 
   if (appliedCoupon && coupons && couponIndex !== -1) {
@@ -954,7 +979,9 @@ const finalizeSingleProjectPurchase = async ({ req, userId, projectId, couponCod
 
   purchases.push({
     id: uuidv4(),
-    userId,
+    userId: buyerUserId,
+    payerUserId: payerUserId,
+    payerCardLast4: normalizeWalletCardNumber(payerUser.walletCardNumber).slice(-4),
     projectId: project.id,
     projectTitle: project.title,
     price: priceAfterDiscount,
@@ -971,27 +998,33 @@ const finalizeSingleProjectPurchase = async ({ req, userId, projectId, couponCod
   });
 
   await db.savePurchases(purchases);
-  req.session.user = buildSessionUser({ user: currentUser, activeSubscription });
-  return { ok: true, redirect: '/my-purchases' };
+  req.session.user = buildSessionUser({ user: buyerUser, activeSubscription });
+  return { ok: true, redirect: '/my-purchases?paymentSuccess=' + encodeURIComponent('تم تأكيد الدفع وإرسال الطلب بنجاح') };
 };
 
-const finalizeCartPurchase = async ({ req, userId, itemsSnapshot, couponCode }) => {
+const finalizeCartPurchase = async ({ req, buyerUserId, payerUserId, itemsSnapshot, couponCode }) => {
   const items = Array.isArray(itemsSnapshot) ? itemsSnapshot.filter(Boolean) : [];
   if (items.length === 0) {
     return { ok: false, redirect: '/cart?error=' + encodeURIComponent('السلة فارغة') };
   }
 
   const users = await db.users();
-  const currentUserIndex = users.findIndex(u => u && u.id === userId);
-  const currentUser = currentUserIndex !== -1 ? users[currentUserIndex] : null;
-  if (!currentUser) {
+  const buyerIndex = users.findIndex(u => u && u.id === buyerUserId && u.role === 'user');
+  const payerIndex = users.findIndex(u => u && u.id === payerUserId && u.role === 'user');
+  const buyerUser = buyerIndex !== -1 ? users[buyerIndex] : null;
+  const payerUser = payerIndex !== -1 ? users[payerIndex] : null;
+  if (!buyerUser) {
     return { ok: false, redirect: '/login', error: 'User not found' };
   }
+  if (!payerUser) {
+    return { ok: false, redirect: '/my-purchases?walletCardError=' + encodeURIComponent('صاحب البطاقة غير موجود') };
+  }
 
-  ensureUserPaymentProfile({ users, user: currentUser });
+  ensureUserPaymentProfile({ users, user: buyerUser });
+  ensureUserPaymentProfile({ users, user: payerUser });
 
-  const activeSubscription = await getActiveSubscriptionForUser({ userId });
-  const pricingUser = buildSessionUser({ user: currentUser, activeSubscription });
+  const activeSubscription = await getActiveSubscriptionForUser({ userId: buyerUserId });
+  const pricingUser = buildSessionUser({ user: buyerUser, activeSubscription });
   const projects = await db.projects();
   const purchases = await db.purchases();
   const summary = await summarizeCart({ cart: { items }, couponCode, sessionUser: pricingUser });
@@ -1009,22 +1042,22 @@ const finalizeCartPurchase = async ({ req, userId, itemsSnapshot, couponCode }) 
     if (!isProjectVisibleToUser({ project, sessionUser: pricingUser })) {
       return { ok: false, redirect: '/cart?error=' + encodeURIComponent('يوجد مشروع غير مسموح لك بشرائه') };
     }
-    const already = purchases.some(existing => existing && existing.userId === userId && existing.projectId === it.projectId);
+    const already = purchases.some(existing => existing && existing.userId === buyerUserId && existing.projectId === it.projectId);
     if (already) {
       return { ok: false, redirect: '/cart?error=' + encodeURIComponent('يوجد مشروع تم شراؤه مسبقاً') };
     }
   }
 
-  const walletBalance = Number(currentUser.walletBalance || 0);
-  if (walletBalance < totalAfter) {
-    return { ok: false, redirect: '/cart?error=' + encodeURIComponent('رصيد المحفظة غير كافٍ') };
+  const payerWalletBalance = Number(payerUser.walletBalance || 0);
+  if (payerWalletBalance < totalAfter) {
+    return { ok: false, redirect: '/cart?error=' + encodeURIComponent('رصيد البطاقة غير كافٍ') };
   }
 
-  currentUser.walletBalance = Math.round((walletBalance - totalAfter) * 100) / 100;
+  payerUser.walletBalance = Math.round((payerWalletBalance - totalAfter) * 100) / 100;
 
   const earnedPoints = await getLoyaltyEarnedPointsForPurchase({ amountEGP: totalAfter });
   if (earnedPoints > 0) {
-    currentUser.loyaltyPoints = normalizeLoyaltyPoints(currentUser.loyaltyPoints) + earnedPoints;
+    buyerUser.loyaltyPoints = normalizeLoyaltyPoints(buyerUser.loyaltyPoints) + earnedPoints;
   }
 
   if (summary.appliedCoupon) {
@@ -1036,11 +1069,11 @@ const finalizeCartPurchase = async ({ req, userId, itemsSnapshot, couponCode }) 
     }
   }
 
-  users[currentUserIndex] = currentUser;
+  users[buyerIndex] = buyerUser;
+  users[payerIndex] = payerUser;
   await db.saveUsers(users);
 
   const orderId = uuidv4();
-  const totalBefore = Number(summary.totalBefore || 0);
   const totalDiscount = Math.round((Number(summary.couponDiscount || 0) + Number(summary.subscriberDiscount || 0)) * 100) / 100;
   const perItemDiscount = items.length ? Math.round((totalDiscount / items.length) * 100) / 100 : 0;
   const perItemDebit = items.length ? Math.round((totalAfter / items.length) * 100) / 100 : 0;
@@ -1058,7 +1091,9 @@ const finalizeCartPurchase = async ({ req, userId, itemsSnapshot, couponCode }) 
     purchases.push({
       id: uuidv4(),
       orderId,
-      userId,
+      userId: buyerUserId,
+      payerUserId: payerUserId,
+      payerCardLast4: normalizeWalletCardNumber(payerUser.walletCardNumber).slice(-4),
       projectId: project.id,
       projectTitle: project.title,
       price: itemDebit,
@@ -1077,9 +1112,9 @@ const finalizeCartPurchase = async ({ req, userId, itemsSnapshot, couponCode }) 
 
   await db.savePurchases(purchases);
 
-  const { carts, cartIndex } = await getOrCreateCartForUser({ userId });
+  const { carts, cartIndex } = await getOrCreateCartForUser({ userId: buyerUserId });
   const projectIds = new Set(items.map(it => it.projectId));
-  const existingCart = carts[cartIndex] || { userId, items: [] };
+  const existingCart = carts[cartIndex] || { userId: buyerUserId, items: [] };
   carts[cartIndex] = {
     ...existingCart,
     items: (Array.isArray(existingCart.items) ? existingCart.items : []).filter(it => it && !projectIds.has(it.projectId)),
@@ -1087,8 +1122,8 @@ const finalizeCartPurchase = async ({ req, userId, itemsSnapshot, couponCode }) 
   };
   await db.saveCarts(carts);
 
-  req.session.user = buildSessionUser({ user: currentUser, activeSubscription });
-  return { ok: true, redirect: '/my-purchases' };
+  req.session.user = buildSessionUser({ user: buyerUser, activeSubscription });
+  return { ok: true, redirect: '/my-purchases?paymentSuccess=' + encodeURIComponent('تم تأكيد الدفع وإرسال الطلب بنجاح') };
 };
 
 const calculateDiscount = ({ priceBefore, coupon }) => {
@@ -1144,6 +1179,12 @@ const normalizeWalletCode = (code) => {
   return code.trim().toUpperCase();
 };
 
+const findUserByWalletCardNumber = ({ users, walletCardNumber }) => {
+  const normalized = normalizeWalletCardNumber(walletCardNumber);
+  if (!normalized) return null;
+  return (Array.isArray(users) ? users : []).find(user => user && user.role === 'user' && normalizeWalletCardNumber(user.walletCardNumber) === normalized) || null;
+};
+
 const getWalletCodeEligibility = (walletCode) => {
   if (!walletCode) return { eligible: false, reason: 'كود غير صحيح' };
   if (!walletCode.active) return { eligible: false, reason: 'الكود غير فعّال' };
@@ -1174,16 +1215,18 @@ const getWalletPaymentAttemptsState = async () => {
   return activeAttempts;
 };
 
-const createWalletPaymentAttempt = async ({ req, user, amount, kind, payload }) => {
+const createWalletPaymentAttempt = async ({ req, buyerUser, payerUser, amount, kind, payload }) => {
   const attempts = await getWalletPaymentAttemptsState();
   const code = generatePaymentVerificationCode();
   const attempt = {
     id: uuidv4(),
-    userId: user.id,
+    userId: buyerUser.id,
+    payerUserId: payerUser.id,
     kind,
     payload,
     amount: Math.round(Number(amount || 0) * 100) / 100,
     requiresPassword: Number(amount || 0) > HIGH_VALUE_PAYMENT_THRESHOLD,
+    payerCardLast4: normalizeWalletCardNumber(payerUser.walletCardNumber).slice(-4),
     codeHash: hashPaymentVerificationCode(code),
     expiresAt: new Date(Date.now() + PAYMENT_VERIFICATION_TTL_MS).toISOString(),
     createdAt: new Date().toISOString(),
@@ -1193,7 +1236,13 @@ const createWalletPaymentAttempt = async ({ req, user, amount, kind, payload }) 
   attempts.push(attempt);
   await db.saveWalletPaymentAttempts(attempts);
 
-  const emailDelivery = await sendPaymentVerificationCode({ user, amount: attempt.amount, code });
+  const emailDelivery = await sendPaymentVerificationCode({
+    user: payerUser,
+    buyerUser,
+    amount: attempt.amount,
+    code,
+    maskedCardNumber: maskWalletCardNumber(payerUser.walletCardNumber)
+  });
   if (!emailDelivery.delivered) {
     req.session.walletPaymentDebugCode = {
       attemptId: attempt.id,
@@ -2254,10 +2303,6 @@ app.post('/purchase/:id', requireAuth, async (req, res) => {
     await db.saveUsers(users);
   }
 
-  if (!currentUser.walletPaymentPasswordHash) {
-    return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('يجب ضبط كلمة مرور البطاقة أولاً'));
-  }
-
   const purchases = await db.purchases();
   const alreadyPurchased = purchases.find(p => p && p.userId === req.session.user.id && p.projectId === project.id);
   if (alreadyPurchased) {
@@ -2286,14 +2331,31 @@ app.post('/purchase/:id', requireAuth, async (req, res) => {
     priceAfterDiscount = Math.round((base - subDiscount) * 100) / 100;
   }
 
-  const walletBalance = Number(currentUser.walletBalance || 0);
+  const enteredCardNumber = normalizeWalletCardNumber(req.body.walletCardNumber) || normalizeWalletCardNumber(currentUser.walletCardNumber);
+  const payerUser = findUserByWalletCardNumber({ users, walletCardNumber: enteredCardNumber });
+  if (!payerUser) {
+    return res.redirect(`/project/${project.id}?couponError=${encodeURIComponent('رقم بطاقة المحفظة غير صحيح')}`);
+  }
+
+  const payerIndex = users.findIndex(u => u && u.id === payerUser.id);
+  if (ensureUserPaymentProfile({ users, user: payerUser }) && payerIndex !== -1) {
+    users[payerIndex] = payerUser;
+    await db.saveUsers(users);
+  }
+
+  const walletBalance = Number(payerUser.walletBalance || 0);
   if (walletBalance < Number(priceAfterDiscount || 0)) {
     return res.redirect(`/project/${project.id}?couponError=${encodeURIComponent('رصيد المحفظة غير كافٍ')}`);
   }
 
+  if (Number(priceAfterDiscount || 0) > HIGH_VALUE_PAYMENT_THRESHOLD && !payerUser.walletPaymentPasswordHash) {
+    return res.redirect(`/project/${project.id}?couponError=${encodeURIComponent('صاحب البطاقة لم يضبط كلمة مرور البطاقة بعد')}`);
+  }
+
   const { attempt } = await createWalletPaymentAttempt({
     req,
-    user: currentUser,
+    buyerUser: currentUser,
+    payerUser,
     amount: priceAfterDiscount,
     kind: 'single',
     payload: {
@@ -2318,10 +2380,14 @@ app.get('/cart', requireAuth, async (req, res) => {
   const users = await db.users();
   const currentUser = users.find(u => u.id === req.session.user.id);
   if (currentUser) {
-    req.session.user = {
-      ...req.session.user,
-      walletBalance: Number(currentUser.walletBalance || 0)
-    };
+    const changed = ensureUserPaymentProfile({ users, user: currentUser });
+    if (changed) {
+      const currentUserIndex = users.findIndex(u => u && u.id === currentUser.id);
+      if (currentUserIndex !== -1) users[currentUserIndex] = currentUser;
+      await db.saveUsers(users);
+    }
+    const activeSubscription = await getActiveSubscriptionForUser({ userId: currentUser.id });
+    req.session.user = buildSessionUser({ user: currentUser, activeSubscription });
   }
 
   const { carts, cart, cartIndex } = await getOrCreateCartForUser({ userId: req.session.user.id });
@@ -2336,6 +2402,7 @@ app.get('/cart', requireAuth, async (req, res) => {
     cart,
     summary,
     couponCode,
+    walletCardNumber: currentUser ? formatWalletCardNumber(currentUser.walletCardNumber) : '',
     error: req.query.error || null
   });
 });
@@ -2409,10 +2476,6 @@ app.post('/cart/checkout', requireAuth, async (req, res) => {
     await db.saveUsers(users);
   }
 
-  if (!currentUser.walletPaymentPasswordHash) {
-    return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('يجب ضبط كلمة مرور البطاقة أولاً'));
-  }
-
   const couponCode = normalizeCouponCode(req.body.couponCode);
   const activeSubscription = await getActiveSubscriptionForUser({ userId: currentUser.id });
   const pricingUser = buildSessionUser({ user: currentUser, activeSubscription });
@@ -2420,14 +2483,30 @@ app.post('/cart/checkout', requireAuth, async (req, res) => {
   const totalAfter = Number(summary.totalAfter || 0);
   if (!(totalAfter > 0)) return res.redirect('/cart?error=' + encodeURIComponent('إجمالي غير صحيح'));
 
-  const walletBalance = Number(currentUser.walletBalance || 0);
+  const enteredCardNumber = normalizeWalletCardNumber(req.body.walletCardNumber) || normalizeWalletCardNumber(currentUser.walletCardNumber);
+  const payerUser = findUserByWalletCardNumber({ users, walletCardNumber: enteredCardNumber });
+  if (!payerUser) {
+    return res.redirect('/cart?error=' + encodeURIComponent('رقم بطاقة المحفظة غير صحيح'));
+  }
+  const payerIndex = users.findIndex(u => u && u.id === payerUser.id);
+  if (ensureUserPaymentProfile({ users, user: payerUser }) && payerIndex !== -1) {
+    users[payerIndex] = payerUser;
+    await db.saveUsers(users);
+  }
+
+  const walletBalance = Number(payerUser.walletBalance || 0);
   if (walletBalance < totalAfter) {
     return res.redirect('/cart?error=' + encodeURIComponent('رصيد المحفظة غير كافٍ'));
   }
 
+  if (totalAfter > HIGH_VALUE_PAYMENT_THRESHOLD && !payerUser.walletPaymentPasswordHash) {
+    return res.redirect('/cart?error=' + encodeURIComponent('صاحب البطاقة لم يضبط كلمة مرور البطاقة بعد'));
+  }
+
   const { attempt } = await createWalletPaymentAttempt({
     req,
-    user: currentUser,
+    buyerUser: currentUser,
+    payerUser,
     amount: totalAfter,
     kind: 'cart',
     payload: {
@@ -2458,8 +2537,13 @@ app.get('/payment/verify/:attemptId', requireAuth, async (req, res) => {
   if (!currentUser) {
     return res.redirect('/login');
   }
+  const payerUser = users.find(u => u && u.id === attempt.payerUserId);
+  if (!payerUser) {
+    return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('صاحب البطاقة غير موجود'));
+  }
 
   ensureUserPaymentProfile({ users, user: currentUser });
+  ensureUserPaymentProfile({ users, user: payerUser });
   const debugCode = req.session.walletPaymentDebugCode && req.session.walletPaymentDebugCode.attemptId === attempt.id
     ? req.session.walletPaymentDebugCode.code
     : null;
@@ -2467,7 +2551,9 @@ app.get('/payment/verify/:attemptId', requireAuth, async (req, res) => {
   res.render('payment-verify', {
     user: req.session.user,
     attempt,
-    walletCardNumber: formatWalletCardNumber(currentUser.walletCardNumber),
+    walletCardNumber: formatWalletCardNumber(payerUser.walletCardNumber),
+    payerName: payerUser.name || payerUser.email || 'صاحب البطاقة',
+    payerEmailMasked: maskEmail(payerUser.email),
     error: req.query.error || null,
     success: req.query.success || null,
     debugCode,
@@ -2492,16 +2578,21 @@ app.post('/payment/verify/:attemptId', requireAuth, async (req, res) => {
   }
 
   const users = await db.users();
-  const currentUser = users.find(u => u && u.id === req.session.user.id);
-  if (!currentUser) {
+  const buyerUser = users.find(u => u && u.id === req.session.user.id);
+  if (!buyerUser) {
     return res.redirect('/login');
   }
+  const payerUser = users.find(u => u && u.id === attempt.payerUserId);
+  if (!payerUser) {
+    return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('صاحب البطاقة غير موجود'));
+  }
 
-  ensureUserPaymentProfile({ users, user: currentUser });
+  ensureUserPaymentProfile({ users, user: buyerUser });
+  ensureUserPaymentProfile({ users, user: payerUser });
 
   if (attempt.requiresPassword) {
     const walletPassword = String(req.body.walletPassword || '');
-    if (!currentUser.walletPaymentPasswordHash || !bcrypt.compareSync(walletPassword, currentUser.walletPaymentPasswordHash)) {
+    if (!payerUser.walletPaymentPasswordHash || !bcrypt.compareSync(walletPassword, payerUser.walletPaymentPasswordHash)) {
       return res.redirect(`/payment/verify/${attempt.id}?error=${encodeURIComponent('كلمة مرور البطاقة غير صحيحة')}`);
     }
   }
@@ -2510,7 +2601,8 @@ app.post('/payment/verify/:attemptId', requireAuth, async (req, res) => {
   if (attempt.kind === 'single') {
     result = await finalizeSingleProjectPurchase({
       req,
-      userId: req.session.user.id,
+      buyerUserId: req.session.user.id,
+      payerUserId: attempt.payerUserId,
       projectId: attempt.payload ? attempt.payload.projectId : null,
       couponCode: attempt.payload ? attempt.payload.couponCode : '',
       referralCode: attempt.payload ? attempt.payload.referralCode : ''
@@ -2518,7 +2610,8 @@ app.post('/payment/verify/:attemptId', requireAuth, async (req, res) => {
   } else if (attempt.kind === 'cart') {
     result = await finalizeCartPurchase({
       req,
-      userId: req.session.user.id,
+      buyerUserId: req.session.user.id,
+      payerUserId: attempt.payerUserId,
       itemsSnapshot: attempt.payload ? attempt.payload.itemsSnapshot : [],
       couponCode: attempt.payload ? attempt.payload.couponCode : ''
     });
@@ -2566,6 +2659,8 @@ app.get('/my-purchases', requireAuth, async (req, res) => {
     hasWalletPaymentPassword: currentUser ? Boolean(currentUser.walletPaymentPasswordHash) : false,
     walletCardError: req.query.walletCardError || null,
     walletCardSuccess: req.query.walletCardSuccess || null,
+    paymentError: req.query.paymentError || null,
+    paymentSuccess: req.query.paymentSuccess || null,
     redeemError: req.query.redeemError || null,
     redeemSuccess: req.query.redeemSuccess || null,
     subscriptionPlans,
@@ -4051,7 +4146,8 @@ app.post('/admin/purchases/:id/reject', requireAdmin, async (req, res) => {
     const refundAmount = calculateRefundForRejectedItem({ rejectedPurchase: purchase, allPurchases: purchases });
     if (refundAmount > 0 && !purchase.walletRefundedAt) {
       const users = await db.users();
-      const userIndex = users.findIndex(u => u.id === purchase.userId);
+      const refundUserId = purchase.payerUserId || purchase.userId;
+      const userIndex = users.findIndex(u => u.id === refundUserId);
       if (userIndex !== -1) {
         users[userIndex].walletBalance = Math.round((Number(users[userIndex].walletBalance || 0) + refundAmount) * 100) / 100;
         await db.saveUsers(users);

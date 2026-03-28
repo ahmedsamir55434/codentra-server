@@ -14,6 +14,13 @@
     <div class="container">
       <h1>مشترياتي</h1>
 
+      <% if (paymentError) { %>
+        <div class="error-message"><%= paymentError %></div>
+      <% } %>
+      <% if (paymentSuccess) { %>
+        <div class="success-message"><%= paymentSuccess %></div>
+      <% } %>
+
       <% if (user) { %>
         <div class="wallet-balance-card" style="margin-bottom: 16px;">
           <div class="wallet-balance-label">المحفظة</div>
@@ -41,7 +48,7 @@
         <div class="purchase-info">
           <h3 style="margin-top: 0;">أمان البطاقة</h3>
           <p class="modification-note" style="margin-top: 0;">
-            يتم طلب كود تحقق لكل عملية دفع، وإذا كانت العملية أكبر من <strong>5000</strong> جنيه يتم طلب كلمة مرور البطاقة أيضًا.
+            يمكن لأي مستخدم الدفع ببطاقتك، لكن كود التحقق سيصل إلى بريدك أنت. وإذا كانت العملية أكبر من <strong>5000</strong> جنيه يتم طلب كلمة مرور البطاقة أيضًا.
           </p>
           <% if (walletCardError) { %>
             <div class="error-message"><%= walletCardError %></div>

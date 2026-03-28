@@ -53,6 +53,7 @@
               <div>خصم الكوبون: <strong><%= summary.couponDiscount %></strong> جنيه</div>
               <div>خصم المشتركين: <strong><%= summary.subscriberDiscount %></strong> جنيه</div>
               <div>الإجمالي بعد الخصم: <strong><%= summary.totalAfter %></strong> جنيه</div>
+              <div style="color:#666; font-size:14px;">يمكنك الدفع ببطاقتك أو ببطاقة مستخدم آخر، وكود التحقق سيصل إلى إيميل صاحب البطاقة.</div>
             </div>
 
             <div class="wallet-balance-card" style="margin-top: 14px; margin-bottom: 14px;">
@@ -68,6 +69,7 @@
 
             <form action="/cart/checkout" method="POST" style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
               <input type="text" name="couponCode" placeholder="كود خصم على إجمالي السلة (اختياري)" style="min-width:260px; flex:1;" value="<%= (couponCode || '') %>">
+              <input type="text" name="walletCardNumber" placeholder="رقم بطاقة المحفظة التي سيتم الخصم منها" style="min-width:260px; flex:1;" value="<%= walletCardNumber || '' %>" required>
               <button type="submit" class="btn btn-primary">إتمام الشراء</button>
             </form>
 
