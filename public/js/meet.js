@@ -2,6 +2,8 @@
   var configEl = document.getElementById('meetConfig');
   var roomId = configEl ? configEl.getAttribute('data-room-id') : null;
   var userRole = configEl ? configEl.getAttribute('data-user-role') : '';
+  var userId = configEl ? configEl.getAttribute('data-user-id') : '';
+  var socketsEnabled = configEl ? configEl.getAttribute('data-sockets-enabled') === '1' : false;
   var statusEl = document.getElementById('meetStatus');
   var localVideo = document.getElementById('localVideo');
   var remoteVideo = document.getElementById('remoteVideo');
@@ -19,10 +21,14 @@
     return;
   }
 
-  var socket = window.io ? window.io() : null;
-  if (!socket) {
-    setStatus('تعذر الاتصال بالسيرفر');
-    return;
+  var socket = null;
+  var useSocket = socketsEnabled && window.io;
+  var lastSignalId = 0;
+  var pollingActive = false;
+  var pollTimer = null;
+
+  if (useSocket) {
+    socket = window.io();
   }
 
   var pc = null;
@@ -43,6 +49,127 @@
     ]
   };
 
+  function sendSignalPayload(payload) {
+    if (useSocket) return Promise.resolve();
+    return fetch('/meet/' + encodeURIComponent(roomId) + '/signal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payload: payload })
+    }).catch(function () {
+      setStatus('تعذر الاتصال بالسيرفر');
+    });
+  }
+
+  function emitJoin() {
+    if (useSocket && socket) {
+      socket.emit('join-room', roomId);
+      return;
+    }
+    sendSignalPayload({ type: 'join-room', roomId: roomId });
+  }
+
+  function emitLeave() {
+    if (useSocket && socket) {
+      socket.emit('leave-room', roomId);
+      return;
+    }
+    sendSignalPayload({ type: 'leave-room', roomId: roomId });
+  }
+
+  function emitOffer(offer) {
+    if (useSocket && socket) {
+      socket.emit('webrtc-offer', { roomId: roomId, offer: offer });
+      return;
+    }
+    sendSignalPayload({ type: 'webrtc-offer', offer: offer });
+  }
+
+  function emitAnswer(answer) {
+    if (useSocket && socket) {
+      socket.emit('webrtc-answer', { roomId: roomId, answer: answer });
+      return;
+    }
+    sendSignalPayload({ type: 'webrtc-answer', answer: answer });
+  }
+
+  function emitIceCandidate(candidate) {
+    if (useSocket && socket) {
+      socket.emit('webrtc-ice-candidate', { roomId: roomId, candidate: candidate });
+      return;
+    }
+    sendSignalPayload({ type: 'webrtc-ice-candidate', candidate: candidate });
+  }
+
+  function handlePeerJoined() {
+    if (userRole !== 'admin') return;
+    createOfferAndSend().catch(function () {
+      setStatus('حدث خطأ أثناء إنشاء الاتصال');
+    });
+
+    startAutoRecordingIfPossible();
+  }
+
+  function handlePeerLeft() {
+    setStatus('الطرف الآخر خرج من الاجتماع');
+    if (remoteVideo) remoteVideo.srcObject = null;
+    stopAndUploadRecording();
+  }
+
+  function handleSignalItem(item) {
+    if (!item || !item.payload) return;
+    if (userId && item.sender_id && item.sender_id === userId) return;
+    var payload = item.payload;
+    if (!payload || !payload.type) return;
+
+    if (payload.type === 'join-room') {
+      handlePeerJoined();
+      return;
+    }
+
+    if (payload.type === 'leave-room') {
+      handlePeerLeft();
+      return;
+    }
+
+    if (payload.type === 'webrtc-offer' && payload.offer) {
+      handleOffer(payload.offer).catch(function () {
+        setStatus('فشل استقبال الاتصال');
+      });
+      return;
+    }
+
+    if (payload.type === 'webrtc-answer' && payload.answer) {
+      handleAnswer(payload.answer).catch(function () {
+        setStatus('فشل تثبيت الاتصال');
+      });
+      return;
+    }
+
+    if (payload.type === 'webrtc-ice-candidate' && payload.candidate) {
+      handleCandidate(payload.candidate);
+    }
+  }
+
+  function pollSignals() {
+    if (pollingActive) return;
+    pollingActive = true;
+
+    fetch('/meet/' + encodeURIComponent(roomId) + '/signal?since=' + encodeURIComponent(lastSignalId))
+      .then(function (resp) { return resp.ok ? resp.json() : null; })
+      .then(function (data) {
+        if (!data || !data.items) return;
+        data.items.forEach(handleSignalItem);
+        if (typeof data.lastId === 'number') lastSignalId = data.lastId;
+      })
+      .catch(function () {
+        setStatus('تعذر الاتصال بالسيرفر');
+      })
+      .finally(function () {
+        pollingActive = false;
+        pollTimer = setTimeout(pollSignals, 2000);
+      });
+  }
+
   function ensurePeerConnection() {
     if (pc) return pc;
 
@@ -50,7 +177,7 @@
 
     pc.onicecandidate = function (event) {
       if (event.candidate) {
-        socket.emit('webrtc-ice-candidate', { roomId: roomId, candidate: event.candidate });
+        emitIceCandidate(event.candidate);
       }
     };
 
@@ -181,7 +308,7 @@
 
     var offer = await peer.createOffer();
     await peer.setLocalDescription(offer);
-    socket.emit('webrtc-offer', { roomId: roomId, offer: offer });
+    emitOffer(offer);
   }
 
   async function handleOffer(offer) {
@@ -189,7 +316,7 @@
     await peer.setRemoteDescription(new RTCSessionDescription(offer));
     var answer = await peer.createAnswer();
     await peer.setLocalDescription(answer);
-    socket.emit('webrtc-answer', { roomId: roomId, answer: answer });
+    emitAnswer(answer);
   }
 
   async function handleAnswer(answer) {
@@ -330,50 +457,45 @@
     await startLocalMedia();
     ensurePeerConnection();
 
-    socket.emit('join-room', roomId);
+    emitJoin();
 
-    socket.on('peer-joined', function () {
-      // If a new peer joined after us, we create an offer.
-      createOfferAndSend().catch(function () {
-        setStatus('حدث خطأ أثناء إنشاء الاتصال');
+    if (useSocket && socket) {
+      socket.on('peer-joined', function () {
+        handlePeerJoined();
       });
 
-      // Start recording automatically on admin side when peer joins.
-      startAutoRecordingIfPossible();
-    });
-
-    socket.on('peer-left', function () {
-      setStatus('الطرف الآخر خرج من الاجتماع');
-      if (remoteVideo) remoteVideo.srcObject = null;
-
-      // Stop and upload recording when peer leaves.
-      stopAndUploadRecording();
-    });
-
-    socket.on('webrtc-offer', function (payload) {
-      if (!payload || !payload.offer) return;
-      handleOffer(payload.offer).catch(function () {
-        setStatus('فشل استقبال الاتصال');
+      socket.on('peer-left', function () {
+        handlePeerLeft();
       });
-    });
 
-    socket.on('webrtc-answer', function (payload) {
-      if (!payload || !payload.answer) return;
-      handleAnswer(payload.answer).catch(function () {
-        setStatus('فشل تثبيت الاتصال');
+      socket.on('webrtc-offer', function (payload) {
+        if (!payload || !payload.offer) return;
+        handleOffer(payload.offer).catch(function () {
+          setStatus('فشل استقبال الاتصال');
+        });
       });
-    });
 
-    socket.on('webrtc-ice-candidate', function (payload) {
-      if (!payload || !payload.candidate) return;
-      handleCandidate(payload.candidate);
-    });
+      socket.on('webrtc-answer', function (payload) {
+        if (!payload || !payload.answer) return;
+        handleAnswer(payload.answer).catch(function () {
+          setStatus('فشل تثبيت الاتصال');
+        });
+      });
+
+      socket.on('webrtc-ice-candidate', function (payload) {
+        if (!payload || !payload.candidate) return;
+        handleCandidate(payload.candidate);
+      });
+    } else {
+      pollSignals();
+    }
 
     window.addEventListener('beforeunload', function () {
-      try { socket.emit('leave-room', roomId); } catch (e) {}
+      try { emitLeave(); } catch (e) {}
       try { if (pc) pc.close(); } catch (e2) {}
       try { if (localStream) localStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e3) {}
       try { if (screenStream) screenStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e4) {}
+      try { if (pollTimer) clearTimeout(pollTimer); } catch (e4) {}
 
       // Attempt to stop and upload. This might not always finish before unload.
       try { stopAndUploadRecording(); } catch (e5) {}
@@ -385,6 +507,7 @@
       shareScreen();
     });
     if (btnEndMeeting) btnEndMeeting.addEventListener('click', async function () {
+      try { emitLeave(); } catch (e) {}
       await stopAndUploadRecording();
       // Give a moment for upload to start, then redirect
       setTimeout(function () {

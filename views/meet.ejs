@@ -10,7 +10,13 @@
 <body>
   <%- include('partials/header') %>
 
-  <div id="meetConfig" data-room-id="<%= roomId %>" data-user-role="<%= user && user.role ? user.role : '' %>"></div>
+  <div
+    id="meetConfig"
+    data-room-id="<%= roomId %>"
+    data-user-role="<%= user && user.role ? user.role : '' %>"
+    data-user-id="<%= user && user.id ? user.id : '' %>"
+    data-sockets-enabled="<%= socketsEnabled ? '1' : '0' %>"
+  ></div>
 
   <main class="meet-page">
     <div class="container">
@@ -45,19 +51,8 @@
 
   <% if (socketsEnabled) { %>
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/js/meet.js"></script>
-  <% } else { %>
-    <script>
-      (function () {
-        var statusEl = document.getElementById('meetStatus');
-        if (statusEl) {
-          statusEl.textContent = 'الميتنجات غير متاحة على استضافة Vercel. شغلها على VPS لتعمل.';
-        }
-        var buttons = document.querySelectorAll('.meet-controls button');
-        buttons.forEach(function (btn) { btn.disabled = true; });
-      })();
-    </script>
   <% } %>
+  <script src="/js/meet.js"></script>
 
   <%- include('partials/footer') %>
 </body>

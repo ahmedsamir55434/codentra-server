@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>طلبات المواقع - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/admins">إدارة الأدمنز</a>
+        <a href="/admin/project-requests" class="active">طلبات المواقع</a>
+        <a href="/admin/modifications">طلبات التعديل</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/admin/messages">الرسائل</a>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/users">المستخدمين</a>
+        <% } %>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>طلبات المواقع</h1>
+
+      <% if (error) { %>
+        <div class="error-message"><%= error %></div>
+      <% } %>
+      <% if (success) { %>
+        <div class="success-message"><%= success %></div>
+      <% } %>
+
+      <% if (!requests || requests.length === 0) { %>
+        <div class="empty-state">
+          <p>لا توجد طلبات بعد</p>
+        </div>
+      <% } else { %>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>العميل</th>
+                <th>الطلب</th>
+                <th>السعر</th>
+                <th>الحالة</th>
+                <th>آخر تعديل</th>
+                <th>إدارة الطلب</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% requests.forEach(reqItem => {
+                const requester = users.find(u => u && u.id === reqItem.userId);
+                const statusMeta = statuses[reqItem.status] || statuses.pending;
+              %>
+                <tr>
+                  <td>
+                    <strong><%= requester ? requester.name : reqItem.userName || 'مستخدم' %></strong><br>
+                    <small><%= requester ? requester.email : reqItem.userEmail || '-' %></small>
+                  </td>
+                  <td class="description-cell">
+                    <strong><%= reqItem.title %></strong>
+                    <p><%= reqItem.description %></p>
+                    <% if (reqItem.requirements) { %>
+                      <p class="muted">مطلوب: <%= reqItem.requirements %></p>
+                    <% } %>
+                    <% if (reqItem.requestedInfo) { %>
+                      <p class="muted">تم طلب معلومات: <%= reqItem.requestedInfo %></p>
+                    <% } %>
+                  </td>
+                  <td><%= reqItem.price ? formatMoney(reqItem.price) + ' ج' : 'جاري التحديد' %></td>
+                  <td>
+                    <span class="status-badge <%= statusMeta.class %>"><%= statusMeta.label %></span>
+                    <% if (reqItem.adminNotes) { %>
+                      <p class="muted">ملاحظة: <%= reqItem.adminNotes %></p>
+                    <% } %>
+                  </td>
+                  <td><%= new Date(reqItem.updatedAt || reqItem.createdAt || 0).toLocaleString('ar-EG') %></td>
+                  <td class="actions">
+                    <form action="/admin/project-requests/<%= reqItem.id %>" method="POST" class="horizontal-form">
+                      <label>السعر (ج)</label>
+                      <input type="number" name="price" step="0.01" value="<%= reqItem.price || '' %>" placeholder="مثلاً 1200">
+                      <label>الحالة</label>
+                      <select name="status">
+                        <% Object.entries(statuses).forEach(([value, meta]) => { %>
+                          <option value="<%= value %>" <%= reqItem.status === value ? 'selected' : '' %>><%= meta.label %></option>
+                        <% }) %>
+                      </select>
+                      <label>طلب معلومات إضافية</label>
+                      <textarea name="requestedInfo" rows="2"><%= reqItem.requestedInfo || '' %></textarea>
+                      <label>ملاحظة للإدارة</label>
+                      <textarea name="adminNotes" rows="2"><%= reqItem.adminNotes || '' %></textarea>
+                      <button type="submit" class="btn btn-sm btn-primary">حفظ</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>
