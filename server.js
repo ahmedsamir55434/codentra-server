@@ -766,6 +766,42 @@ const writeData = async (name, data) => {
   );
 };
 
+const normalizeLoyaltySettingsConfig = (value) => {
+  const defaults = {
+    enabled: true,
+    pointsPerEGP: 0.1,
+    redeem: {
+      enabled: true,
+      pointsToEGP: 0.1,
+      minPoints: 100
+    }
+  };
+
+  const source = (value && typeof value === 'object' && !Array.isArray(value)) ? cloneJson(value) : {};
+  const next = {
+    enabled: source.enabled !== undefined ? Boolean(source.enabled) : defaults.enabled,
+    pointsPerEGP: Number(source.pointsPerEGP),
+    redeem: {
+      enabled: source.redeem && source.redeem.enabled !== undefined ? Boolean(source.redeem.enabled) : defaults.redeem.enabled,
+      pointsToEGP: Number(source.redeem && source.redeem.pointsToEGP),
+      minPoints: Number(source.redeem && source.redeem.minPoints)
+    }
+  };
+
+  if (!Number.isFinite(next.pointsPerEGP) || next.pointsPerEGP <= 0) {
+    next.pointsPerEGP = defaults.pointsPerEGP;
+  }
+  if (!Number.isFinite(next.redeem.pointsToEGP) || next.redeem.pointsToEGP <= 0) {
+    next.redeem.pointsToEGP = defaults.redeem.pointsToEGP;
+  }
+  if (!Number.isFinite(next.redeem.minPoints) || next.redeem.minPoints < 1) {
+    next.redeem.minPoints = defaults.redeem.minPoints;
+  }
+
+  const changed = JSON.stringify(next) !== JSON.stringify(source);
+  return { settings: next, changed };
+};
+
 const db = {
   users: () => readData('users'),
   projects: () => readData('projects'),
@@ -809,8 +845,18 @@ const db = {
   saveSubscriptionPayments: (data) => writeData('subscriptionPayments', data),
   subscriptionCoupons: () => readData('subscriptionCoupons'),
   saveSubscriptionCoupons: (data) => writeData('subscriptionCoupons', data),
-  loyaltySettings: () => readData('loyaltySettings'),
-  saveLoyaltySettings: (data) => writeData('loyaltySettings', data)
+  loyaltySettings: async () => {
+    const raw = await readData('loyaltySettings');
+    const { settings, changed } = normalizeLoyaltySettingsConfig(raw);
+    if (changed) {
+      await writeData('loyaltySettings', settings);
+    }
+    return settings;
+  },
+  saveLoyaltySettings: (data) => {
+    const { settings } = normalizeLoyaltySettingsConfig(data);
+    return writeData('loyaltySettings', settings);
+  }
 };
 
 const getUserNotifications = async ({ userId, limit = null }) => {
