@@ -168,7 +168,7 @@
 
     function setOpen(nextOpen) {
       isOpen = Boolean(nextOpen);
-      panel.hidden = !isOpen;
+      popover.open = isOpen;
       toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       if (isOpen) {
         positionPanel();
@@ -176,7 +176,7 @@
     }
 
     function positionPanel() {
-      if (panel.hidden) return;
+      if (!popover.open) return;
 
       var rect = toggle.getBoundingClientRect();
       var viewportPadding = window.matchMedia('(max-width: 768px)').matches ? 12 : 16;
@@ -235,9 +235,11 @@
       }).catch(function () {});
     }
 
-    toggle.addEventListener('click', function () {
-      setOpen(!isOpen);
+    popover.addEventListener('toggle', function () {
+      isOpen = popover.open;
+      toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       if (isOpen) {
+        positionPanel();
         refreshNotifications(true);
       }
     });

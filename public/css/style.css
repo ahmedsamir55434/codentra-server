@@ -211,6 +211,15 @@ body {
   align-items: center;
 }
 
+.notification-popover > summary {
+  list-style: none;
+}
+
+.notification-popover > summary::-webkit-details-marker,
+.notification-popover > summary::marker {
+  display: none;
+}
+
 .notification-toggle {
   color: var(--text-secondary);
 }
@@ -231,6 +240,10 @@ body {
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
   overflow: hidden;
   z-index: 200;
+}
+
+.notification-popover:not([open]) .notification-panel {
+  display: none;
 }
 
 html[data-theme='light'] .notification-panel {
