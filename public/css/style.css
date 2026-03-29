@@ -234,6 +234,7 @@ body {
   left: 16px;
   width: min(360px, calc(100vw - 32px));
   max-width: calc(100vw - 32px);
+  white-space: normal;
   background: rgba(15, 15, 18, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
@@ -283,6 +284,7 @@ html[data-theme='light'] .notification-panel-footer {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  white-space: normal;
 }
 
 .notification-panel-empty {
@@ -296,6 +298,9 @@ html[data-theme='light'] .notification-panel-footer {
   padding: 14px 16px;
   text-decoration: none;
   color: inherit;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   transition: background 0.2s ease;
 }
@@ -318,11 +323,19 @@ html[data-theme='light'] .notification-preview-item:hover {
 
 .notification-preview-title {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 6px;
   color: var(--text-primary);
+  white-space: normal;
+}
+
+.notification-preview-title strong {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .notification-preview-dot {
@@ -337,12 +350,16 @@ html[data-theme='light'] .notification-preview-item:hover {
   color: var(--text-secondary);
   font-size: 0.92rem;
   line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .notification-preview-time {
   margin-top: 8px;
   font-size: 0.8rem;
   color: var(--text-secondary);
+  white-space: normal;
 }
 
 .user-name {
