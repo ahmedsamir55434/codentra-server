@@ -37,6 +37,12 @@
               <div class="wallet-balance-chip">رقم البطاقة: <strong dir="ltr"><%= walletCardNumber %></strong></div>
             <% } %>
             <div class="wallet-balance-chip">
+              حالة البطاقة:
+              <strong style="color: <%= walletCardFrozen ? '#dc3545' : '#198754' %>;">
+                <%= walletCardFrozen ? 'مجمّدة' : 'نشطة' %>
+              </strong>
+            </div>
+            <div class="wallet-balance-chip">
               كلمة مرور البطاقة:
               <strong><%= hasWalletPaymentPassword ? 'مفعلة' : 'غير مضبوطة' %></strong>
             </div>
@@ -50,12 +56,27 @@
           <p class="modification-note" style="margin-top: 0;">
             يمكن لأي مستخدم الدفع ببطاقتك، لكن كود التحقق سيظهر داخل <strong>مركز الإشعارات</strong> في حسابك فقط. وإذا كانت العملية أكبر من <strong>5000</strong> جنيه يتم طلب كلمة مرور البطاقة أيضًا.
           </p>
+          <p class="modification-note" style="margin-top: 0;">
+            <% if (walletCardFrozen) { %>
+              البطاقة الآن <strong style="color:#dc3545;">مجمّدة</strong> ولن يمكن استخدامها في الدفع حتى تقوم بفك التجميد.
+              <% if (walletCardFrozenAt) { %>
+                تم التجميد بتاريخ <strong><%= new Date(walletCardFrozenAt).toLocaleString('ar-EG') %></strong>.
+              <% } %>
+            <% } else { %>
+              البطاقة الآن <strong style="color:#198754;">نشطة</strong> ويمكنك تجميدها فورًا لو شكيت في أي استخدام غير مرغوب.
+            <% } %>
+          </p>
           <% if (walletCardError) { %>
             <div class="error-message"><%= walletCardError %></div>
           <% } %>
           <% if (walletCardSuccess) { %>
             <div class="success-message"><%= walletCardSuccess %></div>
           <% } %>
+          <form action="/wallet-card/<%= walletCardFrozen ? 'unfreeze' : 'freeze' %>" method="POST" style="margin: 12px 0 18px;">
+            <button type="submit" class="btn <%= walletCardFrozen ? 'btn-success' : 'btn-danger' %>">
+              <%= walletCardFrozen ? 'فك تجميد البطاقة' : 'تجميد البطاقة' %>
+            </button>
+          </form>
           <form action="/wallet-card/password" method="POST" style="margin-top: 10px;">
             <div class="form-group">
               <label for="walletPassword">كلمة مرور البطاقة</label>

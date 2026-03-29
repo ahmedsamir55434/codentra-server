@@ -228,8 +228,18 @@ const ensureUserPaymentProfile = ({ users, user }) => {
     user.walletPaymentPasswordHash = null;
     changed = true;
   }
+  if (user.walletCardFrozen === undefined) {
+    user.walletCardFrozen = false;
+    changed = true;
+  }
+  if (user.walletCardFrozenAt === undefined) {
+    user.walletCardFrozenAt = null;
+    changed = true;
+  }
   return changed;
 };
+
+const isWalletCardFrozen = (user) => Boolean(user && user.walletCardFrozen);
 
 const buildSessionUser = ({ user, activeSubscription }) => {
   return {
@@ -242,6 +252,7 @@ const buildSessionUser = ({ user, activeSubscription }) => {
     referralCode: user.referralCode || null,
     walletBalance: Number(user.walletBalance || 0),
     walletCardNumberMasked: user.role === 'user' ? maskWalletCardNumber(user.walletCardNumber) : null,
+    walletCardFrozen: user.role === 'user' ? Boolean(user.walletCardFrozen) : false,
     hasWalletPaymentPassword: user.role === 'user' ? Boolean(user.walletPaymentPasswordHash) : false,
     loyaltyPoints: user.role === 'user' ? normalizeLoyaltyPoints(user.loyaltyPoints) : 0,
     subscription: activeSubscription ? {
@@ -1080,6 +1091,9 @@ const finalizeSingleProjectPurchase = async ({ req, buyerUserId, payerUserId, pr
   if (!payerUser) {
     return { ok: false, redirect: '/my-purchases?walletCardError=' + encodeURIComponent('صاحب البطاقة غير موجود') };
   }
+  if (isWalletCardFrozen(payerUser)) {
+    return { ok: false, redirect: '/my-purchases?walletCardError=' + encodeURIComponent('بطاقة المحفظة مجمدة حالياً ولا يمكن استخدامها') };
+  }
 
   ensureUserPaymentProfile({ users, user: buyerUser });
   ensureUserPaymentProfile({ users, user: payerUser });
@@ -1252,6 +1266,9 @@ const finalizeCartPurchase = async ({ req, buyerUserId, payerUserId, itemsSnapsh
   }
   if (!payerUser) {
     return { ok: false, redirect: '/my-purchases?walletCardError=' + encodeURIComponent('صاحب البطاقة غير موجود') };
+  }
+  if (isWalletCardFrozen(payerUser)) {
+    return { ok: false, redirect: '/my-purchases?walletCardError=' + encodeURIComponent('بطاقة المحفظة مجمدة حالياً ولا يمكن استخدامها') };
   }
 
   ensureUserPaymentProfile({ users, user: buyerUser });
@@ -1461,6 +1478,10 @@ const getWalletPaymentAttemptsState = async () => {
 };
 
 const createWalletPaymentAttempt = async ({ req, buyerUser, payerUser, amount, kind, payload }) => {
+  if (isWalletCardFrozen(payerUser)) {
+    throw new Error('بطاقة المحفظة مجمدة حالياً');
+  }
+
   const attempts = await getWalletPaymentAttemptsState();
   const code = generatePaymentVerificationCode();
   const attempt = {
@@ -1664,6 +1685,7 @@ app.use(async (req, res, next) => {
       walletBalance: Number(fullUser.walletBalance || 0),
       referralCode: fullUser.referralCode || null,
       walletCardNumberMasked: fullUser.role === 'user' ? maskWalletCardNumber(fullUser.walletCardNumber) : null,
+      walletCardFrozen: fullUser.role === 'user' ? Boolean(fullUser.walletCardFrozen) : false,
       hasWalletPaymentPassword: fullUser.role === 'user' ? Boolean(fullUser.walletPaymentPasswordHash) : false,
       loyaltyPoints: fullUser.role === 'user' ? normalizeLoyaltyPoints(fullUser.loyaltyPoints) : 0
     };
@@ -2569,6 +2591,9 @@ app.post('/purchase/:id', requireAuth, async (req, res) => {
   if (!payerUser) {
     return res.redirect(`/project/${project.id}?couponError=${encodeURIComponent('رقم بطاقة المحفظة غير صحيح')}`);
   }
+  if (isWalletCardFrozen(payerUser)) {
+    return res.redirect(`/project/${project.id}?couponError=${encodeURIComponent('بطاقة المحفظة مجمدة حالياً')}`);
+  }
 
   const payerIndex = users.findIndex(u => u && u.id === payerUser.id);
   if (ensureUserPaymentProfile({ users, user: payerUser }) && payerIndex !== -1) {
@@ -2726,6 +2751,9 @@ app.post('/cart/checkout', requireAuth, async (req, res) => {
   if (!payerUser) {
     return res.redirect('/cart?error=' + encodeURIComponent('رقم بطاقة المحفظة غير صحيح'));
   }
+  if (isWalletCardFrozen(payerUser)) {
+    return res.redirect('/cart?error=' + encodeURIComponent('بطاقة المحفظة مجمدة حالياً'));
+  }
   const payerIndex = users.findIndex(u => u && u.id === payerUser.id);
   if (ensureUserPaymentProfile({ users, user: payerUser }) && payerIndex !== -1) {
     users[payerIndex] = payerUser;
@@ -2784,6 +2812,9 @@ app.get('/payment/verify/:attemptId', requireAuth, async (req, res) => {
   if (!payerUser) {
     return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('صاحب البطاقة غير موجود'));
   }
+  if (isWalletCardFrozen(payerUser)) {
+    return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('بطاقة المحفظة مجمدة حالياً ولا يمكن إكمال الدفع'));
+  }
 
   ensureUserPaymentProfile({ users, user: currentUser });
   ensureUserPaymentProfile({ users, user: payerUser });
@@ -2824,6 +2855,9 @@ app.post('/payment/verify/:attemptId', requireAuth, async (req, res) => {
   const payerUser = users.find(u => u && u.id === attempt.payerUserId);
   if (!payerUser) {
     return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('صاحب البطاقة غير موجود'));
+  }
+  if (isWalletCardFrozen(payerUser)) {
+    return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('بطاقة المحفظة مجمدة حالياً ولا يمكن إكمال الدفع'));
   }
 
   ensureUserPaymentProfile({ users, user: buyerUser });
@@ -2881,6 +2915,7 @@ app.get('/my-purchases', requireAuth, async (req, res) => {
       walletBalance: Number(currentUser.walletBalance || 0),
       loyaltyPoints: normalizeLoyaltyPoints(currentUser.loyaltyPoints),
       walletCardNumberMasked: maskWalletCardNumber(currentUser.walletCardNumber),
+      walletCardFrozen: Boolean(currentUser.walletCardFrozen),
       hasWalletPaymentPassword: Boolean(currentUser.walletPaymentPasswordHash)
     };
   }
@@ -2895,6 +2930,8 @@ app.get('/my-purchases', requireAuth, async (req, res) => {
     invoices,
     user: req.session.user,
     walletCardNumber: currentUser ? formatWalletCardNumber(currentUser.walletCardNumber) : null,
+    walletCardFrozen: currentUser ? Boolean(currentUser.walletCardFrozen) : false,
+    walletCardFrozenAt: currentUser ? (currentUser.walletCardFrozenAt || null) : null,
     hasWalletPaymentPassword: currentUser ? Boolean(currentUser.walletPaymentPasswordHash) : false,
     walletCardError: req.query.walletCardError || null,
     walletCardSuccess: req.query.walletCardSuccess || null,
@@ -2966,6 +3003,7 @@ app.get('/loyalty', requireAuth, async (req, res) => {
     walletBalance: Number(currentUser.walletBalance || 0),
     loyaltyPoints: normalizeLoyaltyPoints(currentUser.loyaltyPoints),
     walletCardNumberMasked: maskWalletCardNumber(currentUser.walletCardNumber),
+    walletCardFrozen: Boolean(currentUser.walletCardFrozen),
     hasWalletPaymentPassword: Boolean(currentUser.walletPaymentPasswordHash)
   };
 
@@ -3005,10 +3043,83 @@ app.post('/wallet-card/password', requireAuth, async (req, res) => {
   req.session.user = {
     ...req.session.user,
     hasWalletPaymentPassword: true,
-    walletCardNumberMasked: maskWalletCardNumber(users[idx].walletCardNumber)
+    walletCardNumberMasked: maskWalletCardNumber(users[idx].walletCardNumber),
+    walletCardFrozen: Boolean(users[idx].walletCardFrozen)
   };
 
   return res.redirect('/my-purchases?walletCardSuccess=' + encodeURIComponent('تم تحديث كلمة مرور البطاقة'));
+});
+
+app.post('/wallet-card/freeze', requireAuth, async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
+
+  const users = await db.users();
+  const idx = users.findIndex(u => u && u.id === req.session.user.id);
+  if (idx === -1) {
+    return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('المستخدم غير موجود'));
+  }
+
+  ensureUserPaymentProfile({ users, user: users[idx] });
+  if (users[idx].walletCardFrozen) {
+    return res.redirect('/my-purchases?walletCardSuccess=' + encodeURIComponent('البطاقة مجمدة بالفعل'));
+  }
+
+  users[idx].walletCardFrozen = true;
+  users[idx].walletCardFrozenAt = new Date().toISOString();
+  await db.saveUsers(users);
+
+  req.session.user = {
+    ...req.session.user,
+    walletCardFrozen: true,
+    walletCardNumberMasked: maskWalletCardNumber(users[idx].walletCardNumber)
+  };
+
+  await createNotification({
+    userId: users[idx].id,
+    title: 'تم تجميد البطاقة',
+    message: 'تم تجميد بطاقة المحفظة ولن يمكن استخدامها في أي عملية دفع حتى يتم فك التجميد.',
+    link: '/my-purchases',
+    kind: 'warning',
+    meta: { type: 'wallet_card_frozen' }
+  });
+
+  return res.redirect('/my-purchases?walletCardSuccess=' + encodeURIComponent('تم تجميد البطاقة بنجاح'));
+});
+
+app.post('/wallet-card/unfreeze', requireAuth, async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
+
+  const users = await db.users();
+  const idx = users.findIndex(u => u && u.id === req.session.user.id);
+  if (idx === -1) {
+    return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('المستخدم غير موجود'));
+  }
+
+  ensureUserPaymentProfile({ users, user: users[idx] });
+  if (!users[idx].walletCardFrozen) {
+    return res.redirect('/my-purchases?walletCardSuccess=' + encodeURIComponent('البطاقة غير مجمدة بالفعل'));
+  }
+
+  users[idx].walletCardFrozen = false;
+  users[idx].walletCardFrozenAt = null;
+  await db.saveUsers(users);
+
+  req.session.user = {
+    ...req.session.user,
+    walletCardFrozen: false,
+    walletCardNumberMasked: maskWalletCardNumber(users[idx].walletCardNumber)
+  };
+
+  await createNotification({
+    userId: users[idx].id,
+    title: 'تم فك تجميد البطاقة',
+    message: 'تم فك تجميد بطاقة المحفظة ويمكن استخدامها مرة أخرى في عمليات الدفع.',
+    link: '/my-purchases',
+    kind: 'success',
+    meta: { type: 'wallet_card_unfrozen' }
+  });
+
+  return res.redirect('/my-purchases?walletCardSuccess=' + encodeURIComponent('تم فك تجميد البطاقة بنجاح'));
 });
 
 app.post('/loyalty/redeem', requireAuth, async (req, res) => {
