@@ -65,12 +65,12 @@
                   <td><%= referred ? (referred.name + ' (' + referred.email + ')') : 'غير معروف' %></td>
                   <td>
                     <% if (r.status === 'rewarded') { %>
-                      <span class="status-badge approved">✓ تم إضافة الرصيد</span>
+                      <span class="status-badge approved">✓ تم إضافة النقاط</span>
                     <% } else { %>
                       <span class="status-badge pending">⏳ بانتظار أول شراء</span>
                     <% } %>
                   </td>
-                  <td><%= Number(r.rewardAmount || 0) %> ج</td>
+                  <td><%= Number(r.rewardPoints != null ? r.rewardPoints : (r.rewardAmount || 0)) %> نقطة</td>
                   <td><%= r.createdAt ? new Date(r.createdAt).toLocaleDateString('ar-EG') : '-' %></td>
                   <td><%= r.rewardedAt ? new Date(r.rewardedAt).toLocaleDateString('ar-EG') : '-' %></td>
                 </tr>

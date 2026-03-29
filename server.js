@@ -1094,6 +1094,14 @@ const getLoyaltyEarnedPointsForPurchase = async ({ amountEGP }) => {
   return Math.floor(amt * rate);
 };
 
+const getReferralRewardPoints = (referral) => {
+  const rawValue = referral && referral.rewardPoints != null
+    ? referral.rewardPoints
+    : (referral ? referral.rewardAmount : 0);
+  const points = normalizeLoyaltyPoints(rawValue);
+  return points > 0 ? points : 100;
+};
+
 const parseOptionalIsoDate = (value) => {
   if (!value) return null;
   const d = new Date(value);
@@ -1296,6 +1304,7 @@ const finalizeSingleProjectPurchase = async ({ req, buyerUserId, payerUserId, pr
         referrerUserId: referralCheck.referrerUserId,
         referredUserId: buyerUser.id,
         status: 'pending',
+        rewardPoints: 100,
         rewardAmount: 100,
         createdAt: new Date().toISOString(),
         rewardedAt: null,
@@ -2286,6 +2295,7 @@ app.post('/register', async (req, res) => {
       referrerUserId: newUser.referredBy.referrerUserId,
       referredUserId: newUser.id,
       status: 'pending',
+      rewardPoints: 100,
       rewardAmount: 100,
       createdAt: new Date().toISOString(),
       rewardedAt: null,
@@ -4870,9 +4880,23 @@ app.post('/admin/purchases/:id/approve', requireAdmin, async (req, res) => {
     const referral = referrals[pendingReferralIndex];
     const users = await db.users();
     const referrerIndex = users.findIndex(u => u.id === referral.referrerUserId);
+    const rewardPoints = getReferralRewardPoints(referral);
     if (referrerIndex !== -1) {
-      users[referrerIndex].walletBalance = Number(users[referrerIndex].walletBalance || 0) + Number(referral.rewardAmount || 0);
+      users[referrerIndex].loyaltyPoints = normalizeLoyaltyPoints(users[referrerIndex].loyaltyPoints) + rewardPoints;
       await db.saveUsers(users);
+
+      await createNotification({
+        userId: users[referrerIndex].id,
+        title: 'تمت إضافة نقاط الإحالة',
+        message: `تمت إضافة ${rewardPoints} نقطة إلى حسابك بعد أول شراء باستخدام كود الإحالة الخاص بك.`,
+        link: '/loyalty',
+        kind: 'success',
+        meta: {
+          type: 'referral_rewarded',
+          referredUserId: approvedPurchase.userId,
+          rewardPoints
+        }
+      });
     }
 
     referrals[pendingReferralIndex].status = 'rewarded';
