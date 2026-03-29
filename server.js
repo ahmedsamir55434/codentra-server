@@ -314,46 +314,85 @@ const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, in
     doc.text(content, { ...rest, align });
   };
 
-  writeLine('Codentra - Invoice', { size: 18, align: 'center' });
-  doc.moveDown(0.5);
-  writeLine(`Invoice: ${inv.invoiceNumber || '-'}`, { size: 12 });
-  writeLine(`Date: ${inv.createdAt ? new Date(inv.createdAt).toLocaleString('en-GB') : '-'}`, { size: 12 });
-  doc.moveDown(0.5);
+  const writeBilingualLine = (arabicLabel, englishLabel, value, options = {}) => {
+    const content = value === null || value === undefined || value === '' ? '-' : String(value);
+    const size = options.size || 11;
+    const gap = options.gap == null ? 0.2 : options.gap;
+    writeLine(`${arabicLabel}: ${content}`, { size, align: 'right' });
+    writeLine(`${englishLabel}: ${content}`, { size, align: 'left' });
+    doc.moveDown(gap);
+  };
 
-  writeLine('Customer:', { size: 12 });
-  writeLine(inv.userName || '-', { size: 12 });
+  const invoiceItems = Array.isArray(items) && items.length
+    ? items
+    : (await db.purchases())
+        .filter(p => p && (p.orderId === inv.orderId || p.id === inv.orderId))
+        .map(p => ({
+          projectTitle: p.projectTitle || p.projectId || 'Project',
+          projectId: p.projectId || null,
+          priceBefore: p.priceBefore != null ? p.priceBefore : p.price,
+          discountAmount: p.discountAmount != null ? p.discountAmount : 0,
+          priceAfter: p.priceAfter != null ? p.priceAfter : p.price,
+          price: p.price
+        }));
+
+  writeLine('Codentra', { size: 20, align: 'center' });
+  writeLine('فاتورة / Invoice', { size: 16, align: 'center' });
+  doc.moveDown(1);
+
+  writeBilingualLine('رقم الفاتورة', 'Invoice No', inv.invoiceNumber || '-');
+  writeBilingualLine('التاريخ', 'Date', inv.createdAt ? new Date(inv.createdAt).toLocaleString('en-GB') : '-');
+  writeBilingualLine('اسم العميل', 'Customer', inv.userName || '-');
   if (includeEmail && inv.userEmail) {
-    writeLine('Email:', { size: 12 });
-    writeLine(inv.userEmail, { size: 12 });
+    writeBilingualLine('البريد الإلكتروني', 'Email', inv.userEmail);
   }
+  writeBilingualLine('رقم الطلب', 'Order ID', inv.orderId || '-');
   if (includeCoupon && inv.couponCode) {
-    writeLine('Coupon:', { size: 12 });
-    writeLine(inv.couponCode, { size: 12 });
+    writeBilingualLine('كود الخصم', 'Coupon', inv.couponCode);
   }
-  doc.moveDown(1);
 
-  writeLine('Items:', { size: 14, underline: true });
+  doc.moveDown(0.5);
+  writeLine('العناصر / Items', { size: 14, underline: true, align: 'center' });
   doc.moveDown(0.5);
 
-  items.forEach((it, idx) => {
-    const title = it.projectTitle || it.projectId || 'Project';
-    writeLine(`${idx + 1}. ${title}`, { size: 11 });
-    if (typeof it.priceBefore !== 'undefined') {
-      writeLine(`   Before: ${formatMoney(it.priceBefore)} EGP | Discount: ${formatMoney(it.discountAmount)} EGP | After: ${formatMoney(it.priceAfter)} EGP`, { size: 10 });
-      doc.moveDown(0.2);
-      return;
-    }
-    if (typeof it.price !== 'undefined') {
-      writeLine(`   Price: $${it.price || 0}`, { size: 10 });
-      doc.moveDown(0.2);
-    }
-  });
+  if (!invoiceItems.length) {
+    writeLine('لا توجد عناصر في هذه الفاتورة', { size: 11, align: 'right' });
+    writeLine('No items available for this invoice', { size: 11, align: 'left' });
+  } else {
+    invoiceItems.forEach((it, idx) => {
+      const title = it.projectTitle || it.projectId || 'Project';
+      writeLine(`العنصر ${idx + 1}: ${title}`, { size: 11, align: 'right' });
+      writeLine(`Item ${idx + 1}: ${title}`, { size: 11, align: 'left' });
 
-  doc.moveDown(1);
-  writeLine('Summary:', { size: 14, underline: true });
-  writeLine(`Total Before: ${formatMoney(inv.totalBefore || 0)} EGP`, { size: 12 });
-  writeLine(`Total Discount: ${formatMoney(inv.totalDiscount || 0)} EGP`, { size: 12 });
-  writeLine(`Total After: ${formatMoney(inv.totalAfter || 0)} EGP`, { size: 14 });
+      if (typeof it.priceBefore !== 'undefined') {
+        writeLine(
+          `قبل الخصم: ${formatMoney(it.priceBefore)} EGP | الخصم: ${formatMoney(it.discountAmount)} EGP | بعد الخصم: ${formatMoney(it.priceAfter)} EGP`,
+          { size: 10, align: 'right' }
+        );
+        writeLine(
+          `Before: ${formatMoney(it.priceBefore)} EGP | Discount: ${formatMoney(it.discountAmount)} EGP | After: ${formatMoney(it.priceAfter)} EGP`,
+          { size: 10, align: 'left' }
+        );
+        doc.moveDown(0.3);
+        return;
+      }
+
+      if (typeof it.price !== 'undefined') {
+        writeLine(`السعر: ${formatMoney(it.price)} EGP`, { size: 10, align: 'right' });
+        writeLine(`Price: ${formatMoney(it.price)} EGP`, { size: 10, align: 'left' });
+        doc.moveDown(0.3);
+      }
+    });
+  }
+
+  doc.moveDown(0.8);
+  writeLine('الملخص / Summary', { size: 14, underline: true, align: 'center' });
+  doc.moveDown(0.5);
+  writeBilingualLine('الإجمالي قبل الخصم', 'Total Before', `${formatMoney(inv.totalBefore || 0)} EGP`);
+  writeBilingualLine('إجمالي الخصم', 'Total Discount', `${formatMoney(inv.totalDiscount || 0)} EGP`);
+  writeBilingualLine('الإجمالي بعد الخصم', 'Total After', `${formatMoney(inv.totalAfter || 0)} EGP`, {
+    size: 13
+  });
 
   doc.end();
 };
@@ -2121,35 +2160,7 @@ app.get('/api/invoice/:orderId.pdf', async (req, res) => {
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="${inv.invoiceNumber || 'invoice'}.pdf"`);
-
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
-  doc.pipe(res);
-
-  doc.fontSize(18).text('Codentra - Invoice', { align: 'center' });
-  doc.moveDown(0.5);
-  doc.fontSize(12).text(`Invoice: ${inv.invoiceNumber || '-'}`);
-  doc.text(`Date: ${inv.createdAt ? new Date(inv.createdAt).toLocaleString('en-GB') : '-'}`);
-  doc.moveDown(0.5);
-  doc.text(`Customer: ${inv.userName || '-'}`);
-  doc.moveDown(0.5);
-  doc.text(`Order ID: ${inv.orderId || '-'}`);
-  doc.moveDown(1);
-
-  doc.fontSize(14).text('Items:', { underline: true });
-  doc.moveDown(0.5);
-
-  const purchases = (await db.purchases()).filter(p => p.orderId === orderId || p.id === orderId);
-  purchases.forEach((p, idx) => {
-    doc.fontSize(12).text(`${idx + 1}. ${p.projectTitle || 'Project'} - $${p.price || 0}`);
-  });
-
-  doc.moveDown(1);
-  doc.fontSize(14).text('Summary:', { underline: true });
-  doc.fontSize(12).text(`Total Before: $${inv.totalBefore || 0}`);
-  doc.text(`Discount: $${inv.totalDiscount || 0}`);
-  doc.text(`Total After: $${inv.totalAfter || 0}`);
-
-  doc.end();
+  await renderInvoicePdf({ res, inv });
 });
 
 // Mobile API - Subscriptions
@@ -4306,35 +4317,7 @@ app.get('/invoice/:orderId.pdf', requireAuth, async (req, res) => {
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="${inv.invoiceNumber || 'invoice'}.pdf"`);
-
-  const doc = new PDFDocument({ size: 'A4', margin: 50 });
-  doc.pipe(res);
-
-  doc.fontSize(18).text('Codentra - Invoice', { align: 'center' });
-  doc.moveDown(0.5);
-  doc.fontSize(12).text(`Invoice: ${inv.invoiceNumber || '-'}`);
-  doc.text(`Date: ${inv.createdAt ? new Date(inv.createdAt).toLocaleString('en-GB') : '-'}`);
-  doc.moveDown(0.5);
-  doc.text(`Customer: ${inv.userName || '-'}`);
-  if (inv.userEmail) doc.text(`Email: ${inv.userEmail}`);
-  if (inv.couponCode) doc.text(`Coupon: ${inv.couponCode}`);
-  doc.moveDown(1);
-
-  doc.fontSize(12).text('Items:', { underline: true });
-  doc.moveDown(0.5);
-
-  (inv.items || []).forEach((it, idx) => {
-    doc.fontSize(11).text(`${idx + 1}) ${it.projectTitle || it.projectId || '-'}`);
-    doc.fontSize(10).text(`   Before: ${formatMoney(it.priceBefore)} EGP | Discount: ${formatMoney(it.discountAmount)} EGP | After: ${formatMoney(it.priceAfter)} EGP`);
-    doc.moveDown(0.2);
-  });
-
-  doc.moveDown(1);
-  doc.fontSize(12).text(`Total Before: ${formatMoney(inv.totalBefore)} EGP`);
-  doc.text(`Total Discount: ${formatMoney(inv.totalDiscount)} EGP`);
-  doc.fontSize(14).text(`Total After: ${formatMoney(inv.totalAfter)} EGP`);
-
-  doc.end();
+  await renderInvoicePdf({ res, inv, includeEmail: true, includeCoupon: true });
 });
 
 // Admin - Referrals
