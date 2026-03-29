@@ -257,6 +257,7 @@ const ARABIC_FONT_URL = process.env.ARABIC_FONT_URL || 'https://raw.githubuserco
 const ARABIC_FONT_PATH = path.join(RUNTIME_ROOT_DIR, 'fonts', 'NotoNaskhArabic-Regular.ttf');
 const ARABIC_FONT_NAME = 'NotoNaskhArabic';
 const ARABIC_CHAR_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
+const LATIN_CHAR_REGEX = /[A-Za-z]/;
 let arabicFontPromise = null;
 
 const downloadFile = (url, destination, redirects = 0) => new Promise((resolve, reject) => {
@@ -325,6 +326,22 @@ const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, in
     doc.text(content, { align: options.align || 'right' });
   };
 
+  const writeMixedLeftLine = (value, options = {}) => {
+    const content = value === null || value === undefined || value === '' ? '-' : String(value);
+    const size = options.size || 11;
+    const segments = content.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]+|[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]+/g) || [content];
+
+    doc.fontSize(size);
+    segments.forEach((segment, index) => {
+      const isArabicSegment = hasArabicFont && ARABIC_CHAR_REGEX.test(segment);
+      doc.font(isArabicSegment ? ARABIC_FONT_NAME : 'Helvetica');
+      doc.text(segment, {
+        align: 'left',
+        continued: index < segments.length - 1
+      });
+    });
+  };
+
   const writeBilingualField = (arabicLabel, englishLabel, value, options = {}) => {
     const content = value === null || value === undefined || value === '' ? '-' : String(value);
     const arabicValue = options.arabicValue === null || options.arabicValue === undefined || options.arabicValue === ''
@@ -338,7 +355,8 @@ const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, in
 
     writeLine(arabicLabel, { size, align: 'right' });
     writeValueLine(arabicValue, { size, align: 'right' });
-    writeLine(`${englishLabel}: ${englishValue}`, { size, align: 'left' });
+    writeLine(englishLabel, { size, align: 'left' });
+    writeMixedLeftLine(englishValue, { size });
     doc.moveDown(gap);
   };
 
@@ -382,9 +400,13 @@ const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, in
   } else {
     invoiceItems.forEach((it, idx) => {
       const title = it.projectTitle || it.projectId || 'Project';
-      writeLine(`العنصر ${idx + 1}`, { size: 11, align: 'right' });
-      writeValueLine(title, { size: 11, align: 'right' });
-      writeLine(`Item ${idx + 1}: ${title}`, { size: 11, align: 'left' });
+      const isMixedTitle = ARABIC_CHAR_REGEX.test(title) && LATIN_CHAR_REGEX.test(title);
+      writeLine(`العنصر رقم ${idx + 1}`, { size: 11, align: 'right' });
+      if (!isMixedTitle) {
+        writeValueLine(title, { size: 11, align: 'right' });
+      }
+      writeLine(`Item ${idx + 1}`, { size: 11, align: 'left' });
+      writeMixedLeftLine(title, { size: 11 });
 
       if (typeof it.priceBefore !== 'undefined') {
         writeLine(
