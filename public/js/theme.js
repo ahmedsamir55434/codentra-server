@@ -170,6 +170,29 @@
       isOpen = Boolean(nextOpen);
       panel.hidden = !isOpen;
       toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      if (isOpen) {
+        positionPanel();
+      }
+    }
+
+    function positionPanel() {
+      if (panel.hidden) return;
+
+      var rect = toggle.getBoundingClientRect();
+      var viewportPadding = window.matchMedia('(max-width: 768px)').matches ? 12 : 16;
+      var panelWidth = Math.min(window.innerWidth - (viewportPadding * 2), window.matchMedia('(max-width: 768px)').matches ? 340 : 360);
+      var left = rect.right - panelWidth;
+
+      if (left < viewportPadding) {
+        left = viewportPadding;
+      }
+      if (left + panelWidth > window.innerWidth - viewportPadding) {
+        left = window.innerWidth - panelWidth - viewportPadding;
+      }
+
+      panel.style.width = panelWidth + 'px';
+      panel.style.left = left + 'px';
+      panel.style.top = (rect.bottom + 12) + 'px';
     }
 
     function getSignature(payload) {
@@ -268,6 +291,18 @@
     window.addEventListener('focus', function () {
       refreshNotifications(true);
     });
+
+    window.addEventListener('resize', function () {
+      if (isOpen) {
+        positionPanel();
+      }
+    });
+
+    window.addEventListener('scroll', function () {
+      if (isOpen) {
+        positionPanel();
+      }
+    }, { passive: true });
 
     refreshNotifications(true);
     pollTimer = window.setInterval(function () {

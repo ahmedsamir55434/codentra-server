@@ -220,10 +220,11 @@ body {
 }
 
 .notification-panel {
-  position: absolute;
-  top: calc(100% + 12px);
-  inset-inline-start: 0;
+  position: fixed;
+  top: 84px;
+  left: 16px;
   width: min(360px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
   background: rgba(15, 15, 18, 0.96);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 18px;
@@ -343,9 +344,8 @@ html[data-theme='light'] .notification-preview-item:hover {
 
 @media (max-width: 768px) {
   .notification-panel {
-    inset-inline-start: auto;
-    inset-inline-end: 0;
     width: min(340px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
   }
 }
 
