@@ -316,12 +316,29 @@ const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, in
     doc.text(content, { ...rest, align });
   };
 
-  const writeBilingualLine = (arabicLabel, englishLabel, value, options = {}) => {
+  const writeValueLine = (value, options = {}) => {
     const content = value === null || value === undefined || value === '' ? '-' : String(value);
+    const isArabicValue = hasArabicFont && ARABIC_CHAR_REGEX.test(content);
+    const size = options.size || 11;
+    doc.fontSize(size);
+    doc.font(isArabicValue ? ARABIC_FONT_NAME : 'Helvetica');
+    doc.text(content, { align: options.align || 'right' });
+  };
+
+  const writeBilingualField = (arabicLabel, englishLabel, value, options = {}) => {
+    const content = value === null || value === undefined || value === '' ? '-' : String(value);
+    const arabicValue = options.arabicValue === null || options.arabicValue === undefined || options.arabicValue === ''
+      ? content
+      : String(options.arabicValue);
+    const englishValue = options.englishValue === null || options.englishValue === undefined || options.englishValue === ''
+      ? content
+      : String(options.englishValue);
     const size = options.size || 11;
     const gap = options.gap == null ? 0.2 : options.gap;
-    writeLine(`${arabicLabel}: ${content}`, { size, align: 'right' });
-    writeLine(`${englishLabel}: ${content}`, { size, align: 'left' });
+
+    writeLine(arabicLabel, { size, align: 'right' });
+    writeValueLine(arabicValue, { size, align: 'right' });
+    writeLine(`${englishLabel}: ${englishValue}`, { size, align: 'left' });
     doc.moveDown(gap);
   };
 
@@ -339,22 +356,24 @@ const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, in
         }));
 
   writeLine('Codentra', { size: 20, align: 'center' });
-  writeLine('فاتورة / Invoice', { size: 16, align: 'center' });
+  writeLine('فاتورة', { size: 16, align: 'center' });
+  writeLine('Invoice', { size: 16, align: 'center' });
   doc.moveDown(1);
 
-  writeBilingualLine('رقم الفاتورة', 'Invoice No', inv.invoiceNumber || '-');
-  writeBilingualLine('التاريخ', 'Date', inv.createdAt ? new Date(inv.createdAt).toLocaleString('en-GB') : '-');
-  writeBilingualLine('اسم العميل', 'Customer', inv.userName || '-');
+  writeBilingualField('رقم الفاتورة', 'Invoice No', inv.invoiceNumber || '-');
+  writeBilingualField('التاريخ', 'Date', inv.createdAt ? new Date(inv.createdAt).toLocaleString('en-GB') : '-');
+  writeBilingualField('اسم العميل', 'Customer', inv.userName || '-');
   if (includeEmail && inv.userEmail) {
-    writeBilingualLine('البريد الإلكتروني', 'Email', inv.userEmail);
+    writeBilingualField('البريد الإلكتروني', 'Email', inv.userEmail);
   }
-  writeBilingualLine('رقم الطلب', 'Order ID', inv.orderId || '-');
+  writeBilingualField('رقم الطلب', 'Order ID', inv.orderId || '-');
   if (includeCoupon && inv.couponCode) {
-    writeBilingualLine('كود الخصم', 'Coupon', inv.couponCode);
+    writeBilingualField('كود الخصم', 'Coupon', inv.couponCode);
   }
 
   doc.moveDown(0.5);
-  writeLine('العناصر / Items', { size: 14, underline: true, align: 'center' });
+  writeLine('العناصر', { size: 14, underline: true, align: 'center' });
+  writeLine('Items', { size: 14, underline: true, align: 'center' });
   doc.moveDown(0.5);
 
   if (!invoiceItems.length) {
@@ -363,12 +382,13 @@ const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, in
   } else {
     invoiceItems.forEach((it, idx) => {
       const title = it.projectTitle || it.projectId || 'Project';
-      writeLine(`العنصر ${idx + 1}: ${title}`, { size: 11, align: 'right' });
+      writeLine(`العنصر ${idx + 1}`, { size: 11, align: 'right' });
+      writeValueLine(title, { size: 11, align: 'right' });
       writeLine(`Item ${idx + 1}: ${title}`, { size: 11, align: 'left' });
 
       if (typeof it.priceBefore !== 'undefined') {
         writeLine(
-          `قبل الخصم: ${formatMoney(it.priceBefore)} EGP | الخصم: ${formatMoney(it.discountAmount)} EGP | بعد الخصم: ${formatMoney(it.priceAfter)} EGP`,
+          `قبل الخصم: ${formatMoney(it.priceBefore)} جنيه | الخصم: ${formatMoney(it.discountAmount)} جنيه | بعد الخصم: ${formatMoney(it.priceAfter)} جنيه`,
           { size: 10, align: 'right' }
         );
         writeLine(
@@ -380,7 +400,7 @@ const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, in
       }
 
       if (typeof it.price !== 'undefined') {
-        writeLine(`السعر: ${formatMoney(it.price)} EGP`, { size: 10, align: 'right' });
+        writeLine(`السعر: ${formatMoney(it.price)} جنيه`, { size: 10, align: 'right' });
         writeLine(`Price: ${formatMoney(it.price)} EGP`, { size: 10, align: 'left' });
         doc.moveDown(0.3);
       }
@@ -388,11 +408,17 @@ const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, in
   }
 
   doc.moveDown(0.8);
-  writeLine('الملخص / Summary', { size: 14, underline: true, align: 'center' });
+  writeLine('الملخص', { size: 14, underline: true, align: 'center' });
+  writeLine('Summary', { size: 14, underline: true, align: 'center' });
   doc.moveDown(0.5);
-  writeBilingualLine('الإجمالي قبل الخصم', 'Total Before', `${formatMoney(inv.totalBefore || 0)} EGP`);
-  writeBilingualLine('إجمالي الخصم', 'Total Discount', `${formatMoney(inv.totalDiscount || 0)} EGP`);
-  writeBilingualLine('الإجمالي بعد الخصم', 'Total After', `${formatMoney(inv.totalAfter || 0)} EGP`, {
+  writeBilingualField('الإجمالي قبل الخصم', 'Total Before', `${formatMoney(inv.totalBefore || 0)} جنيه`, {
+    englishValue: `${formatMoney(inv.totalBefore || 0)} EGP`
+  });
+  writeBilingualField('إجمالي الخصم', 'Total Discount', `${formatMoney(inv.totalDiscount || 0)} جنيه`, {
+    englishValue: `${formatMoney(inv.totalDiscount || 0)} EGP`
+  });
+  writeBilingualField('الإجمالي بعد الخصم', 'Total After', `${formatMoney(inv.totalAfter || 0)} جنيه`, {
+    englishValue: `${formatMoney(inv.totalAfter || 0)} EGP`,
     size: 13
   });
 
