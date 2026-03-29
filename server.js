@@ -293,7 +293,7 @@ const ensureArabicFont = async () => {
   }
 };
 
-const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, includeCoupon = false }) => {
+const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, includeCoupon = false, paymentInfo = null }) => {
   const doc = new PDFDocument({ size: 'A4', margin: 50 });
   doc.pipe(res);
 
@@ -388,6 +388,14 @@ const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, in
   if (includeCoupon && inv.couponCode) {
     writeBilingualField('كود الخصم', 'Coupon', inv.couponCode);
   }
+  if (paymentInfo) {
+    writeBilingualField('وسيلة الدفع', 'Payment Method', paymentInfo.arabicMethod || '-', {
+      englishValue: paymentInfo.englishMethod || '-'
+    });
+    writeBilingualField('بيانات البطاقة', 'Card Details', paymentInfo.arabicOwner || '-', {
+      englishValue: paymentInfo.englishOwner || '-'
+    });
+  }
 
   doc.moveDown(0.5);
   writeLine('العناصر', { size: 14, underline: true, align: 'center' });
@@ -445,6 +453,33 @@ const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, in
   });
 
   doc.end();
+};
+
+const buildInvoicePaymentInfo = ({ purchases = [], users = [] }) => {
+  const orderPurchases = Array.isArray(purchases) ? purchases.filter(Boolean) : [];
+  const firstPurchase = orderPurchases[0] || null;
+  if (!firstPurchase) return null;
+
+  const payerUserId = firstPurchase.payerUserId || firstPurchase.userId || null;
+  const buyerUserId = firstPurchase.userId || null;
+  const payerUser = Array.isArray(users) ? users.find(user => user && user.id === payerUserId) || null : null;
+  const cardLast4 = firstPurchase.payerCardLast4
+    || (payerUser && normalizeWalletCardNumber(payerUser.walletCardNumber).slice(-4))
+    || null;
+  const maskedCard = cardLast4 ? `**** ${cardLast4}` : 'المحفظة';
+  const payerLabel = payerUser ? (payerUser.name || payerUser.email || payerUser.id) : 'غير معروف';
+
+  return {
+    payerUserId,
+    buyerUserId,
+    payerLabel,
+    cardLast4,
+    arabicMethod: cardLast4 ? `بطاقة محفظة تنتهي بـ ${cardLast4}` : 'محفظة المستخدم',
+    englishMethod: cardLast4 ? `Wallet Card ending in ${cardLast4}` : 'User Wallet',
+    arabicOwner: `صاحب البطاقة: ${payerLabel}`,
+    englishOwner: `Card Owner: ${payerLabel}`,
+    maskedCard
+  };
 };
 
 // JWT Helpers
@@ -3882,7 +3917,8 @@ app.get('/admin/purchases', requireAdminPermission(ADMIN_PERMISSIONS.purchases),
   const purchases = await db.purchases();
   const users = await db.users();
   const projects = await db.projects();
-  res.render('admin/purchases', { purchases, users, projects, user: req.session.user });
+  const invoices = await db.invoices();
+  res.render('admin/purchases', { purchases, users, projects, invoices, user: req.session.user });
 });
 
 // Admin - Coupons
@@ -4303,6 +4339,11 @@ app.post('/admin/purchases/:id/approve', requireAdmin, async (req, res) => {
       const totalAfter = Math.round(items.reduce((s, it) => s + Number(it.priceAfter || 0), 0) * 100) / 100;
 
       const couponCode = approvedPurchase.couponCode || null;
+      const payerUserId = approvedPurchase.payerUserId || approvedPurchase.userId || null;
+      const payer = users.find(u => u && u.id === payerUserId) || null;
+      const payerCardLast4 = approvedPurchase.payerCardLast4
+        || (payer ? normalizeWalletCardNumber(payer.walletCardNumber).slice(-4) : null)
+        || null;
 
       invoices.push({
         id: uuidv4(),
@@ -4311,6 +4352,9 @@ app.post('/admin/purchases/:id/approve', requireAdmin, async (req, res) => {
         userId: approvedPurchase.userId,
         userName: buyer ? (buyer.name || buyer.email || buyer.id) : (approvedPurchase.userId || null),
         userEmail: buyer ? (buyer.email || null) : null,
+        payerUserId,
+        payerUserName: payer ? (payer.name || payer.email || payer.id) : null,
+        payerCardLast4,
         couponCode,
         items,
         totalBefore,
@@ -4368,6 +4412,27 @@ app.get('/invoice/:orderId.pdf', requireAuth, async (req, res) => {
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="${inv.invoiceNumber || 'invoice'}.pdf"`);
   await renderInvoicePdf({ res, inv, includeEmail: true, includeCoupon: true });
+});
+
+app.get('/admin/invoice/:orderId.pdf', requireAdminPermission(ADMIN_PERMISSIONS.purchases), async (req, res) => {
+  const orderId = req.params.orderId;
+  const invoices = await db.invoices();
+  const inv = invoices.find(i => i && i.orderId === orderId) || null;
+  if (!inv) return res.status(404).send('Invoice not found');
+
+  const purchases = (await db.purchases()).filter(p => p && (p.orderId === orderId || p.id === orderId));
+  const users = await db.users();
+  const paymentInfo = buildInvoicePaymentInfo({ purchases, users });
+
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${inv.invoiceNumber || 'invoice'}-admin.pdf"`);
+  await renderInvoicePdf({
+    res,
+    inv,
+    includeEmail: true,
+    includeCoupon: true,
+    paymentInfo
+  });
 });
 
 // Admin - Referrals

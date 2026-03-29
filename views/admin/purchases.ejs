@@ -78,6 +78,7 @@
                 <th>المشروع</th>
                 <th>المشتري</th>
                 <th>السعر</th>
+                <th>الدفع</th>
                 <th>التاريخ</th>
                 <th>الحالة</th>
                 <th>الإجراءات</th>
@@ -104,6 +105,10 @@
                 const orderPurchases = orders[orderId];
                 const firstPurchase = orderPurchases[0];
                 const user = users.find(u => u.id === firstPurchase.userId);
+                const payer = users.find(u => u.id === (firstPurchase.payerUserId || firstPurchase.userId));
+                const invoice = (invoices || []).find(inv => inv && inv.orderId === orderId);
+                const payerCardLast4 = firstPurchase.payerCardLast4 || (payer && payer.walletCardNumber ? String(payer.walletCardNumber).replace(/\D/g, '').slice(-4) : '');
+                const isBuyerCard = (firstPurchase.payerUserId || firstPurchase.userId) === firstPurchase.userId;
                 const isMultiItem = orderPurchases.length > 1;
               %>
                 <tr>
@@ -140,6 +145,19 @@
                       </div>
                     <% } %>
                   </td>
+                  <td>
+                    <div style="font-weight: 600;">
+                      تم الدفع ببطاقة
+                      <span dir="ltr"><%= payerCardLast4 ? `**** ${payerCardLast4}` : 'Wallet' %></span>
+                    </div>
+                    <div style="margin-top: 6px; color: var(--text-secondary); font-size: 0.85rem;">
+                      صاحب البطاقة:
+                      <strong><%= payer ? (payer.name || payer.email || payer.id) : 'غير معروف' %></strong>
+                    </div>
+                    <div style="margin-top: 4px; color: var(--text-secondary); font-size: 0.85rem;">
+                      <%= isBuyerCard ? 'بطاقة المشتري نفسه' : 'بطاقة مستخدم آخر' %>
+                    </div>
+                  </td>
                   <td><%= new Date(firstPurchase.purchasedAt).toLocaleDateString('ar-EG') %></td>
                   <td>
                     <% 
@@ -170,6 +188,11 @@
                       <% }) %>
                     <% } %>
                     <% if (allApproved) { %>
+                      <% if (invoice) { %>
+                        <div style="margin-bottom: 8px;">
+                          <a href="/admin/invoice/<%= orderId %>.pdf" class="btn btn-sm btn-secondary" target="_blank">فاتورة PDF</a>
+                        </div>
+                      <% } %>
                       <% orderPurchases.forEach(p => { %>
                         <form action="/admin/purchases/<%= p.id %>/upload" method="POST" enctype="multipart/form-data" class="inline-form upload-form">
                           <input type="file" name="modifiedFile" accept=".zip" class="file-input">
