@@ -252,6 +252,7 @@ const buildSessionUser = ({ user, activeSubscription }) => {
   };
 };
 
+const BUNDLED_ARABIC_FONT_PATH = path.join(__dirname, 'assets', 'fonts', 'NotoNaskhArabic-Regular.ttf');
 const ARABIC_FONT_URL = process.env.ARABIC_FONT_URL || 'https://raw.githubusercontent.com/google/fonts/main/ofl/notonaskharabic/NotoNaskhArabic-Regular.ttf';
 const ARABIC_FONT_PATH = path.join(RUNTIME_ROOT_DIR, 'fonts', 'NotoNaskhArabic-Regular.ttf');
 const ARABIC_FONT_NAME = 'NotoNaskhArabic';
@@ -277,6 +278,7 @@ const downloadFile = (url, destination, redirects = 0) => new Promise((resolve, 
 
 const ensureArabicFont = async () => {
   try {
+    if (fs.existsSync(BUNDLED_ARABIC_FONT_PATH)) return BUNDLED_ARABIC_FONT_PATH;
     if (fs.existsSync(ARABIC_FONT_PATH)) return ARABIC_FONT_PATH;
     if (arabicFontPromise) return arabicFontPromise;
     arabicFontPromise = (async () => {
