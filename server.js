@@ -528,6 +528,7 @@ const DATASET_DEFS = [
   { name: 'appointments', file: 'appointments.json', fallback: () => ({ timeSlots: [], bookings: [] }) },
   { name: 'reviews', file: 'reviews.json', fallback: [] },
   { name: 'messages', file: 'messages.json', fallback: [] },
+  { name: 'notifications', file: 'notifications.json', fallback: [] },
   { name: 'adminTeamMessages', file: 'admin-team-messages.json', fallback: [] },
   { name: 'carts', file: 'carts.json', fallback: [] },
   { name: 'invoices', file: 'invoices.json', fallback: [] },
@@ -633,6 +634,8 @@ const db = {
   saveReviews: (data) => writeData('reviews', data),
   messages: () => readData('messages'),
   saveMessages: (data) => writeData('messages', data),
+  notifications: () => readData('notifications'),
+  saveNotifications: (data) => writeData('notifications', data),
   adminTeamMessages: () => readData('adminTeamMessages'),
   saveAdminTeamMessages: (data) => writeData('adminTeamMessages', data),
   carts: () => readData('carts'),
@@ -654,6 +657,92 @@ const db = {
   saveSubscriptionCoupons: (data) => writeData('subscriptionCoupons', data),
   loyaltySettings: () => readData('loyaltySettings'),
   saveLoyaltySettings: (data) => writeData('loyaltySettings', data)
+};
+
+const getUserNotifications = async ({ userId, limit = null }) => {
+  if (!userId) return [];
+  const notificationsRaw = await db.notifications();
+  const notifications = Array.isArray(notificationsRaw) ? notificationsRaw : [];
+  const sorted = notifications
+    .filter(notification => notification && notification.userId === userId)
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  if (limit && Number.isFinite(Number(limit)) && Number(limit) > 0) {
+    return sorted.slice(0, Number(limit));
+  }
+  return sorted;
+};
+
+const getUnreadNotificationCount = async ({ userId }) => {
+  const notifications = await getUserNotifications({ userId });
+  return notifications.filter(notification => !notification.readAt).length;
+};
+
+const createNotification = async ({ userId, title, message, link = null, kind = 'info', meta = null }) => {
+  if (!userId || !title || !message) return null;
+  const notificationsRaw = await db.notifications();
+  const notifications = Array.isArray(notificationsRaw) ? notificationsRaw : [];
+
+  notifications.push({
+    id: uuidv4(),
+    userId,
+    title: String(title).trim(),
+    message: String(message).trim(),
+    link: link || null,
+    kind: kind || 'info',
+    meta: meta || null,
+    readAt: null,
+    createdAt: new Date().toISOString()
+  });
+
+  const trimmedNotifications = notifications
+    .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())
+    .slice(-1000);
+
+  await db.saveNotifications(trimmedNotifications);
+  return trimmedNotifications[trimmedNotifications.length - 1] || null;
+};
+
+const serializeNotification = (notification) => {
+  if (!notification) return null;
+  return {
+    id: notification.id,
+    title: notification.title || '',
+    message: notification.message || '',
+    link: notification.link || null,
+    kind: notification.kind || 'info',
+    readAt: notification.readAt || null,
+    createdAt: notification.createdAt || null
+  };
+};
+
+const markNotificationRead = async ({ userId, notificationId }) => {
+  if (!userId || !notificationId) return false;
+  const notificationsRaw = await db.notifications();
+  const notifications = Array.isArray(notificationsRaw) ? notificationsRaw : [];
+  const index = notifications.findIndex(notification => notification && notification.id === notificationId && notification.userId === userId);
+  if (index === -1) return false;
+  if (!notifications[index].readAt) {
+    notifications[index].readAt = new Date().toISOString();
+    await db.saveNotifications(notifications);
+  }
+  return true;
+};
+
+const markAllNotificationsRead = async ({ userId }) => {
+  if (!userId) return 0;
+  const notificationsRaw = await db.notifications();
+  const notifications = Array.isArray(notificationsRaw) ? notificationsRaw : [];
+  let updated = 0;
+  notifications.forEach(notification => {
+    if (notification && notification.userId === userId && !notification.readAt) {
+      notification.readAt = new Date().toISOString();
+      updated += 1;
+    }
+  });
+  if (updated > 0) {
+    await db.saveNotifications(notifications);
+  }
+  return updated;
 };
 
 const normalizeCouponCode = (code) => {
@@ -998,6 +1087,17 @@ const finalizeSingleProjectPurchase = async ({ req, buyerUserId, payerUserId, pr
   });
 
   await db.savePurchases(purchases);
+  await createNotification({
+    userId: buyerUserId,
+    title: 'تم تسجيل طلب شراء جديد',
+    message: `تم تسجيل طلب شراء المشروع "${project.title}" وبانتظار مراجعة الأدمن.`,
+    link: '/my-purchases',
+    kind: 'info',
+    meta: {
+      type: 'purchase_pending',
+      projectId: project.id
+    }
+  });
   req.session.user = buildSessionUser({ user: buyerUser, activeSubscription });
   return { ok: true, redirect: '/my-purchases?paymentSuccess=' + encodeURIComponent('تم تأكيد الدفع وإرسال الطلب بنجاح') };
 };
@@ -1111,6 +1211,17 @@ const finalizeCartPurchase = async ({ req, buyerUserId, payerUserId, itemsSnapsh
   });
 
   await db.savePurchases(purchases);
+  await createNotification({
+    userId: buyerUserId,
+    title: 'تم تسجيل طلب السلة',
+    message: `تم تسجيل ${items.length} مشروع/مشاريع من السلة وبانتظار مراجعة الأدمن.`,
+    link: '/my-purchases',
+    kind: 'info',
+    meta: {
+      type: 'cart_purchase_pending',
+      orderSize: items.length
+    }
+  });
 
   const { carts, cartIndex } = await getOrCreateCartForUser({ userId: buyerUserId });
   const projectIds = new Set(items.map(it => it.projectId));
@@ -1236,6 +1347,24 @@ const createWalletPaymentAttempt = async ({ req, buyerUser, payerUser, amount, k
 
   attempts.push(attempt);
   await db.saveWalletPaymentAttempts(attempts);
+
+  await createNotification({
+    userId: payerUser.id,
+    title: 'طلب دفع جديد ببطاقتك',
+    message: [
+      `المشتري: ${buyerUser.name || buyerUser.email || buyerUser.id}`,
+      `المبلغ: ${formatMoney(attempt.amount)} جنيه`,
+      `كود التحقق: ${code}`,
+      attempt.requiresPassword ? 'هذه العملية تحتاج أيضًا كلمة مرور البطاقة.' : null
+    ].filter(Boolean).join(' | '),
+    link: '/notifications',
+    kind: 'warning',
+    meta: {
+      type: 'wallet_payment_code',
+      attemptId: attempt.id
+    }
+  });
+
   return { attempt };
 };
 
@@ -1407,6 +1536,21 @@ app.use(async (req, res, next) => {
   } catch (e) {
     // ignore
   }
+  next();
+});
+
+app.use(async (req, res, next) => {
+  res.locals.user = req.session && req.session.user ? req.session.user : null;
+  res.locals.notificationUnreadCount = 0;
+
+  try {
+    if (req.session && req.session.user && req.session.user.id && req.session.user.role === 'user') {
+      res.locals.notificationUnreadCount = await getUnreadNotificationCount({ userId: req.session.user.id });
+    }
+  } catch (error) {
+    res.locals.notificationUnreadCount = 0;
+  }
+
   next();
 });
 
@@ -2639,21 +2783,6 @@ app.get('/my-purchases', requireAuth, async (req, res) => {
   const subscriptionPlans = await db.subscriptionPlans();
   const subscriptions = (await db.subscriptions()).filter(s => s && s.userId === req.session.user.id);
   const subscriptionPayments = (await db.subscriptionPayments()).filter(p => p && p.userId === req.session.user.id);
-  const walletPaymentAttempts = await getWalletPaymentAttemptsState();
-  const walletPaymentRequests = walletPaymentAttempts
-    .filter(attempt => attempt && attempt.payerUserId === req.session.user.id)
-    .map(attempt => {
-      const buyer = users.find(u => u && u.id === attempt.userId) || null;
-      return {
-        id: attempt.id,
-        code: attempt.ownerVisibleCode || null,
-        amount: Number(attempt.amount || 0),
-        requiresPassword: Boolean(attempt.requiresPassword),
-        buyerLabel: buyer ? (buyer.name || buyer.email || buyer.id) : 'مستخدم غير معروف',
-        kindLabel: attempt.kind === 'cart' ? 'سلة مشتريات' : 'شراء مشروع',
-        createdAt: attempt.createdAt
-      };
-    });
 
   res.render('my-purchases', {
     purchases,
@@ -2665,13 +2794,53 @@ app.get('/my-purchases', requireAuth, async (req, res) => {
     walletCardSuccess: req.query.walletCardSuccess || null,
     paymentError: req.query.paymentError || null,
     paymentSuccess: req.query.paymentSuccess || null,
-    walletPaymentRequests,
     redeemError: req.query.redeemError || null,
     redeemSuccess: req.query.redeemSuccess || null,
     subscriptionPlans,
     subscriptions,
     subscriptionPayments
   });
+});
+
+app.get('/notifications', requireAuth, async (req, res) => {
+  const notifications = await getUserNotifications({ userId: req.session.user.id });
+  res.render('notifications', {
+    user: req.session.user,
+    notifications,
+    success: req.query.success || null
+  });
+});
+
+app.get('/api/notifications/summary', requireAuth, async (req, res) => {
+  const allNotifications = await getUserNotifications({ userId: req.session.user.id });
+  const notifications = allNotifications.slice(0, 8);
+  const unreadCount = allNotifications.filter(notification => !notification.readAt).length;
+
+  return res.json({
+    unreadCount,
+    notifications: notifications.map(serializeNotification)
+  });
+});
+
+app.post('/api/notifications/:id/read', requireAuth, async (req, res) => {
+  const ok = await markNotificationRead({ userId: req.session.user.id, notificationId: req.params.id });
+  return res.json({ ok });
+});
+
+app.post('/api/notifications/read-all', requireAuth, async (req, res) => {
+  const updated = await markAllNotificationsRead({ userId: req.session.user.id });
+  return res.json({ ok: true, updated });
+});
+
+app.post('/notifications/:id/read', requireAuth, async (req, res) => {
+  await markNotificationRead({ userId: req.session.user.id, notificationId: req.params.id });
+  const nextUrl = (req.body.next || '').trim();
+  return res.redirect(nextUrl || '/notifications');
+});
+
+app.post('/notifications/read-all', requireAuth, async (req, res) => {
+  await markAllNotificationsRead({ userId: req.session.user.id });
+  return res.redirect('/notifications?success=' + encodeURIComponent('تم تعليم كل الإشعارات كمقروءة'));
 });
 
 app.get('/loyalty', requireAuth, async (req, res) => {
@@ -2772,6 +2941,17 @@ app.post('/loyalty/redeem', requireAuth, async (req, res) => {
     loyaltyPoints: normalizeLoyaltyPoints(users[idx].loyaltyPoints)
   };
 
+  await createNotification({
+    userId: users[idx].id,
+    title: 'تم تحويل النقاط إلى رصيد',
+    message: `تم استبدال ${pointsRequested} نقطة وإضافة ${credit} جنيه إلى محفظتك.`,
+    link: '/loyalty',
+    kind: 'success',
+    meta: {
+      type: 'loyalty_redeem'
+    }
+  });
+
   res.redirect('/loyalty?success=' + encodeURIComponent('تم الاستبدال بنجاح'));
 });
 
@@ -2811,6 +2991,17 @@ app.post('/wallet/redeem', requireAuth, async (req, res) => {
     ...req.session.user,
     walletBalance: Number(users[userIndex].walletBalance || 0)
   };
+
+  await createNotification({
+    userId: users[userIndex].id,
+    title: 'تم شحن المحفظة',
+    message: `تم إضافة ${amount} جنيه إلى محفظتك باستخدام كود الشحن ${code}.`,
+    link: '/my-purchases',
+    kind: 'success',
+    meta: {
+      type: 'wallet_topup'
+    }
+  });
 
   return res.redirect(`/my-purchases?redeemSuccess=${encodeURIComponent('تم إضافة الرصيد بنجاح')}`);
 });
@@ -4090,6 +4281,18 @@ app.post('/admin/purchases/:id/approve', requireAdmin, async (req, res) => {
     await db.saveReferrals(referrals);
   }
 
+  await createNotification({
+    userId: approvedPurchase.userId,
+    title: 'تمت الموافقة على طلبك',
+    message: `تمت الموافقة على شراء "${approvedPurchase.projectTitle}" ويمكنك متابعة التفاصيل من مشترياتك.`,
+    link: '/my-purchases',
+    kind: 'success',
+    meta: {
+      type: 'purchase_approved',
+      purchaseId: approvedPurchase.id
+    }
+  });
+
   res.redirect('/admin/purchases');
 });
 
@@ -4164,6 +4367,20 @@ app.post('/admin/purchases/:id/reject', requireAdmin, async (req, res) => {
 
   purchases[index].status = 'rejected';
   await db.savePurchases(purchases);
+
+  await createNotification({
+    userId: purchase.userId,
+    title: 'تم رفض أحد طلباتك',
+    message: purchase.walletRefundAmount
+      ? `تم رفض "${purchase.projectTitle}" وتم رد ${purchase.walletRefundAmount} جنيه إلى المحفظة.`
+      : `تم رفض "${purchase.projectTitle}".`,
+    link: '/my-purchases',
+    kind: 'warning',
+    meta: {
+      type: 'purchase_rejected',
+      purchaseId: purchase.id
+    }
+  });
   res.redirect('/admin/purchases');
 });
 

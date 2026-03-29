@@ -48,7 +48,7 @@
         <div class="purchase-info">
           <h3 style="margin-top: 0;">أمان البطاقة</h3>
           <p class="modification-note" style="margin-top: 0;">
-            يمكن لأي مستخدم الدفع ببطاقتك، لكن كود التحقق سيظهر داخل حسابك هنا فقط. وإذا كانت العملية أكبر من <strong>5000</strong> جنيه يتم طلب كلمة مرور البطاقة أيضًا.
+            يمكن لأي مستخدم الدفع ببطاقتك، لكن كود التحقق سيظهر داخل <strong>مركز الإشعارات</strong> في حسابك فقط. وإذا كانت العملية أكبر من <strong>5000</strong> جنيه يتم طلب كلمة مرور البطاقة أيضًا.
           </p>
           <% if (walletCardError) { %>
             <div class="error-message"><%= walletCardError %></div>
@@ -69,33 +69,6 @@
           </form>
         </div>
       </div>
-
-      <% if (walletPaymentRequests && walletPaymentRequests.length) { %>
-        <div class="purchase-card" style="margin-bottom: 16px;">
-          <div class="purchase-info">
-            <h3 style="margin-top: 0;">طلبات تأكيد بطاقتك</h3>
-            <p class="modification-note" style="margin-top: 0;">هذه الأكواد تظهر لك فقط بصفتك صاحب البطاقة.</p>
-          </div>
-        </div>
-
-        <div class="purchases-list" style="margin-bottom: 16px;">
-          <% walletPaymentRequests.forEach(request => { %>
-            <div class="purchase-card">
-              <div class="purchase-info">
-                <h3 style="margin-top: 0;">كود التحقق: <span dir="ltr"><%= request.code %></span></h3>
-                <div class="purchase-meta">
-                  <span><%= request.kindLabel %></span>
-                  <span>المبلغ: <strong><%= request.amount %></strong> جنيه</span>
-                </div>
-                <p class="modification-note">المشتري: <strong><%= request.buyerLabel %></strong></p>
-                <% if (request.requiresPassword) { %>
-                  <p class="modification-note">هذه العملية تحتاج أيضًا كلمة مرور البطاقة لأنها أكبر من 5000 جنيه.</p>
-                <% } %>
-              </div>
-            </div>
-          <% }) %>
-        </div>
-      <% } %>
 
       <div class="purchase-card" style="margin-bottom: 16px;">
         <div class="purchase-info">

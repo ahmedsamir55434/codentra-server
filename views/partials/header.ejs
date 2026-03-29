@@ -24,6 +24,33 @@
             <a href="/">الرئيسية</a>
             <a href="/cart">السلة 🛒</a>
             <a href="/my-purchases">مشترياتي</a>
+            <div class="notification-popover" id="notificationPopover">
+              <button
+                type="button"
+                class="nav-notification-link notification-toggle"
+                id="notificationToggle"
+                aria-expanded="false"
+                aria-controls="notificationPanel"
+              >
+                الإشعارات
+                <span class="notification-badge <%= notificationUnreadCount > 0 ? '' : 'is-hidden' %>" id="notificationBadge">
+                  <%= notificationUnreadCount > 99 ? '99+' : notificationUnreadCount %>
+                </span>
+              </button>
+
+              <div class="notification-panel" id="notificationPanel" hidden>
+                <div class="notification-panel-header">
+                  <strong>الإشعارات</strong>
+                  <button type="button" class="notification-mark-all" id="notificationMarkAll">تعليم الكل</button>
+                </div>
+                <div class="notification-panel-body" id="notificationPanelBody">
+                  <div class="notification-panel-empty">جار تحميل الإشعارات...</div>
+                </div>
+                <div class="notification-panel-footer">
+                  <a href="/notifications">عرض كل الإشعارات</a>
+                </div>
+              </div>
+            </div>
             <a href="/subscriptions">الاشتراكات</a>
             <a href="/loyalty">نقاطي</a>
             <a href="/messages">التواصل 📨</a>

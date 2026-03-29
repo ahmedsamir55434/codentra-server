@@ -102,13 +102,192 @@
     window.addEventListener('resize', requestTick);
   }
 
+  function initNotificationsPopover() {
+    var toggle = document.getElementById('notificationToggle');
+    var panel = document.getElementById('notificationPanel');
+    var badge = document.getElementById('notificationBadge');
+    var body = document.getElementById('notificationPanelBody');
+    var markAll = document.getElementById('notificationMarkAll');
+    var popover = document.getElementById('notificationPopover');
+
+    if (!toggle || !panel || !badge || !body || !markAll || !popover) return;
+
+    var isOpen = false;
+    var lastSignature = '';
+    var pollTimer = null;
+
+    function formatDate(value) {
+      if (!value) return '';
+      try {
+        return new Date(value).toLocaleString('ar-EG');
+      } catch (e) {
+        return value;
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setBadge(count) {
+      var unreadCount = Number(count || 0);
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
+        badge.classList.remove('is-hidden');
+      } else {
+        badge.textContent = '0';
+        badge.classList.add('is-hidden');
+      }
+    }
+
+    function renderNotifications(notifications) {
+      if (!Array.isArray(notifications) || notifications.length === 0) {
+        body.innerHTML = '<div class="notification-panel-empty">لا توجد إشعارات حاليًا.</div>';
+        return;
+      }
+
+      body.innerHTML = notifications.map(function (notification) {
+        var href = notification.link || '/notifications';
+        return [
+          '<a class="notification-preview-item ' + (!notification.readAt ? 'is-unread' : '') + '" href="' + escapeHtml(href) + '" data-notification-id="' + escapeHtml(notification.id) + '">',
+          '<div class="notification-preview-title">',
+          '<strong>' + escapeHtml(notification.title) + '</strong>',
+          !notification.readAt ? '<span class="notification-preview-dot"></span>' : '',
+          '</div>',
+          '<div class="notification-preview-message">' + escapeHtml(notification.message) + '</div>',
+          '<div class="notification-preview-time">' + escapeHtml(formatDate(notification.createdAt)) + '</div>',
+          '</a>'
+        ].join('');
+      }).join('');
+    }
+
+    function setOpen(nextOpen) {
+      isOpen = Boolean(nextOpen);
+      panel.hidden = !isOpen;
+      toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+
+    function getSignature(payload) {
+      try {
+        return JSON.stringify(payload);
+      } catch (e) {
+        return String(Date.now());
+      }
+    }
+
+    function refreshNotifications(forceRender) {
+      return fetch('/api/notifications/summary', {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      })
+        .then(function (response) {
+          if (!response.ok) throw new Error('Failed to load notifications');
+          return response.json();
+        })
+        .then(function (payload) {
+          setBadge(payload.unreadCount || 0);
+          var signature = getSignature(payload);
+          if (forceRender || signature !== lastSignature || isOpen) {
+            renderNotifications(payload.notifications || []);
+            lastSignature = signature;
+          }
+        })
+        .catch(function () {
+          if (!body.children.length) {
+            body.innerHTML = '<div class="notification-panel-empty">تعذر تحميل الإشعارات الآن.</div>';
+          }
+        });
+    }
+
+    function markNotificationRead(notificationId) {
+      return fetch('/api/notifications/' + encodeURIComponent(notificationId) + '/read', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      }).catch(function () {});
+    }
+
+    toggle.addEventListener('click', function () {
+      setOpen(!isOpen);
+      if (isOpen) {
+        refreshNotifications(true);
+      }
+    });
+
+    markAll.addEventListener('click', function () {
+      fetch('/api/notifications/read-all', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      })
+        .then(function () { return refreshNotifications(true); })
+        .catch(function () {});
+    });
+
+    body.addEventListener('click', function (event) {
+      var item = event.target.closest('[data-notification-id]');
+      if (!item) return;
+
+      var href = item.getAttribute('href');
+      var notificationId = item.getAttribute('data-notification-id');
+      event.preventDefault();
+
+      markNotificationRead(notificationId).finally(function () {
+        if (href) {
+          window.location.href = href;
+        } else {
+          refreshNotifications(true);
+        }
+      });
+    });
+
+    document.addEventListener('click', function (event) {
+      if (!isOpen) return;
+      if (!popover.contains(event.target)) {
+        setOpen(false);
+      }
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && isOpen) {
+        setOpen(false);
+      }
+    });
+
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) {
+        refreshNotifications(true);
+      }
+    });
+
+    window.addEventListener('focus', function () {
+      refreshNotifications(true);
+    });
+
+    refreshNotifications(true);
+    pollTimer = window.setInterval(function () {
+      refreshNotifications(false);
+    }, 4000);
+
+    window.addEventListener('beforeunload', function () {
+      if (pollTimer) window.clearInterval(pollTimer);
+    });
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {
       init();
       initHeaderAutoHide();
+      initNotificationsPopover();
     });
   } else {
     init();
     initHeaderAutoHide();
+    initNotificationsPopover();
   }
 })();

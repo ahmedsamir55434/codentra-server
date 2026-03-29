@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مركز الإشعارات - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/purchases.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="purchases-page">
+    <div class="container">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
+        <div>
+          <h1 style="margin-bottom:8px;">مركز الإشعارات</h1>
+          <p style="margin:0; color:#666;">هنا ستجد كل التنبيهات المهمة الخاصة بحسابك.</p>
+        </div>
+        <% if (notifications && notifications.length) { %>
+          <form action="/notifications/read-all" method="POST" style="margin:0;">
+            <button type="submit" class="btn btn-secondary">تعليم الكل كمقروء</button>
+          </form>
+        <% } %>
+      </div>
+
+      <% if (success) { %>
+        <div class="success-message"><%= success %></div>
+      <% } %>
+
+      <% if (!notifications || notifications.length === 0) { %>
+        <div class="empty-state">
+          <div class="empty-icon">🔔</div>
+          <h2>لا توجد إشعارات حاليًا</h2>
+          <p>أي تحديثات جديدة ستظهر لك هنا.</p>
+        </div>
+      <% } else { %>
+        <div class="purchases-list">
+          <% notifications.forEach(notification => { %>
+            <div class="purchase-card" style="<%= notification.readAt ? 'opacity:.88;' : 'border-color: rgba(212,175,55,.45); box-shadow: 0 0 0 1px rgba(212,175,55,.18);' %>">
+              <div class="purchase-info">
+                <div class="purchase-meta" style="margin-bottom:8px;">
+                  <span class="status-badge <%= notification.kind === 'success' ? 'approved' : 'pending' %>">
+                    <%= notification.kind === 'success' ? 'نجاح' : (notification.kind === 'warning' ? 'تنبيه' : 'معلومة') %>
+                  </span>
+                  <span class="purchase-date"><%= notification.createdAt ? new Date(notification.createdAt).toLocaleString('ar-EG') : '-' %></span>
+                  <% if (!notification.readAt) { %>
+                    <span class="wallet-balance-chip">غير مقروء</span>
+                  <% } %>
+                </div>
+                <h3 style="margin-top:0;"><%= notification.title %></h3>
+                <p class="modification-note" style="margin-bottom:0;"><%= notification.message %></p>
+              </div>
+              <div class="purchase-actions">
+                <% if (!notification.readAt) { %>
+                  <form action="/notifications/<%= notification.id %>/read" method="POST" style="margin:0;">
+                    <input type="hidden" name="next" value="<%= notification.link || '/notifications' %>">
+                    <button type="submit" class="btn btn-primary"><%= notification.link ? 'فتح الإشعار' : 'تعليم كمقروء' %></button>
+                  </form>
+                <% } else if (notification.link) { %>
+                  <a href="<%= notification.link %>" class="btn btn-secondary">فتح</a>
+                <% } %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

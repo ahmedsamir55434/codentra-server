@@ -29,7 +29,7 @@
         </div>
         <div class="wallet-balance-meta">
           <div class="wallet-balance-chip">صاحب البطاقة: <strong><%= payerName %></strong></div>
-          <div class="wallet-balance-chip">الكود موجود داخل حساب صاحب البطاقة على الموقع</div>
+          <div class="wallet-balance-chip">الكود موجود داخل مركز إشعارات صاحب البطاقة على الموقع</div>
           <div class="wallet-balance-chip">قيمة العملية: <strong><%= Number(attempt.amount || 0) %></strong> جنيه</div>
           <div class="wallet-balance-chip">نوع العملية: <strong><%= attempt.kind === 'cart' ? 'سلة مشتريات' : 'شراء مشروع' %></strong></div>
           <div class="wallet-balance-chip">ينتهي الكود خلال 10 دقائق</div>
@@ -41,7 +41,7 @@
           لأنك صاحب البطاقة أيضًا، فهذا هو كود التحقق: <strong dir="ltr"><%= ownerVisibleCode %></strong>
         </div>
       <% } else { %>
-        <div class="success-message">كود التحقق ظاهر الآن داخل حساب صاحب البطاقة على الموقع فقط.</div>
+        <div class="success-message">كود التحقق ظاهر الآن داخل مركز إشعارات صاحب البطاقة فقط.</div>
       <% } %>
 
       <% if (attempt.requiresPassword) { %>
