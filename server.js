@@ -392,8 +392,16 @@ const renderInvoicePdf = async ({ res, inv, items = [], includeEmail = false, in
     writeBilingualField('وسيلة الدفع', 'Payment Method', paymentInfo.arabicMethod || '-', {
       englishValue: paymentInfo.englishMethod || '-'
     });
-    writeBilingualField('بيانات البطاقة', 'Card Details', paymentInfo.arabicOwner || '-', {
-      englishValue: paymentInfo.englishOwner || '-'
+    writeBilingualField('بيانات البطاقة', 'Card Details', paymentInfo.maskedCard || '-', {
+      arabicValue: paymentInfo.maskedCard || '-',
+      englishValue: paymentInfo.maskedCard || '-'
+    });
+    writeBilingualField('صاحب البطاقة', 'Card Owner', paymentInfo.payerLabel || '-', {
+      arabicValue: paymentInfo.payerLabel || '-',
+      englishValue: paymentInfo.payerLabel || '-'
+    });
+    writeBilingualField('نوع الاستخدام', 'Usage Type', paymentInfo.arabicUsageType || '-', {
+      englishValue: paymentInfo.englishUsageType || '-'
     });
   }
 
@@ -478,6 +486,8 @@ const buildInvoicePaymentInfo = ({ purchases = [], users = [] }) => {
     englishMethod: cardLast4 ? `Wallet Card ending in ${cardLast4}` : 'User Wallet',
     arabicOwner: `صاحب البطاقة: ${payerLabel}`,
     englishOwner: `Card Owner: ${payerLabel}`,
+    arabicUsageType: payerUserId && buyerUserId && payerUserId !== buyerUserId ? 'بطاقة مستخدم آخر' : 'بطاقة المشتري نفسه',
+    englishUsageType: payerUserId && buyerUserId && payerUserId !== buyerUserId ? 'Another User Card' : 'Buyer Own Card',
     maskedCard
   };
 };
