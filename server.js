@@ -236,6 +236,10 @@ const ensureUserPaymentProfile = ({ users, user }) => {
     user.walletCardFrozenAt = null;
     changed = true;
   }
+  if (user.walletDailyLimit === undefined) {
+    user.walletDailyLimit = null;
+    changed = true;
+  }
   return changed;
 };
 
@@ -253,6 +257,7 @@ const buildSessionUser = ({ user, activeSubscription }) => {
     walletBalance: Number(user.walletBalance || 0),
     walletCardNumberMasked: user.role === 'user' ? maskWalletCardNumber(user.walletCardNumber) : null,
     walletCardFrozen: user.role === 'user' ? Boolean(user.walletCardFrozen) : false,
+    walletDailyLimit: user.role === 'user' && user.walletDailyLimit != null ? Number(user.walletDailyLimit) : null,
     hasWalletPaymentPassword: user.role === 'user' ? Boolean(user.walletPaymentPasswordHash) : false,
     loyaltyPoints: user.role === 'user' ? normalizeLoyaltyPoints(user.loyaltyPoints) : 0,
     subscription: activeSubscription ? {
@@ -594,6 +599,7 @@ const seedRuntimeData = () => {
     'appointments.json',
     'meeting-recordings.json',
     'wallet-payment-attempts.json',
+    'wallet-card-activities.json',
     'subscription-plans.json',
     'subscriptions.json',
     'subscription-payments.json',
@@ -679,6 +685,7 @@ const DATASET_DEFS = [
   { name: 'invoices', file: 'invoices.json', fallback: [] },
   { name: 'meetingRecordings', file: 'meeting-recordings.json', fallback: [] },
   { name: 'walletPaymentAttempts', file: 'wallet-payment-attempts.json', fallback: [] },
+  { name: 'walletCardActivities', file: 'wallet-card-activities.json', fallback: [] },
   { name: 'subscriptionPlans', file: 'subscription-plans.json', fallback: [] },
   { name: 'subscriptions', file: 'subscriptions.json', fallback: [] },
   { name: 'subscriptionPayments', file: 'subscription-payments.json', fallback: [] },
@@ -792,6 +799,8 @@ const db = {
   saveMeetingRecordings: (data) => writeData('meetingRecordings', data),
   walletPaymentAttempts: () => readData('walletPaymentAttempts'),
   saveWalletPaymentAttempts: (data) => writeData('walletPaymentAttempts', data),
+  walletCardActivities: () => readData('walletCardActivities'),
+  saveWalletCardActivities: (data) => writeData('walletCardActivities', data),
   subscriptionPlans: () => readData('subscriptionPlans'),
   subscriptions: () => readData('subscriptions'),
   subscriptionPayments: () => readData('subscriptionPayments'),
@@ -845,6 +854,93 @@ const createNotification = async ({ userId, title, message, link = null, kind = 
 
   await db.saveNotifications(trimmedNotifications);
   return trimmedNotifications[trimmedNotifications.length - 1] || null;
+};
+
+const createWalletCardActivity = async ({
+  cardOwnerUserId,
+  actorUserId = null,
+  type,
+  status = 'info',
+  amount = 0,
+  cardLast4 = null,
+  description,
+  meta = null,
+  createdAt = null
+}) => {
+  if (!cardOwnerUserId || !type) return null;
+  const activitiesRaw = await db.walletCardActivities();
+  const activities = Array.isArray(activitiesRaw) ? activitiesRaw : [];
+
+  activities.push({
+    id: uuidv4(),
+    cardOwnerUserId,
+    actorUserId,
+    type,
+    status,
+    amount: Math.round(Number(amount || 0) * 100) / 100,
+    cardLast4: cardLast4 || null,
+    description: description ? String(description).trim() : '',
+    meta: meta || null,
+    createdAt: createdAt || new Date().toISOString()
+  });
+
+  const trimmed = activities
+    .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())
+    .slice(-400);
+  await db.saveWalletCardActivities(trimmed);
+  return trimmed[trimmed.length - 1] || null;
+};
+
+const getWalletCardActivitiesForUser = async ({ cardOwnerUserId, limit = 20 }) => {
+  if (!cardOwnerUserId) return [];
+  const activitiesRaw = await db.walletCardActivities();
+  const activities = Array.isArray(activitiesRaw) ? activitiesRaw : [];
+  const sorted = activities
+    .filter(activity => activity && activity.cardOwnerUserId === cardOwnerUserId)
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  if (limit && Number.isFinite(Number(limit)) && Number(limit) > 0) {
+    return sorted.slice(0, Number(limit));
+  }
+  return sorted;
+};
+
+const getWalletCardSpentToday = async ({ cardOwnerUserId, now = new Date() }) => {
+  if (!cardOwnerUserId) return 0;
+  const activitiesRaw = await db.walletCardActivities();
+  const activities = Array.isArray(activitiesRaw) ? activitiesRaw : [];
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+
+  const spent = activities.reduce((sum, activity) => {
+    if (!activity || activity.cardOwnerUserId !== cardOwnerUserId) return sum;
+    if (activity.type !== 'payment_completed') return sum;
+    const createdAt = new Date(activity.createdAt || 0);
+    if (Number.isNaN(createdAt.getTime()) || createdAt < start || createdAt >= end) return sum;
+    return sum + Number(activity.amount || 0);
+  }, 0);
+
+  return Math.round(spent * 100) / 100;
+};
+
+const getWalletDailyLimitStatus = async ({ payerUser, amount = 0 }) => {
+  const limit = Number(payerUser && payerUser.walletDailyLimit);
+  if (!Number.isFinite(limit) || limit <= 0) {
+    return { enabled: false, limit: null, spentToday: 0, remaining: null, exceeds: false };
+  }
+
+  const spentToday = await getWalletCardSpentToday({ cardOwnerUserId: payerUser.id });
+  const nextAmount = Math.round(Number(amount || 0) * 100) / 100;
+  const remaining = Math.round((limit - spentToday) * 100) / 100;
+
+  return {
+    enabled: true,
+    limit: Math.round(limit * 100) / 100,
+    spentToday,
+    remaining,
+    exceeds: spentToday + nextAmount > limit
+  };
 };
 
 const serializeNotification = (notification) => {
@@ -1092,6 +1188,13 @@ const finalizeSingleProjectPurchase = async ({ req, buyerUserId, payerUserId, pr
     return { ok: false, redirect: '/my-purchases?walletCardError=' + encodeURIComponent('صاحب البطاقة غير موجود') };
   }
   if (isWalletCardFrozen(payerUser)) {
+    await createWalletCardActivity({
+      cardOwnerUserId: payerUserId,
+      actorUserId: buyerUserId,
+      type: 'payment_blocked_frozen',
+      status: 'blocked',
+      description: 'تم منع عملية دفع لأن البطاقة مجمدة.'
+    });
     return { ok: false, redirect: '/my-purchases?walletCardError=' + encodeURIComponent('بطاقة المحفظة مجمدة حالياً ولا يمكن استخدامها') };
   }
 
@@ -1191,6 +1294,25 @@ const finalizeSingleProjectPurchase = async ({ req, buyerUserId, payerUserId, pr
   }
 
   const payerWalletBalance = Number(payerUser.walletBalance || 0);
+  const dailyLimitStatus = await getWalletDailyLimitStatus({
+    payerUser,
+    amount: Number(priceAfterDiscount || 0)
+  });
+  if (dailyLimitStatus.exceeds) {
+    await createWalletCardActivity({
+      cardOwnerUserId: payerUser.id,
+      actorUserId: buyerUserId,
+      type: 'payment_blocked_daily_limit',
+      status: 'blocked',
+      amount: Number(priceAfterDiscount || 0),
+      cardLast4: normalizeWalletCardNumber(payerUser.walletCardNumber).slice(-4),
+      description: `تم منع عملية دفع بسبب تجاوز الحد اليومي ${formatMoney(dailyLimitStatus.limit)} جنيه.`
+    });
+    return {
+      ok: false,
+      redirect: '/my-purchases?walletCardError=' + encodeURIComponent('تم تجاوز الحد اليومي للبطاقة')
+    };
+  }
   if (payerWalletBalance < Number(priceAfterDiscount || 0)) {
     return {
       ok: false,
@@ -1235,6 +1357,19 @@ const finalizeSingleProjectPurchase = async ({ req, buyerUserId, payerUserId, pr
   });
 
   await db.savePurchases(purchases);
+  await createWalletCardActivity({
+    cardOwnerUserId: payerUser.id,
+    actorUserId: buyerUserId,
+    type: 'payment_completed',
+    status: 'success',
+    amount: Number(priceAfterDiscount || 0),
+    cardLast4: normalizeWalletCardNumber(payerUser.walletCardNumber).slice(-4),
+    description: `تم خصم ${formatMoney(priceAfterDiscount)} جنيه لشراء المشروع "${project.title}".`,
+    meta: {
+      projectId: project.id,
+      projectTitle: project.title
+    }
+  });
   await createNotification({
     userId: buyerUserId,
     title: 'تم تسجيل طلب شراء جديد',
@@ -1268,6 +1403,13 @@ const finalizeCartPurchase = async ({ req, buyerUserId, payerUserId, itemsSnapsh
     return { ok: false, redirect: '/my-purchases?walletCardError=' + encodeURIComponent('صاحب البطاقة غير موجود') };
   }
   if (isWalletCardFrozen(payerUser)) {
+    await createWalletCardActivity({
+      cardOwnerUserId: payerUserId,
+      actorUserId: buyerUserId,
+      type: 'payment_blocked_frozen',
+      status: 'blocked',
+      description: 'تم منع عملية دفع من السلة لأن البطاقة مجمدة.'
+    });
     return { ok: false, redirect: '/my-purchases?walletCardError=' + encodeURIComponent('بطاقة المحفظة مجمدة حالياً ولا يمكن استخدامها') };
   }
 
@@ -1300,6 +1442,25 @@ const finalizeCartPurchase = async ({ req, buyerUserId, payerUserId, itemsSnapsh
   }
 
   const payerWalletBalance = Number(payerUser.walletBalance || 0);
+  const dailyLimitStatus = await getWalletDailyLimitStatus({
+    payerUser,
+    amount: totalAfter
+  });
+  if (dailyLimitStatus.exceeds) {
+    await createWalletCardActivity({
+      cardOwnerUserId: payerUser.id,
+      actorUserId: buyerUserId,
+      type: 'payment_blocked_daily_limit',
+      status: 'blocked',
+      amount: totalAfter,
+      cardLast4: normalizeWalletCardNumber(payerUser.walletCardNumber).slice(-4),
+      description: `تم منع عملية دفع من السلة بسبب تجاوز الحد اليومي ${formatMoney(dailyLimitStatus.limit)} جنيه.`
+    });
+    return {
+      ok: false,
+      redirect: '/my-purchases?walletCardError=' + encodeURIComponent('تم تجاوز الحد اليومي للبطاقة')
+    };
+  }
   if (payerWalletBalance < totalAfter) {
     return { ok: false, redirect: '/cart?error=' + encodeURIComponent('رصيد البطاقة غير كافٍ') };
   }
@@ -1362,6 +1523,19 @@ const finalizeCartPurchase = async ({ req, buyerUserId, payerUserId, itemsSnapsh
   });
 
   await db.savePurchases(purchases);
+  await createWalletCardActivity({
+    cardOwnerUserId: payerUser.id,
+    actorUserId: buyerUserId,
+    type: 'payment_completed',
+    status: 'success',
+    amount: totalAfter,
+    cardLast4: normalizeWalletCardNumber(payerUser.walletCardNumber).slice(-4),
+    description: `تم خصم ${formatMoney(totalAfter)} جنيه لشراء ${items.length} مشروع من السلة.`,
+    meta: {
+      orderId,
+      itemCount: items.length
+    }
+  });
   await createNotification({
     userId: buyerUserId,
     title: 'تم تسجيل طلب السلة',
@@ -1479,7 +1653,30 @@ const getWalletPaymentAttemptsState = async () => {
 
 const createWalletPaymentAttempt = async ({ req, buyerUser, payerUser, amount, kind, payload }) => {
   if (isWalletCardFrozen(payerUser)) {
+    await createWalletCardActivity({
+      cardOwnerUserId: payerUser.id,
+      actorUserId: buyerUser.id,
+      type: 'payment_blocked_frozen',
+      status: 'blocked',
+      amount,
+      cardLast4: normalizeWalletCardNumber(payerUser.walletCardNumber).slice(-4),
+      description: 'تم منع إنشاء طلب دفع لأن البطاقة مجمدة.'
+    });
     throw new Error('بطاقة المحفظة مجمدة حالياً');
+  }
+
+  const dailyLimitStatus = await getWalletDailyLimitStatus({ payerUser, amount });
+  if (dailyLimitStatus.exceeds) {
+    await createWalletCardActivity({
+      cardOwnerUserId: payerUser.id,
+      actorUserId: buyerUser.id,
+      type: 'payment_blocked_daily_limit',
+      status: 'blocked',
+      amount,
+      cardLast4: normalizeWalletCardNumber(payerUser.walletCardNumber).slice(-4),
+      description: `تم منع إنشاء طلب دفع بسبب تجاوز الحد اليومي ${formatMoney(dailyLimitStatus.limit)} جنيه.`
+    });
+    throw new Error('تم تجاوز الحد اليومي للبطاقة');
   }
 
   const attempts = await getWalletPaymentAttemptsState();
@@ -1502,6 +1699,19 @@ const createWalletPaymentAttempt = async ({ req, buyerUser, payerUser, amount, k
 
   attempts.push(attempt);
   await db.saveWalletPaymentAttempts(attempts);
+  await createWalletCardActivity({
+    cardOwnerUserId: payerUser.id,
+    actorUserId: buyerUser.id,
+    type: 'verification_requested',
+    status: 'pending',
+    amount: attempt.amount,
+    cardLast4: attempt.payerCardLast4,
+    description: `تم إنشاء طلب دفع جديد بقيمة ${formatMoney(attempt.amount)} جنيه ويحتاج كود تحقق.`,
+    meta: {
+      attemptId: attempt.id,
+      kind
+    }
+  });
 
   await createNotification({
     userId: payerUser.id,
@@ -1552,7 +1762,7 @@ const getDownloadFileName = ({ originalFileName, projectTitle, filePath }) => {
 };
 
 const ensureLocalJsonFiles = () => {
-  ['users.json', 'projects.json', 'purchases.json', 'modifications.json', 'messages.json', 'admin-team-messages.json', 'carts.json', 'invoices.json', 'reviews.json', 'coupons.json', 'referrals.json', 'wallet-codes.json', 'wallet-payment-attempts.json'].forEach(file => {
+  ['users.json', 'projects.json', 'purchases.json', 'modifications.json', 'messages.json', 'admin-team-messages.json', 'carts.json', 'invoices.json', 'reviews.json', 'coupons.json', 'referrals.json', 'wallet-codes.json', 'wallet-payment-attempts.json', 'wallet-card-activities.json'].forEach(file => {
     const filePath = path.join(DATA_DIR, file);
     if (!fs.existsSync(filePath)) {
       fs.writeFileSync(filePath, '[]');
@@ -2592,6 +2802,15 @@ app.post('/purchase/:id', requireAuth, async (req, res) => {
     return res.redirect(`/project/${project.id}?couponError=${encodeURIComponent('رقم بطاقة المحفظة غير صحيح')}`);
   }
   if (isWalletCardFrozen(payerUser)) {
+    await createWalletCardActivity({
+      cardOwnerUserId: payerUser.id,
+      actorUserId: currentUser.id,
+      type: 'payment_blocked_frozen',
+      status: 'blocked',
+      amount: Number(priceAfterDiscount || 0),
+      cardLast4: normalizeWalletCardNumber(payerUser.walletCardNumber).slice(-4),
+      description: 'تم منع محاولة شراء لأن البطاقة مجمدة.'
+    });
     return res.redirect(`/project/${project.id}?couponError=${encodeURIComponent('بطاقة المحفظة مجمدة حالياً')}`);
   }
 
@@ -2752,6 +2971,15 @@ app.post('/cart/checkout', requireAuth, async (req, res) => {
     return res.redirect('/cart?error=' + encodeURIComponent('رقم بطاقة المحفظة غير صحيح'));
   }
   if (isWalletCardFrozen(payerUser)) {
+    await createWalletCardActivity({
+      cardOwnerUserId: payerUser.id,
+      actorUserId: currentUser.id,
+      type: 'payment_blocked_frozen',
+      status: 'blocked',
+      amount: totalAfter,
+      cardLast4: normalizeWalletCardNumber(payerUser.walletCardNumber).slice(-4),
+      description: 'تم منع محاولة دفع من السلة لأن البطاقة مجمدة.'
+    });
     return res.redirect('/cart?error=' + encodeURIComponent('بطاقة المحفظة مجمدة حالياً'));
   }
   const payerIndex = users.findIndex(u => u && u.id === payerUser.id);
@@ -2813,6 +3041,15 @@ app.get('/payment/verify/:attemptId', requireAuth, async (req, res) => {
     return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('صاحب البطاقة غير موجود'));
   }
   if (isWalletCardFrozen(payerUser)) {
+    await createWalletCardActivity({
+      cardOwnerUserId: payerUser.id,
+      actorUserId: req.session.user.id,
+      type: 'payment_blocked_frozen',
+      status: 'blocked',
+      amount: attempt.amount,
+      cardLast4: attempt.payerCardLast4,
+      description: 'تم منع إكمال التحقق لأن البطاقة أصبحت مجمدة.'
+    });
     return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('بطاقة المحفظة مجمدة حالياً ولا يمكن إكمال الدفع'));
   }
 
@@ -2844,6 +3081,16 @@ app.post('/payment/verify/:attemptId', requireAuth, async (req, res) => {
 
   const verificationCode = String(req.body.verificationCode || '').trim();
   if (!verificationCode || hashPaymentVerificationCode(verificationCode) !== attempt.codeHash) {
+    await createWalletCardActivity({
+      cardOwnerUserId: attempt.payerUserId,
+      actorUserId: req.session.user.id,
+      type: 'verification_failed',
+      status: 'failed',
+      amount: attempt.amount,
+      cardLast4: attempt.payerCardLast4,
+      description: 'تم إدخال كود تحقق غير صحيح لطلب دفع على البطاقة.',
+      meta: { attemptId: attempt.id }
+    });
     return res.redirect(`/payment/verify/${attempt.id}?error=${encodeURIComponent('كود التحقق غير صحيح')}`);
   }
 
@@ -2857,6 +3104,15 @@ app.post('/payment/verify/:attemptId', requireAuth, async (req, res) => {
     return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('صاحب البطاقة غير موجود'));
   }
   if (isWalletCardFrozen(payerUser)) {
+    await createWalletCardActivity({
+      cardOwnerUserId: payerUser.id,
+      actorUserId: req.session.user.id,
+      type: 'payment_blocked_frozen',
+      status: 'blocked',
+      amount: attempt.amount,
+      cardLast4: attempt.payerCardLast4,
+      description: 'تم منع إتمام الدفع لأن البطاقة أصبحت مجمدة.'
+    });
     return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('بطاقة المحفظة مجمدة حالياً ولا يمكن إكمال الدفع'));
   }
 
@@ -2866,6 +3122,16 @@ app.post('/payment/verify/:attemptId', requireAuth, async (req, res) => {
   if (attempt.requiresPassword) {
     const walletPassword = String(req.body.walletPassword || '');
     if (!payerUser.walletPaymentPasswordHash || !bcrypt.compareSync(walletPassword, payerUser.walletPaymentPasswordHash)) {
+      await createWalletCardActivity({
+        cardOwnerUserId: payerUser.id,
+        actorUserId: req.session.user.id,
+        type: 'password_failed',
+        status: 'failed',
+        amount: attempt.amount,
+        cardLast4: attempt.payerCardLast4,
+        description: 'تم إدخال كلمة مرور بطاقة غير صحيحة أثناء التحقق من الدفع.',
+        meta: { attemptId: attempt.id }
+      });
       return res.redirect(`/payment/verify/${attempt.id}?error=${encodeURIComponent('كلمة مرور البطاقة غير صحيحة')}`);
     }
   }
@@ -2924,6 +3190,8 @@ app.get('/my-purchases', requireAuth, async (req, res) => {
   const subscriptionPlans = await db.subscriptionPlans();
   const subscriptions = (await db.subscriptions()).filter(s => s && s.userId === req.session.user.id);
   const subscriptionPayments = (await db.subscriptionPayments()).filter(p => p && p.userId === req.session.user.id);
+  const walletCardActivities = currentUser ? await getWalletCardActivitiesForUser({ cardOwnerUserId: currentUser.id, limit: 20 }) : [];
+  const walletDailySpentToday = currentUser ? await getWalletCardSpentToday({ cardOwnerUserId: currentUser.id }) : 0;
 
   res.render('my-purchases', {
     purchases,
@@ -2932,6 +3200,9 @@ app.get('/my-purchases', requireAuth, async (req, res) => {
     walletCardNumber: currentUser ? formatWalletCardNumber(currentUser.walletCardNumber) : null,
     walletCardFrozen: currentUser ? Boolean(currentUser.walletCardFrozen) : false,
     walletCardFrozenAt: currentUser ? (currentUser.walletCardFrozenAt || null) : null,
+    walletDailyLimit: currentUser && currentUser.walletDailyLimit != null ? Number(currentUser.walletDailyLimit) : null,
+    walletDailySpentToday,
+    walletCardActivities,
     hasWalletPaymentPassword: currentUser ? Boolean(currentUser.walletPaymentPasswordHash) : false,
     walletCardError: req.query.walletCardError || null,
     walletCardSuccess: req.query.walletCardSuccess || null,
@@ -3050,6 +3321,47 @@ app.post('/wallet-card/password', requireAuth, async (req, res) => {
   return res.redirect('/my-purchases?walletCardSuccess=' + encodeURIComponent('تم تحديث كلمة مرور البطاقة'));
 });
 
+app.post('/wallet-card/daily-limit', requireAuth, async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
+
+  const rawLimit = String(req.body.dailyLimit || '').trim();
+  let nextLimit = null;
+  if (rawLimit !== '') {
+    nextLimit = Number(rawLimit);
+    if (!Number.isFinite(nextLimit) || nextLimit < 0) {
+      return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('الحد اليومي غير صحيح'));
+    }
+    nextLimit = Math.round(nextLimit * 100) / 100;
+  }
+
+  const users = await db.users();
+  const idx = users.findIndex(u => u && u.id === req.session.user.id);
+  if (idx === -1) {
+    return res.redirect('/my-purchases?walletCardError=' + encodeURIComponent('المستخدم غير موجود'));
+  }
+
+  ensureUserPaymentProfile({ users, user: users[idx] });
+  users[idx].walletDailyLimit = nextLimit;
+  await db.saveUsers(users);
+
+  req.session.user = {
+    ...req.session.user,
+    walletDailyLimit: nextLimit
+  };
+
+  await createWalletCardActivity({
+    cardOwnerUserId: users[idx].id,
+    actorUserId: users[idx].id,
+    type: 'daily_limit_updated',
+    status: 'info',
+    description: nextLimit > 0
+      ? `تم تعيين حد الإنفاق اليومي للبطاقة إلى ${formatMoney(nextLimit)} جنيه.`
+      : 'تم إلغاء حد الإنفاق اليومي للبطاقة.'
+  });
+
+  return res.redirect('/my-purchases?walletCardSuccess=' + encodeURIComponent(nextLimit > 0 ? 'تم تحديث الحد اليومي للبطاقة' : 'تم إلغاء الحد اليومي للبطاقة'));
+});
+
 app.post('/wallet-card/freeze', requireAuth, async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
 
@@ -3081,6 +3393,14 @@ app.post('/wallet-card/freeze', requireAuth, async (req, res) => {
     link: '/my-purchases',
     kind: 'warning',
     meta: { type: 'wallet_card_frozen' }
+  });
+  await createWalletCardActivity({
+    cardOwnerUserId: users[idx].id,
+    actorUserId: users[idx].id,
+    type: 'card_frozen',
+    status: 'warning',
+    cardLast4: normalizeWalletCardNumber(users[idx].walletCardNumber).slice(-4),
+    description: 'تم تجميد بطاقة المحفظة من صاحبها.'
   });
 
   return res.redirect('/my-purchases?walletCardSuccess=' + encodeURIComponent('تم تجميد البطاقة بنجاح'));
@@ -3117,6 +3437,14 @@ app.post('/wallet-card/unfreeze', requireAuth, async (req, res) => {
     link: '/my-purchases',
     kind: 'success',
     meta: { type: 'wallet_card_unfrozen' }
+  });
+  await createWalletCardActivity({
+    cardOwnerUserId: users[idx].id,
+    actorUserId: users[idx].id,
+    type: 'card_unfrozen',
+    status: 'success',
+    cardLast4: normalizeWalletCardNumber(users[idx].walletCardNumber).slice(-4),
+    description: 'تم فك تجميد بطاقة المحفظة من صاحبها.'
   });
 
   return res.redirect('/my-purchases?walletCardSuccess=' + encodeURIComponent('تم فك تجميد البطاقة بنجاح'));
