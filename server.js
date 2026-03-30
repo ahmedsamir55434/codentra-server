@@ -94,6 +94,7 @@ const buildInvoiceNumber = () => {
 const HIGH_VALUE_PAYMENT_THRESHOLD = 5000;
 const PAYMENT_VERIFICATION_TTL_MS = 10 * 60 * 1000;
 const PAYMENT_CODE_LENGTH = 6;
+const RECENTLY_VIEWED_LIMIT = 6;
 const SMTP_HOST = process.env.SMTP_HOST || '';
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_USER = process.env.SMTP_USER || '';
@@ -1169,6 +1170,114 @@ const isProjectVisibleToUser = ({ project, sessionUser }) => {
   return true;
 };
 
+const normalizeRecentlyViewedProjectIds = (projectIds) => {
+  if (!Array.isArray(projectIds)) return [];
+
+  const seen = new Set();
+  const normalized = [];
+
+  for (const value of projectIds) {
+    if (typeof value !== 'string') continue;
+    const projectId = value.trim();
+    if (!projectId || seen.has(projectId)) continue;
+    seen.add(projectId);
+    normalized.push(projectId);
+    if (normalized.length >= RECENTLY_VIEWED_LIMIT) break;
+  }
+
+  return normalized;
+};
+
+const mergeRecentlyViewedProjectIds = (...lists) => {
+  const merged = [];
+  lists.forEach((list) => {
+    normalizeRecentlyViewedProjectIds(list).forEach((projectId) => {
+      merged.push(projectId);
+    });
+  });
+  return normalizeRecentlyViewedProjectIds(merged);
+};
+
+const prependRecentlyViewedProjectId = (projectIds, projectId) => {
+  if (!projectId || typeof projectId !== 'string') {
+    return normalizeRecentlyViewedProjectIds(projectIds);
+  }
+
+  return normalizeRecentlyViewedProjectIds([projectId.trim(), ...normalizeRecentlyViewedProjectIds(projectIds)]);
+};
+
+const getSessionRecentlyViewedProjectIds = (req) => {
+  if (!req || !req.session) return [];
+  return normalizeRecentlyViewedProjectIds(req.session.recentlyViewedProjectIds);
+};
+
+const setSessionRecentlyViewedProjectIds = (req, projectIds) => {
+  if (!req || !req.session) return [];
+  const normalized = normalizeRecentlyViewedProjectIds(projectIds);
+  req.session.recentlyViewedProjectIds = normalized;
+  return normalized;
+};
+
+const syncRecentlyViewedProjectsForUser = async ({ req, userId }) => {
+  const sessionIds = getSessionRecentlyViewedProjectIds(req);
+  if (!userId) return sessionIds;
+
+  const users = await db.users();
+  const userIndex = users.findIndex((item) => item && item.id === userId);
+  if (userIndex === -1) return sessionIds;
+
+  const storedIds = normalizeRecentlyViewedProjectIds(users[userIndex].recentlyViewedProjectIds);
+  const mergedIds = mergeRecentlyViewedProjectIds(sessionIds, storedIds);
+  setSessionRecentlyViewedProjectIds(req, mergedIds);
+
+  if (mergedIds.join('|') !== storedIds.join('|')) {
+    users[userIndex].recentlyViewedProjectIds = mergedIds;
+    await db.saveUsers(users);
+  }
+
+  return mergedIds;
+};
+
+const recordRecentlyViewedProject = async ({ req, projectId }) => {
+  const sessionIds = prependRecentlyViewedProjectId(getSessionRecentlyViewedProjectIds(req), projectId);
+  setSessionRecentlyViewedProjectIds(req, sessionIds);
+
+  if (!req || !req.session || !req.session.user || !req.session.user.id) {
+    return sessionIds;
+  }
+
+  const users = await db.users();
+  const userIndex = users.findIndex((item) => item && item.id === req.session.user.id);
+  if (userIndex === -1) return sessionIds;
+
+  const storedIds = normalizeRecentlyViewedProjectIds(users[userIndex].recentlyViewedProjectIds);
+  const nextStoredIds = prependRecentlyViewedProjectId(storedIds, projectId);
+
+  if (nextStoredIds.join('|') !== storedIds.join('|')) {
+    users[userIndex].recentlyViewedProjectIds = nextStoredIds;
+    await db.saveUsers(users);
+  }
+
+  return nextStoredIds;
+};
+
+const getRecentlyViewedProjects = async ({ req, availableProjects }) => {
+  if (!Array.isArray(availableProjects) || availableProjects.length === 0) return [];
+
+  let recentIds = getSessionRecentlyViewedProjectIds(req);
+  if (req && req.session && req.session.user && req.session.user.id) {
+    recentIds = await syncRecentlyViewedProjectsForUser({ req, userId: req.session.user.id });
+  }
+
+  const visibleProjectsMap = new Map(
+    availableProjects.map((project) => [project.id, project])
+  );
+
+  return recentIds
+    .map((projectId) => visibleProjectsMap.get(projectId))
+    .filter(Boolean);
+};
+
 const getSubscriberDiscountPercent = ({ sessionUser }) => {
   const tier = getUserSubscriptionTier({ sessionUser });
   if (tier === 'premium') return 20;
@@ -2145,7 +2254,8 @@ const requireAdminPermission = (permission) => {
 // Home - Projects listing
 app.get('/', async (req, res) => {
   const projects = (await db.projects()).filter(p => isProjectVisibleToUser({ project: p, sessionUser: req.session.user }));
-  res.render('index', { projects, user: req.session.user });
+  const recentProjects = await getRecentlyViewedProjects({ req, availableProjects: projects });
+  res.render('index', { projects, recentProjects, user: req.session.user });
 });
 
 // Auth routes
@@ -2239,6 +2349,7 @@ app.post('/login', async (req, res) => {
     : null;
 
   req.session.user = buildSessionUser({ user, activeSubscription });
+  await syncRecentlyViewedProjectsForUser({ req, userId: user.id });
   res.redirect(user.role === 'admin' ? '/admin' : '/');
 });
 
@@ -2308,6 +2419,7 @@ app.post('/register', async (req, res) => {
   await db.saveUsers(users);
   
   req.session.user = buildSessionUser({ user: newUser, activeSubscription: null });
+  await syncRecentlyViewedProjectsForUser({ req, userId: newUser.id });
   res.redirect('/');
 });
 
@@ -2710,6 +2822,8 @@ app.get('/project/:id', async (req, res) => {
   if (!isProjectVisibleToUser({ project, sessionUser: req.session.user })) {
     return res.status(403).send('Not allowed');
   }
+
+  await recordRecentlyViewedProject({ req, projectId: project.id });
   
   let hasPurchased = false;
   let canReview = false;

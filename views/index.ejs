@@ -8,6 +8,7 @@
 </head>
 <body>
   <%- include('partials/header') %>
+  <% const safeRecentProjects = Array.isArray(recentProjects) ? recentProjects : []; %>
 
   <main class="hero">
     <div class="container">
@@ -16,20 +17,74 @@
     </div>
   </main>
 
+  <% if (safeRecentProjects.length > 0) { %>
+    <section class="projects-section recently-viewed-section">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="section-kicker">متابعة سريعة</span>
+            <h2>شوهد مؤخرًا</h2>
+          </div>
+          <p class="section-copy">ارجع بسرعة لآخر المشاريع التي فتحتها وكمل من حيث توقفت.</p>
+        </div>
+
+        <div class="projects-grid recent-projects-grid">
+          <% safeRecentProjects.forEach(project => { %>
+            <div class="project-card project-card-recent">
+              <div class="project-image <%= project.images && project.images.length > 0 ? 'has-cover' : '' %>">
+                <% if (project.images && project.images.length > 0) { %>
+                  <img src="/<%= project.images[0] %>" alt="<%= project.title %>" class="project-cover">
+                <% } else { %>
+                  <div class="placeholder-img">
+                    <span><%= project.category %></span>
+                  </div>
+                <% } %>
+              </div>
+              <div class="project-info">
+                <span class="project-card-eyebrow">آخر زيارة</span>
+                <h3><%= project.title %></h3>
+                <p class="project-desc"><%= project.description.substring(0, 100) %><%= project.description.length > 100 ? '...' : '' %></p>
+                <div class="project-tech">
+                  <% project.technologies.slice(0, 3).forEach(tech => { %>
+                    <span class="tech-tag"><%= tech %></span>
+                  <% }) %>
+                </div>
+                <div class="project-footer">
+                  <span class="price"><%= project.price %> جنيه</span>
+                  <a href="/project/<%= project.id %>" class="btn btn-secondary">متابعة</a>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </section>
+  <% } %>
+
   <section class="projects-section">
     <div class="container">
-      <h2>المشاريع المتاحة</h2>
+      <div class="section-head">
+        <div>
+          <span class="section-kicker">السوق</span>
+          <h2>المشاريع المتاحة</h2>
+        </div>
+        <p class="section-copy">تصفح كل المشاريع الجاهزة واختر المشروع الأنسب لاحتياجك الحالي.</p>
+      </div>
       <div class="projects-grid">
         <% projects.forEach(project => { %>
           <div class="project-card">
-            <div class="project-image">
-              <div class="placeholder-img">
-                <span><%= project.category %></span>
-              </div>
+            <div class="project-image <%= project.images && project.images.length > 0 ? 'has-cover' : '' %>">
+              <% if (project.images && project.images.length > 0) { %>
+                <img src="/<%= project.images[0] %>" alt="<%= project.title %>" class="project-cover">
+              <% } else { %>
+                <div class="placeholder-img">
+                  <span><%= project.category %></span>
+                </div>
+              <% } %>
             </div>
             <div class="project-info">
               <h3><%= project.title %></h3>
-              <p class="project-desc"><%= project.description.substring(0, 100) %>...</p>
+              <p class="project-desc"><%= project.description.substring(0, 100) %><%= project.description.length > 100 ? '...' : '' %></p>
               <div class="project-tech">
                 <% project.technologies.slice(0, 3).forEach(tech => { %>
                   <span class="tech-tag"><%= tech %></span>
