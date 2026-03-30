@@ -7,18 +7,22 @@
       </a>
     </div>
     <nav class="main-nav">
-      <a href="/">المشاريع</a>
-      <button type="button" class="btn btn-secondary theme-toggle" id="themeToggle" aria-label="تبديل الوضع الليلي/النهاري">
-        الوضع
-      </button>
       <% if (user) { %>
         <% if (user.role === 'admin') { %>
-          <a href="/admin">لوحة التحكم</a>
-          <% if (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.appointments)) { %>
-            <a href="/admin/appointments">المواعيد</a>
-          <% } %>
-          <span class="user-name">مرحباً <%= user.name %></span>
-          <a href="/logout" class="btn btn-secondary">خروج</a>
+          <div class="nav-links" id="navLinks">
+            <a href="/">المشاريع</a>
+            <a href="/admin">لوحة التحكم</a>
+            <% if (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.appointments)) { %>
+              <a href="/admin/appointments">المواعيد</a>
+            <% } %>
+          </div>
+          <div class="nav-actions">
+            <button type="button" class="btn btn-secondary theme-toggle" id="themeToggle" aria-label="تبديل الوضع الليلي/النهاري">
+              الوضع
+            </button>
+            <span class="user-name">مرحباً <%= user.name %></span>
+            <a href="/logout" class="btn btn-secondary header-action-btn">خروج</a>
+          </div>
         <% } else { %>
           <div class="nav-links" id="navLinks">
             <a href="/">الرئيسية</a>
@@ -53,12 +57,25 @@
             <a href="/loyalty">نقاطي</a>
             <a href="/messages">التواصل 📨</a>
           </div>
-          <span class="user-name">مرحباً <%= user.name %></span>
-          <a href="/logout" class="btn btn-secondary">خروج</a>
+          <div class="nav-actions">
+            <button type="button" class="btn btn-secondary theme-toggle" id="themeToggle" aria-label="تبديل الوضع الليلي/النهاري">
+              الوضع
+            </button>
+            <span class="user-name">مرحباً <%= user.name %></span>
+            <a href="/logout" class="btn btn-secondary header-action-btn">خروج</a>
+          </div>
         <% } %>
       <% } else { %>
-        <a href="/login" class="btn btn-secondary">تسجيل الدخول</a>
-        <a href="/register" class="btn btn-primary">حساب جديد</a>
+        <div class="nav-links" id="navLinks">
+          <a href="/">المشاريع</a>
+        </div>
+        <div class="nav-actions">
+          <button type="button" class="btn btn-secondary theme-toggle" id="themeToggle" aria-label="تبديل الوضع الليلي/النهاري">
+            الوضع
+          </button>
+          <a href="/login" class="btn btn-secondary header-action-btn">تسجيل الدخول</a>
+          <a href="/register" class="btn btn-primary header-action-btn">حساب جديد</a>
+        </div>
       <% } %>
     </nav>
   </div>

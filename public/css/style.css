@@ -114,12 +114,12 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 70px;
+  min-height: 78px;
   height: auto;
-  padding-top: 8px;
-  padding-bottom: 8px;
+  padding-top: 10px;
+  padding-bottom: 10px;
   flex-wrap: nowrap;
-  gap: 12px;
+  gap: 20px;
 }
 
 .logo a {
@@ -138,30 +138,44 @@ body {
   border-radius: var(--radius);
 }
 
+.logo {
+  flex: 0 0 auto;
+}
+
 .main-nav {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: nowrap;
-  max-width: 100%;
-  overflow-x: auto;
-  white-space: nowrap;
-  justify-content: flex-end;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
 }
 
 .nav-links {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
 .user-name {
-  margin: 0 12px;
+  margin: 0;
+  white-space: nowrap;
 }
 
 .main-nav .btn {
-  margin-left: 8px;
+  margin-left: 0;
 }
 
 .main-nav a {
@@ -169,6 +183,7 @@ body {
   color: var(--text-secondary);
   font-weight: 500;
   transition: color 0.2s;
+  white-space: nowrap;
 }
 
 .main-nav a:hover {
@@ -368,8 +383,15 @@ html[data-theme='light'] .notification-preview-item:hover {
 }
 
 .theme-toggle {
-  padding: 8px 12px;
+  padding: 8px 14px;
   border-radius: 999px;
+  min-height: 40px;
+}
+
+.header-action-btn {
+  padding: 8px 14px;
+  min-height: 40px;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 768px) {
@@ -764,11 +786,11 @@ html[data-theme='light'] .notification-preview-item:hover {
 
 @media (max-width: 768px) {
   .main-header .container {
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
     height: auto;
-    padding: 12px 16px;
-    gap: 10px;
+    padding: 15px 20px;
+    gap: 15px;
   }
 
   .logo a {
@@ -781,14 +803,19 @@ html[data-theme='light'] .notification-preview-item:hover {
 
   .main-nav {
     width: 100%;
-    justify-content: center;
+    align-items: stretch;
     gap: 8px;
-    overflow-x: auto;
   }
 
   .nav-links {
     gap: 8px;
+    flex-wrap: wrap;
     justify-content: center;
+  }
+
+  .nav-actions {
+    justify-content: center;
+    gap: 8px;
   }
 
   .main-nav a {
@@ -803,7 +830,7 @@ html[data-theme='light'] .notification-preview-item:hover {
     text-align: center;
   }
 
-  .btn {
+  .main-nav .btn {
     padding: 10px 14px;
   }
   
@@ -860,6 +887,10 @@ html[data-theme='light'] .notification-preview-item:hover {
   }
 
   .nav-links {
+    gap: 6px;
+  }
+
+  .nav-actions {
     gap: 6px;
   }
 

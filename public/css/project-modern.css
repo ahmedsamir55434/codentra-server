@@ -284,8 +284,8 @@
   margin-top: 5px;
 }
 
-/* Buttons */
-.btn {
+/* Scope project-specific button styling so the shared header keeps the global navbar look */
+.project-main-content .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -302,7 +302,7 @@
   min-width: 200px;
 }
 
-.btn::before {
+.project-main-content .btn::before {
   content: '';
   position: absolute;
   top: 0;
@@ -313,28 +313,28 @@
   transition: left 0.5s ease;
 }
 
-.btn:hover::before {
+.project-main-content .btn:hover::before {
   left: 100%;
 }
 
-.btn-primary {
+.project-main-content .btn-primary {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
 }
 
-.btn-primary:hover {
+.project-main-content .btn-primary:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
 }
 
-.btn-secondary {
+.project-main-content .btn-secondary {
   background: rgba(255, 255, 255, 0.1);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.btn-secondary:hover {
+.project-main-content .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
 }
@@ -466,7 +466,7 @@
     font-size: 2rem;
   }
   
-  .btn {
+  .project-main-content .btn {
     padding: 12px 20px;
     font-size: 0.9rem;
     min-width: 150px;
