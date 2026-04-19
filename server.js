@@ -389,57 +389,19 @@ const ADMIN_TEAM_UPLOADS_DIR = path.join(UPLOADS_DIR, 'admin-team');
 const COMMUNITY_MEDIA_DIR = path.join(UPLOADS_DIR, 'community-media');
 const COMMUNITY_CV_DIR = path.join(UPLOADS_DIR, 'community-cv');
 
-// Ensure directories exist
-[DATA_DIR, UPLOADS_DIR, MEETING_RECORDINGS_DIR, ADMIN_TEAM_UPLOADS_DIR, COMMUNITY_MEDIA_DIR, COMMUNITY_CV_DIR].forEach(dir => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
+// Ensure directories exist (skip on Vercel)
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  [DATA_DIR, UPLOADS_DIR, MEETING_RECORDINGS_DIR, ADMIN_TEAM_UPLOADS_DIR, COMMUNITY_MEDIA_DIR, COMMUNITY_CV_DIR].forEach(dir => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  });
+}
 
 // JSON storage helpers
 const db = {
-  users: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'users.json'), 'utf8') || '[]'),
-  projects: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'projects.json'), 'utf8') || '[]'),
-  purchases: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'purchases.json'), 'utf8') || '[]'),
-  modifications: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'modifications.json'), 'utf8') || '[]'),
-  coupons: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'coupons.json'), 'utf8') || '[]'),
-  referrals: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'referrals.json'), 'utf8') || '[]'),
-  walletCodes: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'wallet-codes.json'), 'utf8') || '[]'),
-  walletPaymentAttempts: () => {
-    const filePath = path.join(DATA_DIR, 'wallet-payment-attempts.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  },
-  appointments: () => {
-    const filePath = path.join(DATA_DIR, 'appointments.json');
-    if (!fs.existsSync(filePath)) {
-      const initial = { timeSlots: [], bookings: [] };
-      fs.writeFileSync(filePath, JSON.stringify(initial, null, 2));
-      return initial;
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '{"timeSlots":[],"bookings":[]}');
-  },
-  saveUsers: (data) => fs.writeFileSync(path.join(DATA_DIR, 'users.json'), JSON.stringify(data, null, 2)),
-  saveProjects: (data) => fs.writeFileSync(path.join(DATA_DIR, 'projects.json'), JSON.stringify(data, null, 2)),
-  savePurchases: (data) => fs.writeFileSync(path.join(DATA_DIR, 'purchases.json'), JSON.stringify(data, null, 2)),
-  saveModifications: (data) => fs.writeFileSync(path.join(DATA_DIR, 'modifications.json'), JSON.stringify(data, null, 2)),
-  saveCoupons: (data) => fs.writeFileSync(path.join(DATA_DIR, 'coupons.json'), JSON.stringify(data, null, 2)),
-  saveReferrals: (data) => fs.writeFileSync(path.join(DATA_DIR, 'referrals.json'), JSON.stringify(data, null, 2)),
-  saveWalletCodes: (data) => fs.writeFileSync(path.join(DATA_DIR, 'wallet-codes.json'), JSON.stringify(data, null, 2)),
-  saveWalletPaymentAttempts: (data) => fs.writeFileSync(path.join(DATA_DIR, 'wallet-payment-attempts.json'), JSON.stringify(data, null, 2)),
-  reviews: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'reviews.json'), 'utf8') || '[]'),
-  saveReviews: (data) => fs.writeFileSync(path.join(DATA_DIR, 'reviews.json'), JSON.stringify(data, null, 2)),
-  messages: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'messages.json'), 'utf8') || '[]'),
-  saveMessages: (data) => fs.writeFileSync(path.join(DATA_DIR, 'messages.json'), JSON.stringify(data, null, 2)),
-  adminTeamMessages: () => {
-    const filePath = path.join(DATA_DIR, 'admin-team-messages.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
+  users: () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'users.json'), 'utf8') || '[]');
+    } catch { return []; }
   },
   saveAdminTeamMessages: (data) => fs.writeFileSync(path.join(DATA_DIR, 'admin-team-messages.json'), JSON.stringify(data, null, 2)),
   carts: () => {
@@ -543,6 +505,94 @@ const db = {
   savePresentationSubscriptions: (data) => fs.writeFileSync(path.join(DATA_DIR, 'presentation-subscriptions.json'), JSON.stringify(data, null, 2)),
   savePresentationDecks: (data) => fs.writeFileSync(path.join(DATA_DIR, 'presentation-decks.json'), JSON.stringify(data, null, 2)),
   savePresentationPaymentAttempts: (data) => fs.writeFileSync(path.join(DATA_DIR, 'presentation-payment-attempts.json'), JSON.stringify(data, null, 2)),
+  projects: () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'projects.json'), 'utf8') || '[]');
+    } catch { return []; }
+  },
+  purchases: () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'purchases.json'), 'utf8') || '[]');
+    } catch { return []; }
+  },
+  modifications: () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'modifications.json'), 'utf8') || '[]');
+    } catch { return []; }
+  },
+  coupons: () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'coupons.json'), 'utf8') || '[]');
+    } catch { return []; }
+  },
+  referrals: () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'referrals.json'), 'utf8') || '[]');
+    } catch { return []; }
+  },
+  walletCodes: () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'wallet-codes.json'), 'utf8') || '[]');
+    } catch { return []; }
+  },
+  adminTeam: () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'admin-team.json'), 'utf8') || '[]');
+    } catch { return []; }
+  },
+  meetings: () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'meetings.json'), 'utf8') || '[]');
+    } catch { return []; }
+  },
+  communityPosts: () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'community-posts.json'), 'utf8') || '[]');
+    } catch { return []; }
+  },
+  communityJobs: () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'community-jobs.json'), 'utf8') || '[]');
+    } catch { return []; }
+  },
+  communityJobApplications: () => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'community-job-applications.json'), 'utf8') || '[]');
+    } catch { return []; }
+  },
+  saveProjects: (data) => {
+    try { fs.writeFileSync(path.join(DATA_DIR, 'projects.json'), JSON.stringify(data, null, 2)); } catch {}
+  },
+  savePurchases: (data) => {
+    try { fs.writeFileSync(path.join(DATA_DIR, 'purchases.json'), JSON.stringify(data, null, 2)); } catch {}
+  },
+  saveModifications: (data) => {
+    try { fs.writeFileSync(path.join(DATA_DIR, 'modifications.json'), JSON.stringify(data, null, 2)); } catch {}
+  },
+  saveCoupons: (data) => {
+    try { fs.writeFileSync(path.join(DATA_DIR, 'coupons.json'), JSON.stringify(data, null, 2)); } catch {}
+  },
+  saveReferrals: (data) => {
+    try { fs.writeFileSync(path.join(DATA_DIR, 'referrals.json'), JSON.stringify(data, null, 2)); } catch {}
+  },
+  saveWalletCodes: (data) => {
+    try { fs.writeFileSync(path.join(DATA_DIR, 'wallet-codes.json'), JSON.stringify(data, null, 2)); } catch {}
+  },
+  saveAdminTeam: (data) => {
+    try { fs.writeFileSync(path.join(DATA_DIR, 'admin-team.json'), JSON.stringify(data, null, 2)); } catch {}
+  },
+  saveMeetings: (data) => {
+    try { fs.writeFileSync(path.join(DATA_DIR, 'meetings.json'), JSON.stringify(data, null, 2)); } catch {}
+  },
+  saveCommunityPosts: (data) => {
+    try { fs.writeFileSync(path.join(DATA_DIR, 'community-posts.json'), JSON.stringify(data, null, 2)); } catch {}
+  },
+  saveCommunityJobs: (data) => {
+    try { fs.writeFileSync(path.join(DATA_DIR, 'community-jobs.json'), JSON.stringify(data, null, 2)); } catch {}
+  },
+  saveCommunityJobApplications: (data) => {
+    try { fs.writeFileSync(path.join(DATA_DIR, 'community-job-applications.json'), JSON.stringify(data, null, 2)); } catch {}
+  },
   loyaltySettings: () => {
     const filePath = path.join(DATA_DIR, 'loyalty-settings.json');
     const defaults = {
