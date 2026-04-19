@@ -1,0 +1,42 @@
+<header class="main-header">
+  <div class="container">
+    <div class="logo">
+      <a href="/">
+        <img src="/logo.jpg" alt="Codentra" class="logo-img">
+        <span>Codentra</span>
+      </a>
+    </div>
+    <nav class="main-nav">
+      <a href="/">المشاريع</a>
+      <button type="button" class="btn btn-secondary theme-toggle" id="themeToggle" aria-label="تبديل الوضع الليلي/النهاري">
+        الوضع
+      </button>
+      <% if (user) { %>
+        <% if (user.role === 'admin') { %>
+          <a href="/admin">لوحة التحكم</a>
+          <% if (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.appointments)) { %>
+            <a href="/admin/appointments">المواعيد</a>
+          <% } %>
+          <span class="user-name">مرحباً <%= user.name %></span>
+          <a href="/logout" class="btn btn-secondary">خروج</a>
+        <% } else { %>
+          <div class="nav-links" id="navLinks">
+            <a href="/">الرئيسية</a>
+            <a href="/cart">السلة 🛒</a>
+            <a href="/my-purchases">مشترياتي</a>
+            <a href="/subscriptions">الاشتراكات</a>
+            <a href="/loyalty">نقاطي</a>
+            <a href="/appointments">حجز جلسة</a>
+            <a href="/my-appointments">مواعيدي</a>
+            <a href="/messages">التواصل 📨</a>
+          </div>
+          <span class="user-name">مرحباً <%= user.name %></span>
+          <a href="/logout" class="btn btn-secondary">خروج</a>
+        <% } %>
+      <% } else { %>
+        <a href="/login" class="btn btn-secondary">تسجيل الدخول</a>
+        <a href="/register" class="btn btn-primary">حساب جديد</a>
+      <% } %>
+    </nav>
+  </div>
+</header>

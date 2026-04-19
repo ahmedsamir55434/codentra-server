@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community Jobs - Admin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('../partials/header', { user: user }) %>
+
+  <main class="container" style="padding: 30px 0;">
+    <h1 style="margin-bottom: 10px;">إدارة وظائف الكومينتي</h1>
+
+    <% if (error) { %>
+      <div style="background:#ffe5e5;color:#a30000;padding:10px;border-radius:8px;margin:10px 0;"><%= error %></div>
+    <% } %>
+    <% if (success) { %>
+      <div style="background:#e7ffe5;color:#116400;padding:10px;border-radius:8px;margin:10px 0;"><%= success %></div>
+    <% } %>
+
+    <section style="background: var(--card-bg, #fff); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08); margin-bottom: 20px;">
+      <h2 style="margin-bottom: 10px;">إضافة وظيفة</h2>
+      <form action="/admin/community/jobs" method="POST">
+        <div class="form-group">
+          <label>العنوان</label>
+          <input type="text" name="title" required style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.2);" />
+        </div>
+        <div class="form-group">
+          <label>الوصف</label>
+          <textarea name="description" rows="4" required style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.2);"></textarea>
+        </div>
+        <div class="form-group">
+          <label>الأجر</label>
+          <input type="text" name="salary" required style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.2);" />
+        </div>
+        <div class="form-group">
+          <label>سنين الخبرة</label>
+          <input type="number" name="experienceYears" required min="0" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.2);" />
+        </div>
+        <button type="submit" class="btn btn-primary">إضافة</button>
+      </form>
+    </section>
+
+    <section>
+      <h2 style="margin-bottom: 10px;">الوظائف</h2>
+      <% if (!jobs || jobs.length === 0) { %>
+        <div class="empty-state"><p>لا توجد وظائف</p></div>
+      <% } else { %>
+        <div style="overflow:auto;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:right;padding:10px;border-bottom:1px solid rgba(0,0,0,0.1);">العنوان</th>
+                <th style="text-align:right;padding:10px;border-bottom:1px solid rgba(0,0,0,0.1);">الأجر</th>
+                <th style="text-align:right;padding:10px;border-bottom:1px solid rgba(0,0,0,0.1);">الخبرة</th>
+                <th style="text-align:right;padding:10px;border-bottom:1px solid rgba(0,0,0,0.1);">طلبات</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% jobs.forEach(j => { %>
+                <tr>
+                  <td style="padding:10px;border-bottom:1px solid rgba(0,0,0,0.06);"><%= j.title %></td>
+                  <td style="padding:10px;border-bottom:1px solid rgba(0,0,0,0.06);"><%= j.salary %></td>
+                  <td style="padding:10px;border-bottom:1px solid rgba(0,0,0,0.06);"><%= j.experienceYears %></td>
+                  <td style="padding:10px;border-bottom:1px solid rgba(0,0,0,0.06);">
+                    <a class="btn btn-secondary" href="/admin/community/jobs/<%= j.id %>/applications">عرض الطلبات</a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+
+    <div style="margin-top: 20px;">
+      <a href="/admin">رجوع للوحة التحكم</a>
+    </div>
+  </main>
+
+  <%- include('../partials/footer') %>
+  <script src="/js/theme.js"></script>
+</body>
+</html>

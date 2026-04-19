@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>التحقق من التسجيل - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/projects/new">إضافة مشروع</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/admin/modifications">طلبات التعديل</a>
+        <a href="/admin/messages">الرسائل</a>
+        <a href="/admin/reviews">التقييمات</a>
+        <a href="/admin/coupons">الكوبونات</a>
+        <a href="/admin/referrals">الإحالات</a>
+        <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <a href="/admin/appointments">المواعيد</a>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/meeting-recordings" class="active">تسجيلات الاجتماعات</a>
+          <a href="/admin/admins">إدارة الأدمنز</a>
+        <% } %>
+        <a href="/admin/users">المستخدمين</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>التحقق من نزاهة التسجيل</h1>
+
+      <div class="table-container" style="margin-top: 16px;">
+        <table class="admin-table">
+          <tbody>
+            <tr>
+              <th>التسجيل</th>
+              <td><%= recording && recording.id ? recording.id : '' %></td>
+            </tr>
+            <tr>
+              <th>العميل</th>
+              <td><%= (recording && (recording.userName || recording.userId)) ? (recording.userName || recording.userId) : '' %></td>
+            </tr>
+            <tr>
+              <th>الأدمن</th>
+              <td><%= (recording && (recording.adminName || recording.adminId)) ? (recording.adminName || recording.adminId) : '' %></td>
+            </tr>
+            <tr>
+              <th>التاريخ</th>
+              <td><%= recording && recording.createdAt ? new Date(recording.createdAt).toLocaleString('ar-EG') : '' %></td>
+            </tr>
+            <tr>
+              <th>الملف موجود</th>
+              <td><%= fileExists ? 'نعم' : 'لا' %></td>
+            </tr>
+            <tr>
+              <th>البصمة المحفوظة (SHA-256)</th>
+              <td style="word-break: break-all;" dir="ltr"><%= storedSha256 || '-' %></td>
+            </tr>
+            <tr>
+              <th>البصمة الحالية (SHA-256)</th>
+              <td style="word-break: break-all;" dir="ltr"><%= currentSha256 || '-' %></td>
+            </tr>
+            <tr>
+              <th>النتيجة</th>
+              <td>
+                <% if (!fileExists) { %>
+                  الملف غير موجود
+                <% } else if (!storedSha256) { %>
+                  لا توجد بصمة محفوظة لهذا التسجيل (قد يكون تسجيل قديم)
+                <% } else { %>
+                  <%= match ? '✅ سليم (لم يتم التعديل)' : '❌ تم التعديل/غير مطابق' %>
+                <% } %>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="margin-top: 16px; display:flex; gap: 10px; flex-wrap: wrap;">
+        <a class="btn btn-secondary" href="/admin/meeting-recordings">رجوع</a>
+        <% if (recording && recording.filePath) { %>
+          <a class="btn btn-primary" href="/<%= recording.filePath %>" target="_blank">فتح الفيديو</a>
+          <a class="btn btn-secondary" href="/<%= recording.filePath %>" download>تحميل</a>
+        <% } %>
+      </div>
+
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>طلبات التعديل - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/projects/new">إضافة مشروع</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/admin/modifications" class="active">طلبات التعديل</a>
+        <a href="/admin/messages">الرسائل</a>
+        <a href="/admin/reviews">التقييمات</a>
+        <a href="/admin/coupons">الكوبونات</a>
+        <a href="/admin/referrals">الإحالات</a>
+        <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/admins">إدارة الأدمنز</a>
+        <% } %>
+        <a href="/admin/users">المستخدمين</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>طلبات التعديل</h1>
+      
+      <% if (modifications.length === 0) { %>
+        <div class="empty-state">
+          <p>لا توجد طلبات تعديل</p>
+        </div>
+      <% } else { %>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>المشروع</th>
+                <th>المستخدم</th>
+                <th>وصف التعديل</th>
+                <th>التاريخ</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% modifications.forEach(mod => { 
+                const user = users.find(u => u.id === mod.userId);
+              %>
+                <tr>
+                  <td><%= mod.projectTitle %></td>
+                  <td><%= user ? user.name : 'غير معروف' %> (<%= user ? user.email : '' %>)</td>
+                  <td class="description-cell"><%= mod.description %></td>
+                  <td><%= new Date(mod.createdAt).toLocaleDateString('ar-EG') %></td>
+                  <td>
+                    <% if (mod.status === 'pending') { %>
+                      <span class="status-badge pending">⏳ بانتظار التنفيذ</span>
+                    <% } else { %>
+                      <span class="status-badge approved">✓ تم التنفيذ</span>
+                    <% } %>
+                  </td>
+                  <td class="actions">
+                    <% if (mod.status === 'pending') { %>
+                      <form action="/admin/modifications/<%= mod.id %>/complete" method="POST" enctype="multipart/form-data" class="modification-form">
+                        <input type="file" name="modifiedFile" accept=".zip" required class="file-input">
+                        <input type="text" name="note" placeholder="ملاحظة للمستخدم (اختياري)" class="note-input">
+                        <button type="submit" class="btn btn-sm btn-success">✓ إنهاء ورفع الملف</button>
+                      </form>
+                    <% } else { %>
+                      <span class="completed-text">تم الإكمال</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

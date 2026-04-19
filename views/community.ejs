@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Community - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('partials/header', { user: user }) %>
+
+  <main class="container" style="padding: 30px 0;">
+    <h1 style="margin-bottom: 10px;">Community</h1>
+
+    <% if (error) { %>
+      <div style="background:#ffe5e5;color:#a30000;padding:10px;border-radius:8px;margin:10px 0;"><%= error %></div>
+    <% } %>
+    <% if (success) { %>
+      <div style="background:#e7ffe5;color:#116400;padding:10px;border-radius:8px;margin:10px 0;"><%= success %></div>
+    <% } %>
+
+    <section style="margin: 20px 0;">
+      <h2 style="margin-bottom: 10px;">وظائف</h2>
+      <% if (!jobs || jobs.length === 0) { %>
+        <div class="empty-state"><p>لا توجد وظائف حالياً</p></div>
+      <% } else { %>
+        <div class="projects-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+          <% jobs.slice(0, 6).forEach(job => { %>
+            <div class="project-card">
+              <div class="project-content">
+                <h3 class="project-title"><%= job.title %></h3>
+                <p class="project-description"><%= job.description %></p>
+                <p style="margin: 8px 0;"><strong>الأجر:</strong> <%= job.salary %></p>
+                <p style="margin: 8px 0;"><strong>الخبرة:</strong> <%= job.experienceYears %> سنة</p>
+                <a class="btn btn-primary" href="/community/jobs/<%= job.id %>">التفاصيل والتقديم</a>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+        <div style="margin-top: 10px;">
+          <a href="/community/jobs">عرض كل الوظائف</a>
+        </div>
+      <% } %>
+    </section>
+
+    <section style="margin: 20px 0;">
+      <h2 style="margin-bottom: 10px;">المنشورات</h2>
+
+      <% if (user && user.role === 'admin') { %>
+        <form action="/community/posts" method="POST" enctype="multipart/form-data" style="background: var(--card-bg, #fff); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.08);">
+          <div class="form-group">
+            <label>النص</label>
+            <textarea name="text" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.2);"></textarea>
+          </div>
+          <div class="form-group">
+            <label>صورة أو فيديو</label>
+            <input type="file" name="media" accept="image/*,video/*" />
+          </div>
+          <button type="submit" class="btn btn-primary">نشر</button>
+        </form>
+      <% } %>
+
+      <% if (!posts || posts.length === 0) { %>
+        <div class="empty-state"><p>لا توجد منشورات بعد</p></div>
+      <% } else { %>
+        <% posts.forEach(p => { %>
+          <article style="background: var(--card-bg, #fff); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.08);">
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;">
+              <div>
+                <strong><%= p.authorName %></strong>
+                <div style="opacity:0.7;font-size:12px;"><%= new Date(p.createdAt).toLocaleString('ar-EG') %></div>
+              </div>
+              <div style="opacity:0.8;font-size:12px;">
+                <span>👍 <%= p.likesCount %></span>
+                <span style="margin-right:10px;">💬 <%= p.commentsCount %></span>
+                <span style="margin-right:10px;">🔁 <%= p.sharesCount %></span>
+              </div>
+            </div>
+
+            <% if (p.text) { %>
+              <p style="margin: 10px 0; white-space: pre-wrap;"><%= p.text %></p>
+            <% } %>
+
+            <% if (p.mediaUrl) { %>
+              <% if (p.mediaType === 'video') { %>
+                <video src="<%= p.mediaUrl %>" controls style="width:100%;border-radius:12px;max-height:420px;"></video>
+              <% } else { %>
+                <img src="<%= p.mediaUrl %>" alt="post media" style="width:100%;border-radius:12px;max-height:420px;object-fit:cover;" />
+              <% } %>
+            <% } %>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+              <% if (user) { %>
+                <form action="/community/posts/<%= p.id %>/like" method="POST">
+                  <button type="submit" class="btn btn-secondary"><%= p.likedByMe ? 'إلغاء لايك' : 'لايك' %></button>
+                </form>
+                <form action="/community/posts/<%= p.id %>/share" method="POST">
+                  <button type="submit" class="btn btn-secondary">شير</button>
+                </form>
+              <% } else { %>
+                <a href="/login" class="btn btn-secondary">سجّل دخول للتفاعل</a>
+              <% } %>
+            </div>
+
+            <div style="margin-top: 12px;">
+              <h4 style="margin: 0 0 8px 0;">التعليقات</h4>
+              <% if (Array.isArray(p.comments) && p.comments.length) { %>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <% p.comments.slice().reverse().slice(0, 5).forEach(c => { %>
+                    <div style="background: rgba(0,0,0,0.03); padding: 10px; border-radius: 10px;">
+                      <div style="font-size:12px;opacity:0.8;">#<%= c.userId %> - <%= new Date(c.createdAt).toLocaleString('ar-EG') %></div>
+                      <div style="white-space: pre-wrap;"><%= c.text %></div>
+                    </div>
+                  <% }) %>
+                </div>
+              <% } else { %>
+                <div style="opacity:0.7;">لا توجد تعليقات</div>
+              <% } %>
+
+              <% if (user) { %>
+                <form action="/community/posts/<%= p.id %>/comment" method="POST" style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+                  <input type="text" name="text" placeholder="اكتب تعليق..." style="flex:1;min-width:220px;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.2);" />
+                  <button type="submit" class="btn btn-primary">إرسال</button>
+                </form>
+              <% } %>
+            </div>
+          </article>
+        <% }) %>
+      <% } %>
+    </section>
+  </main>
+
+  <%- include('partials/footer') %>
+  <script src="/js/theme.js"></script>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= project ? 'تعديل' : 'إضافة' %> مشروع - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/project-images.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/projects/new" class="active">إضافة مشروع</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/admin/modifications">طلبات التعديل</a>
+        <a href="/admin/messages">الرسائل</a>
+        <a href="/admin/reviews">التقييمات</a>
+        <a href="/admin/coupons">الكوبونات</a>
+        <a href="/admin/referrals">الإحالات</a>
+        <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/admins">إدارة الأدمنز</a>
+        <% } %>
+        <a href="/admin/users">المستخدمين</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1><%= project ? 'تعديل' : 'إضافة' %> مشروع</h1>
+      
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="error-message" style="background: #fee; border: 1px solid #fcc; color: #c33; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+          <%= error %>
+        </div>
+      <% } %>
+      
+      <div class="form-container">
+        <form action="<%= project ? '/admin/projects/' + project.id : '/admin/projects' %>" method="POST" enctype="multipart/form-data" class="admin-form">
+          <div class="form-group">
+            <label for="title">عنوان المشروع *</label>
+            <input type="text" id="title" name="title" value="<%= project ? project.title : '' %>" required>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="category">التصنيف *</label>
+              <select id="category" name="category" required>
+                <option value="">اختر التصنيف</option>
+                <option value="Web" <%= project && project.category === 'Web' ? 'selected' : '' %>>ويب</option>
+                <option value="Mobile" <%= project && project.category === 'Mobile' ? 'selected' : '' %>>موبايل</option>
+                <option value="Desktop" <%= project && project.category === 'Desktop' ? 'selected' : '' %>>ديسكتوب</option>
+                <option value="API" <%= project && project.category === 'API' ? 'selected' : '' %>>API</option>
+                <option value="Other" <%= project && project.category === 'Other' ? 'selected' : '' %>>أخرى</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="price">السعر (جنيه) *</label>
+              <input type="number" id="price" name="price" min="0" step="0.01" value="<%= project ? project.price : '' %>" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="visibility">رؤية المشروع *</label>
+            <select id="visibility" name="visibility" required>
+              <option value="public" <%= !project || !project.visibility || project.visibility === 'public' ? 'selected' : '' %>>عام</option>
+              <option value="basic" <%= project && project.visibility === 'basic' ? 'selected' : '' %>>Basic فقط</option>
+              <option value="premium" <%= project && project.visibility === 'premium' ? 'selected' : '' %>>Premium فقط</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="technologies">التقنيات المستخدمة (مفصولة بفواصل)</label>
+            <input type="text" id="technologies" name="technologies" value="<%= project ? project.technologies.join(', ') : '' %>" placeholder="Node.js, React, MongoDB">
+          </div>
+          
+          <div class="form-group">
+            <label for="description">وصف المشروع *</label>
+            <textarea id="description" name="description" rows="6" required><%= project ? project.description : '' %></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label for="projectFile">ملف المشروع (ZIP) <%= project ? '- اتركه فارغًا للإبقاء على الملف الحالي' : '*' %></label>
+            <input type="file" id="projectFile" name="projectFile" accept=".zip" <%= project ? '' : 'required' %>>
+            <% if (project && project.filePath) { %>
+              <p class="file-info">الملف الحالي: <%= project.filePath %></p>
+            <% } %>
+          </div>
+          
+          <div class="form-group">
+            <label for="projectImages">صور المشروع (يمكنك اختيار صور متعددة)</label>
+            <input type="file" id="projectImages" name="projectImages" accept="image/*" multiple>
+            <div class="image-preview-container" id="imagePreviewContainer">
+              <% if (project && project.images && project.images.length > 0) { %>
+                <% project.images.forEach((image, index) => { %>
+                  <div class="image-preview-item">
+                    <img src="/<%= image %>" alt="صورة <%= index + 1 %>" class="preview-image">
+                    <button type="button" class="remove-image-btn" onclick="removeExistingImage('<%= image %>', this)">×</button>
+                  </div>
+                <% }); %>
+              <% } %>
+            </div>
+            <small class="form-help">يمكنك رفع حتى 5 صور. الصور المسموح بها: JPG, PNG, GIF, WebP</small>
+          </div>
+          
+          <div class="form-actions">
+            <a href="/admin" class="btn btn-secondary">إلغاء</a>
+            <button type="submit" class="btn btn-primary"><%= project ? 'حفظ التعديلات' : 'إضافة المشروع' %></button>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+
+  <script>
+    // Image preview and management
+    const imageInput = document.getElementById('projectImages');
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const maxImages = 5;
+    
+    // Preview new images
+    imageInput.addEventListener('change', function(e) {
+      const files = Array.from(e.target.files);
+      const existingPreviews = previewContainer.querySelectorAll('.image-preview-item').length;
+      
+      if (existingPreviews + files.length > maxImages) {
+        alert(`يمكنك إضافة حتى ${maxImages} صور فقط. لديك ${existingPreviews} صور بالفعل.`);
+        e.target.value = '';
+        return;
+      }
+      
+      files.forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const previewItem = document.createElement('div');
+            previewItem.className = 'image-preview-item';
+            previewItem.innerHTML = `
+              <img src="${e.target.result}" alt="${file.name}" class="preview-image">
+              <button type="button" class="remove-image-btn" onclick="removeImagePreview(this)">×</button>
+            `;
+            previewContainer.appendChild(previewItem);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    });
+    
+    // Remove new image preview
+    function removeImagePreview(button) {
+      button.parentElement.remove();
+    }
+    
+    // Remove existing image
+    function removeExistingImage(imagePath, button) {
+      if (confirm('هل أنت متأكد من حذف هذه الصورة؟')) {
+        // Add to hidden input to mark for deletion
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'removeImages';
+        hiddenInput.value = imagePath;
+        button.parentElement.appendChild(hiddenInput);
+        button.parentElement.remove();
+      }
+    }
+  </script>
+</body>
+</html>

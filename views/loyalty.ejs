@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نقاطي - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/purchases.css" />
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="page purchases-page" style="padding: 30px 0;">
+    <div class="container">
+      <h1 style="margin-bottom: 10px;">نقاطي</h1>
+      <p style="opacity: .9; margin-bottom: 20px;">اجمع نقاط عند شراء المشاريع واستبدلها برصيد في المحفظة.</p>
+
+      <% if (error) { %>
+        <div class="error-message"><%= error %></div>
+      <% } %>
+      <% if (success) { %>
+        <div class="success-message"><%= success %></div>
+      <% } %>
+
+      <section class="purchase-card" style="margin-bottom: 18px;">
+        <h2 style="margin-bottom: 8px;">ملخص</h2>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <div>نقاطك الحالية: <strong><%= points %></strong></div>
+          <div>رصيد المحفظة: <strong><%= Number(user.walletBalance || 0) %></strong> جنيه</div>
+          <div style="opacity:.9;">الحد الأدنى للاستبدال: <strong><%= minPoints %></strong> نقطة</div>
+          <div style="opacity:.9;">قيمة النقاط: <strong><%= pointsToEGP %></strong> جنيه لكل نقطة</div>
+        </div>
+
+        <form method="POST" action="/loyalty/redeem" style="margin-top: 12px; display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+          <div class="form-group" style="min-width: 220px;">
+            <label for="redeemPoints">عدد النقاط المراد استبدالها</label>
+            <input id="redeemPoints" name="points" type="number" step="1" min="1" placeholder="مثال: 200" required>
+          </div>
+          <button type="submit" class="btn btn-primary">استبدال لرصيد المحفظة</button>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

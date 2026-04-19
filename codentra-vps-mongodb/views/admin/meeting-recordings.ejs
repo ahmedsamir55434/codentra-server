@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيلات الاجتماعات - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/projects/new">إضافة مشروع</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/admin/modifications">طلبات التعديل</a>
+        <a href="/admin/messages">الرسائل</a>
+        <a href="/admin/reviews">التقييمات</a>
+        <a href="/admin/coupons">الكوبونات</a>
+        <a href="/admin/referrals">الإحالات</a>
+        <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <a href="/admin/appointments">المواعيد</a>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/meeting-recordings" class="active">تسجيلات الاجتماعات</a>
+          <a href="/admin/admins">إدارة الأدمنز</a>
+        <% } %>
+        <a href="/admin/users">المستخدمين</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>تسجيلات الاجتماعات</h1>
+
+      <% if (!recordings || recordings.length === 0) { %>
+        <div class="empty-state" style="margin-top:10px;">
+          <div class="empty-icon">🎥</div>
+          <h2>لا يوجد تسجيلات بعد</h2>
+          <p>سيتم حفظ التسجيل تلقائياً بعد انتهاء أي اجتماع</p>
+        </div>
+      <% } else { %>
+        <div class="table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                <th>العميل</th>
+                <th>الأدمن</th>
+                <th>التحقق</th>
+                <th>المشاهدة</th>
+                <th>تحميل</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% recordings.forEach(r => { %>
+                <tr>
+                  <td><%= r.createdAt ? new Date(r.createdAt).toLocaleString('ar-EG') : '' %></td>
+                  <td><%= r.userName || r.userId %></td>
+                  <td><%= r.adminName || r.adminId %></td>
+                  <td>
+                    <a href="/admin/meeting-recordings/<%= r.id %>/verify" class="btn btn-secondary">تحقق</a>
+                  </td>
+                  <td>
+                    <% if (r.filePath) { %>
+                      <video src="/<%= r.filePath %>" controls style="max-width: 260px; border-radius: 10px;"></video>
+                    <% } else { %>
+                      -
+                    <% } %>
+                  </td>
+                  <td>
+                    <% if (r.filePath) { %>
+                      <a href="/<%= r.filePath %>" download class="btn btn-secondary">تحميل</a>
+                    <% } else { %>
+                      -
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

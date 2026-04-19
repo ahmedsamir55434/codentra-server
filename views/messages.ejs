@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>التواصل مع الأدمن - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/messages.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="messages-page">
+    <div class="container">
+      <div class="chat-container">
+        <div class="chat-header">
+          <h2>💬 التواصل مع الدعم</h2>
+          <p>يمكنك إرسال رسالة للأدمن بخصوص مشترياتك أو استفساراتك</p>
+        </div>
+
+        <div class="chat-messages">
+          <% if (messages.length === 0) { %>
+            <div class="empty-chat">
+              <div class="empty-icon">💬</div>
+              <p>ابدأ محادثة مع الأدمن</p>
+            </div>
+          <% } else { %>
+            <% messages.forEach(msg => { %>
+              <div class="message <%= msg.senderId === user.id ? 'sent' : 'received' %>">
+                <div class="message-content">
+                  <%= msg.content %>
+                </div>
+                <div class="message-meta">
+                  <span class="sender"><%= msg.senderId === user.id ? 'أنت' : 'الأدمن' %></span>
+                  <span class="time"><%= new Date(msg.createdAt).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) %></span>
+                </div>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+
+        <div class="chat-input">
+          <form action="/messages" method="POST" class="message-form">
+            <textarea name="content" placeholder="اكتب رسالتك هنا..." required rows="3"></textarea>
+            <button type="submit" class="btn btn-primary">إرسال</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= project.title %> - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/project-modern.css">
+  <link rel="stylesheet" href="/css/project-images.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <!-- Hero Section -->
+  <section class="project-hero">
+    <div class="project-hero-content">
+      <div class="project-header">
+        <span class="category-badge"><%= project.category %></span>
+        <h1><%= project.title %></h1>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Content -->
+  <main class="project-main-content">
+    <div class="project-content">
+      <!-- Description Section -->
+      <section class="content-section">
+        <h2 class="section-title">وصف المشروع</h2>
+        <p class="project-description"><%= project.description %></p>
+      </section>
+
+      <!-- Technologies Section -->
+      <section class="content-section">
+        <h2 class="section-title">التقنيات المستخدمة</h2>
+        <div class="tech-list">
+          <% project.technologies.forEach(tech => { %>
+            <span class="tech-badge"><%= tech %></span>
+          <% }) %>
+        </div>
+      </section>
+
+      <!-- Images Section -->
+      <% if (project.images && project.images.length > 0) { %>
+        <section class="content-section project-images-section">
+          <h2 class="section-title">معرض الصور</h2>
+          <div class="project-images-grid">
+            <% project.images.forEach((image, index) => { %>
+              <div class="project-image-item" onclick="openLightbox('<%= image %>')">
+                <img src="/<%= image %>" alt="صورة <%= index + 1 %> من <%= project.title %>" loading="lazy">
+              </div>
+            <% }); %>
+          </div>
+        </section>
+      <% } %>
+
+      <!-- Reviews Section -->
+      <section class="content-section">
+        <h2 class="section-title">التقييمات والتعليقات</h2>
+        <% 
+          const _reviews = (typeof reviews !== 'undefined' && Array.isArray(reviews)) ? reviews : [];
+          const _avgRating = (typeof avgRating !== 'undefined' && Number.isFinite(avgRating)) ? avgRating : 0;
+          const _canReview = (typeof canReview !== 'undefined') ? canReview : false;
+          const _existingReview = (typeof existingReview !== 'undefined') ? existingReview : null;
+        %>
+        
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 30px;">
+          <div style="font-size: 2rem; font-weight: bold; color: #667eea;">
+            <%= _avgRating ? _avgRating.toFixed(1) : '0.0' %> / 5
+          </div>
+          <div style="color: #b0b0b0;">
+            (<%= _reviews.length %> تقييم)
+          </div>
+        </div>
+
+        <% if (user && _existingReview) { %>
+          <div style="background: rgba(255,255,255,0.02); border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+            <h4 style="margin: 0 0 10px 0; color: #ffffff;">تقييمك</h4>
+            <div style="color: #b0b0b0; margin-bottom: 10px;">
+              <%= _existingReview.rating %> / 5 • <%= new Date(_existingReview.createdAt).toLocaleDateString('ar-EG') %>
+            </div>
+            <p style="color: #ffffff; margin: 0;"><%= _existingReview.comment %></p>
+          </div>
+        <% } %>
+
+        <% if (user && _canReview) { %>
+          <form action="/project/<%= project.id %>/reviews" method="POST" style="margin-bottom: 30px;">
+            <div style="margin-bottom: 15px;">
+              <label style="display: block; margin-bottom: 5px; color: #ffffff;">التقييم</label>
+              <select name="rating" required style="width: 200px; padding: 8px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #ffffff;">
+                <option value="">اختر تقييم</option>
+                <option value="5">5 - ممتاز</option>
+                <option value="4">4 - جيد جداً</option>
+                <option value="3">3 - جيد</option>
+                <option value="2">2 - مقبول</option>
+                <option value="1">1 - ضعيف</option>
+              </select>
+            </div>
+            <div style="margin-bottom: 15px;">
+              <label style="display: block; margin-bottom: 5px; color: #ffffff;">تعليق</label>
+              <textarea name="comment" rows="3" required style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #ffffff; resize: vertical;"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">إرسال التقييم</button>
+          </form>
+        <% } %>
+
+        <% if (_reviews.length === 0) { %>
+          <div style="text-align: center; color: #b0b0b0; padding: 40px;">
+            لا توجد تقييمات بعد
+          </div>
+        <% } else { %>
+          <div style="display: flex; flex-direction: column; gap: 15px;">
+            <% _reviews.forEach(r => { %>
+              <div style="background: rgba(255,255,255,0.02); border-radius: 10px; padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                  <span style="color: #ffffff; font-weight: 500;"><%= r.userName %></span>
+                  <span style="color: #b0b0b0; font-size: 0.9rem;">
+                    <%= r.rating %> / 5 • <%= new Date(r.createdAt).toLocaleDateString('ar-EG') %>
+                  </span>
+                </div>
+                <p style="color: #ffffff; margin: 0;"><%= r.comment %></p>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </section>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="project-sidebar">
+      <div class="purchase-box">
+        <div class="price-tag">
+          <span class="amount"><%= project.price %></span>
+          <span class="currency">جنيه</span>
+        </div>
+
+        <% if (user && user.role === 'user' && user.subscription && user.subscription.status === 'active') { %>
+          <% if (user.subscription.planId === 'basic') { %>
+            <div class="success-message">خصم المشتركين: 10% سيتم تطبيقه عند الشراء</div>
+          <% } else if (user.subscription.planId === 'premium') { %>
+            <div class="success-message">خصم المشتركين: 20% سيتم تطبيقه عند الشراء</div>
+          <% } %>
+        <% } %>
+        
+        <% if (user) { %>
+          <% if (hasPurchased) { %>
+            <div style="margin: 20px 0;">
+              <div class="success-message" style="margin-bottom: 15px;">
+                <strong>✓ تم الشراء</strong>
+              </div>
+              <a href="/my-purchases" class="btn btn-secondary">الذهاب إلى مشترياتي</a>
+            </div>
+          <% } else { %>
+            <% if (couponError) { %>
+              <div class="error-message"><%= couponError %></div>
+            <% } %>
+            
+            <form action="/cart/add" method="POST" style="margin: 20px 0;">
+              <input type="hidden" name="projectId" value="<%= project.id %>">
+              <button type="submit" class="btn btn-primary" style="width: 100%;">
+                أضف للسلة
+              </button>
+            </form>
+          <% } %>
+        <% } else { %>
+          <div style="margin: 20px 0;">
+            <a href="/login" class="btn btn-primary" style="width: 100%; margin-bottom: 10px;">
+              تسجيل الدخول للشراء
+            </a>
+            <p style="color: #b0b0b0; font-size: 0.9rem;">
+              يجب تسجيل الدخول لشراء هذا المشروع
+            </p>
+          </div>
+        <% } %>
+
+        <!-- Project Meta Info -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <div style="color: #b0b0b0; font-size: 0.9rem; margin-bottom: 8px;">
+            <span style="color: #666;">تاريخ الإضافة:</span>
+            <span style="color: #b0b0b0;"><%= new Date(project.createdAt).toLocaleDateString('ar-EG') %></span>
+          </div>
+          <div style="color: #b0b0b0; font-size: 0.9rem;">
+            <span style="color: #666;">التصنيف:</span>
+            <span style="color: #b0b0b0;"><%= project.category %></span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Image Lightbox -->
+  <div class="image-lightbox" id="imageLightbox" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">×</button>
+    <img src="" alt="صورة مكبرة" class="lightbox-image" id="lightboxImage">
+  </div>
+
+  <%- include('partials/footer') %>
+
+  <script>
+    // Lightbox functionality
+    function openLightbox(imageSrc) {
+      const lightbox = document.getElementById('imageLightbox');
+      const lightboxImg = document.getElementById('lightboxImage');
+      
+      lightboxImg.src = '/' + imageSrc;
+      lightbox.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    
+    function closeLightbox() {
+      const lightbox = document.getElementById('imageLightbox');
+      lightbox.classList.remove('active');
+      document.body.style.overflow = 'auto';
+    }
+    
+    // Close lightbox with Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeLightbox();
+      }
+    });
+  </script>
+</body>
+</html>

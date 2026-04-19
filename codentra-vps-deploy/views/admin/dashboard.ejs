@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة التحكم - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin" class="active">الرئيسية</a>
+        <a href="/admin/team">جروب الفريق</a>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.projects))) { %>
+          <a href="/admin/projects/new">إضافة مشروع</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.purchases))) { %>
+          <a href="/admin/purchases">المشتريات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.modifications))) { %>
+          <a href="/admin/modifications">طلبات التعديل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.messages))) { %>
+          <a href="/admin/messages">الرسائل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.reviews))) { %>
+          <a href="/admin/reviews">التقييمات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.coupons))) { %>
+          <a href="/admin/coupons">الكوبونات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.referrals))) { %>
+          <a href="/admin/referrals">الإحالات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletCodes))) { %>
+          <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletBalances))) { %>
+          <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.appointments))) { %>
+          <a href="/admin/appointments">المواعيد</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionCoupons))) { %>
+          <a href="/admin/subscription-coupons">كوبونات الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionPlans))) { %>
+          <a href="/admin/subscription-plans">خطط الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionReports))) { %>
+          <a href="/admin/subscription-reports">تقارير الاشتراك</a>
+        <% } %>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/meeting-recordings">تسجيلات الاجتماعات</a>
+          <a href="/admin/admins">إدارة الأدمنز</a>
+        <% } %>
+        <a href="/admin/users">المستخدمين</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>لوحة التحكم</h1>
+      
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value"><%= projects.length %></div>
+          <div class="stat-label">المشاريع</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= users.filter(u => u.role === 'user').length %></div>
+          <div class="stat-label">المستخدمين</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= purchases.length %></div>
+          <div class="stat-label">المشتريات</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.salesMonth))) ? reports.salesMonth : 0 %> ج</div>
+          <div class="stat-label">مبيعات الشهر</div>
+        </div>
+      </div>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <h2>التقارير</h2>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.salesToday))) ? reports.salesToday : 0 %> ج</div>
+            <div class="stat-label">مبيعات اليوم</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.salesWeek))) ? reports.salesWeek : 0 %> ج</div>
+            <div class="stat-label">مبيعات الأسبوع</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.totalDiscounts))) ? reports.totalDiscounts : 0 %> ج</div>
+            <div class="stat-label">إجمالي الخصومات</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.approvalRate))) ? reports.approvalRate : 0 %>%</div>
+            <div class="stat-label">معدل القبول</div>
+          </div>
+        </div>
+
+        <div class="stats-grid" style="margin-top: 20px;">
+          <div class="stat-card">
+            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.rejectionRate))) ? reports.rejectionRate : 0 %>%</div>
+            <div class="stat-label">معدل الرفض</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.approvedCount))) ? reports.approvedCount : 0 %></div>
+            <div class="stat-label">عدد المقبول</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.rejectedCount))) ? reports.rejectedCount : 0 %></div>
+            <div class="stat-label">عدد المرفوض</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.totalPurchases))) ? reports.totalPurchases : 0 %></div>
+            <div class="stat-label">إجمالي الطلبات</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <h2>أعلى المشاريع</h2>
+        </div>
+
+        <% if (!topProjects || topProjects.length === 0) { %>
+          <div class="empty-state">
+            <p>لا توجد بيانات كافية بعد</p>
+          </div>
+        <% } else { %>
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>المشروع</th>
+                  <th>عدد المشتريات (معتمدة)</th>
+                  <th>الإيراد</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% topProjects.forEach(row => { %>
+                  <tr>
+                    <td>
+                      <%= row.title %>
+                      <% if (row.projectId) { %>
+                        <a href="/project/<%= row.projectId %>" target="_blank" style="margin-right: 8px; font-size: 0.9rem;">عرض</a>
+                      <% } %>
+                    </td>
+                    <td><strong><%= row.count %></strong></td>
+                    <td><%= row.revenue %> ج</td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </section>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <h2>المشاريع</h2>
+          <a href="/admin/projects/new" class="btn btn-primary">إضافة مشروع</a>
+        </div>
+        
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>العنوان</th>
+                <th>التصنيف</th>
+                <th>السعر</th>
+                <th>التاريخ</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% projects.forEach(project => { %>
+                <tr>
+                  <td><%= project.title %></td>
+                  <td><%= project.category %></td>
+                  <td><%= project.price %> ج</td>
+                  <td><%= new Date(project.createdAt).toLocaleDateString('ar-EG') %></td>
+                  <td class="actions">
+                    <a href="/project/<%= project.id %>" class="btn btn-sm btn-secondary" target="_blank">عرض</a>
+                    <a href="/admin/projects/<%= project.id %>/edit" class="btn btn-sm btn-primary">تعديل</a>
+                    <form action="/admin/projects/<%= project.id %>/delete" method="POST" class="inline-form" onsubmit="return confirm('هل أنت متأكد من الحذف؟')">
+                      <button type="submit" class="btn btn-sm btn-danger">حذف</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

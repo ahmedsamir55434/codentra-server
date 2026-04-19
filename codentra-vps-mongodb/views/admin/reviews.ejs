@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>التقييمات - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/projects/new">إضافة مشروع</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/admin/modifications">طلبات التعديل</a>
+        <a href="/admin/messages">الرسائل</a>
+        <a href="/admin/reviews" class="active">التقييمات</a>
+        <a href="/admin/coupons">الكوبونات</a>
+        <a href="/admin/referrals">الإحالات</a>
+        <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/admins">إدارة الأدمنز</a>
+        <% } %>
+        <a href="/admin/users">المستخدمين</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>التقييمات</h1>
+
+      <% if (reviews.length === 0) { %>
+        <div class="empty-state">
+          <p>لا توجد تقييمات بعد</p>
+        </div>
+      <% } else { %>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>المشروع</th>
+                <th>المستخدم</th>
+                <th>التقييم</th>
+                <th>التعليق</th>
+                <th>التاريخ</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% reviews.slice().reverse().forEach(r => { %>
+                <tr>
+                  <td><%= r.projectTitle || '—' %></td>
+                  <td><%= r.userName || '—' %></td>
+                  <td><%= r.rating %> / 5</td>
+                  <td class="description-cell"><%= r.comment %></td>
+                  <td><%= new Date(r.createdAt).toLocaleDateString('ar-EG') %></td>
+                  <td class="actions">
+                    <form action="/admin/reviews/<%= r.id %>/delete" method="POST" class="inline-form" onsubmit="return confirm('هل أنت متأكد من حذف هذا التقييم؟')">
+                      <button type="submit" class="btn btn-sm btn-danger">حذف</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

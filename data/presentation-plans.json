@@ -1,0 +1,22 @@
+[
+  {
+    "id": "presentations-monthly",
+    "name": "الاشتراك الشهري",
+    "interval": "monthly",
+    "price": 499,
+    "durationDays": 30,
+    "generationCredits": 40,
+    "badge": "الأكثر طلبًا",
+    "description": "أنشئ حتى 40 بريزنتيشن شهريًا مع تحميل PowerPoint جاهز."
+  },
+  {
+    "id": "presentations-yearly",
+    "name": "الاشتراك السنوي",
+    "interval": "yearly",
+    "price": 4499,
+    "durationDays": 365,
+    "generationCredits": 600,
+    "badge": "أفضل قيمة",
+    "description": "حل سنوي للشركات والفرق مع 600 بريزنتيشن وتكلفة أقل لكل عرض."
+  }
+]

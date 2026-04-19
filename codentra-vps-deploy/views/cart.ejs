@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سلة المشتريات - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/purchases.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="purchases-page">
+    <div class="container">
+      <h1>سلة المشتريات</h1>
+
+      <% if (error) { %>
+        <div class="error-message"><%= error %></div>
+      <% } %>
+
+      <% if (!cart || !cart.items || cart.items.length === 0) { %>
+        <div class="empty-state">
+          <div class="empty-icon">🛒</div>
+          <h2>السلة فارغة</h2>
+          <p>اختار مشاريع واضغط “أضف للسلة”</p>
+          <a href="/" class="btn btn-primary">تصفح المشاريع</a>
+        </div>
+      <% } else { %>
+        <div class="purchases-list">
+          <% cart.items.forEach(item => { %>
+            <div class="purchase-card">
+              <div class="purchase-info">
+                <h3 style="margin-top:0;"><%= item.projectTitle %></h3>
+                <div class="purchase-meta">
+                  <span class="purchase-price"><%= Number(item.price || 0) %> جنيه</span>
+                </div>
+              </div>
+              <div class="purchase-actions">
+                <form action="/cart/remove" method="POST" style="margin:0;">
+                  <input type="hidden" name="projectId" value="<%= item.projectId %>">
+                  <button type="submit" class="btn btn-secondary">حذف</button>
+                </form>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+
+        <div class="purchase-card" style="margin-top:16px;">
+          <div class="purchase-info">
+            <h3 style="margin-top:0;">ملخص الدفع</h3>
+            <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+              <div>الإجمالي قبل الخصم: <strong><%= summary.totalBefore %></strong> جنيه</div>
+              <div>خصم الكوبون: <strong><%= summary.couponDiscount %></strong> جنيه</div>
+              <div>خصم المشتركين: <strong><%= summary.subscriberDiscount %></strong> جنيه</div>
+              <div>الإجمالي بعد الخصم: <strong><%= summary.totalAfter %></strong> جنيه</div>
+              <div>رصيد المحفظة الحالي: <strong><%= Number(user.walletBalance || 0) %></strong> جنيه</div>
+            </div>
+
+            <form action="/cart/checkout" method="POST" style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+              <input type="text" name="couponCode" placeholder="كود خصم على إجمالي السلة (اختياري)" style="min-width:260px; flex:1;" value="<%= (couponCode || '') %>">
+              <button type="submit" class="btn btn-primary">إتمام الشراء</button>
+            </form>
+
+            <form action="/cart/clear" method="POST" style="margin-top:10px;">
+              <button type="submit" class="btn btn-secondary">تفريغ السلة</button>
+            </form>
+          </div>
+        </div>
+      <% } %>
+
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

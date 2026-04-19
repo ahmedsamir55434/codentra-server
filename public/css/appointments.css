@@ -1,0 +1,76 @@
+.appointments-page {
+  padding: 40px 0;
+}
+
+.appointments-page h1 {
+  margin-bottom: 30px;
+}
+
+.appointment-actions {
+  width: 100%;
+}
+
+.appointment-book-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+}
+
+.appointment-book-form select,
+.appointment-book-form input[type="text"],
+.appointment-book-form input[type="date"],
+.appointment-book-form input[type="time"],
+.appointment-book-form input[type="number"] {
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.appointment-book-form select:focus,
+.appointment-book-form input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: var(--ring);
+}
+
+.appointment-book-form input[type="text"] {
+  flex: 1;
+  min-width: 180px;
+}
+
+.appointment-book-form .btn {
+  white-space: nowrap;
+}
+
+.appointment-meta {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.meeting-link-hint {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .appointment-book-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .appointment-book-form select,
+  .appointment-book-form input[type="text"],
+  .appointment-book-form .btn {
+    width: 100%;
+  }
+}

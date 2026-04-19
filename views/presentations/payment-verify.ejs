@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تأكيد الدفع - Codentra Presentations</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/presentations.css">
+</head>
+<body class="presentations-page">
+  <%- include('../partials/header') %>
+
+  <main class="presentations-shell">
+    <section class="container presentations-verify-wrap">
+      <div class="presentations-card presentations-verify-card">
+        <div class="presentations-section-head compact">
+          <div>
+            <span class="presentations-kicker">تأكيد الدفع</span>
+            <h1>إكمال اشتراك Codentra Presentations</h1>
+          </div>
+        </div>
+
+        <% if (error) { %>
+          <div class="presentations-flash presentations-flash-error"><%= error %></div>
+        <% } %>
+
+        <div class="presentations-verify-grid">
+          <div class="presentations-verify-summary">
+            <div class="presentations-summary-row">
+              <span>الخطة</span>
+              <strong><%= plan ? plan.name : attempt.planId %></strong>
+            </div>
+            <div class="presentations-summary-row">
+              <span>المبلغ</span>
+              <strong><%= Number(attempt.amount || 0).toFixed(2) %> جنيه</strong>
+            </div>
+            <div class="presentations-summary-row">
+              <span>البطاقة</span>
+              <strong><%= walletCardNumber || `**** ${attempt.payerCardLast4}` %></strong>
+            </div>
+            <div class="presentations-summary-row">
+              <span>صاحب البطاقة</span>
+              <strong><%= payer ? payer.name : 'غير معروف' %></strong>
+            </div>
+          </div>
+
+          <form class="presentations-form" action="/codentra-presentations/payment/verify/<%= attempt.id %>" method="POST">
+            <label class="presentations-field-wide">
+              <span>كود التحقق</span>
+              <input type="text" name="verificationCode" required>
+            </label>
+
+            <% if (attempt.requiresPassword) { %>
+              <label class="presentations-field-wide">
+                <span>كلمة مرور البطاقة</span>
+                <input type="password" name="walletPassword" required>
+              </label>
+            <% } %>
+
+            <button type="submit" class="btn btn-primary btn-full">تأكيد وخصم الاشتراك</button>
+          </form>
+        </div>
+
+        <% if (ownerVisibleCode) { %>
+          <div class="presentations-owner-code">
+            <span>أنت صاحب البطاقة</span>
+            <strong><%= ownerVisibleCode %></strong>
+            <p>هذا الكود ظاهر هنا لأنك تستخدم بطاقتك أنت. لا تشاركه إلا إذا كنت موافقًا على الدفع.</p>
+          </div>
+        <% } else { %>
+          <div class="presentations-empty">
+            كود التحقق يظهر لصاحب البطاقة داخل صفحة <strong>Codentra Presentations</strong> على حسابه.
+          </div>
+        <% } %>
+      </div>
+    </section>
+  </main>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>جروب الفريق - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/team" class="active">جروب الفريق</a>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.projects))) { %>
+          <a href="/admin/projects/new">إضافة مشروع</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.purchases))) { %>
+          <a href="/admin/purchases">المشتريات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.modifications))) { %>
+          <a href="/admin/modifications">طلبات التعديل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.messages))) { %>
+          <a href="/admin/messages">الرسائل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.reviews))) { %>
+          <a href="/admin/reviews">التقييمات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.coupons))) { %>
+          <a href="/admin/coupons">الكوبونات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.referrals))) { %>
+          <a href="/admin/referrals">الإحالات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletCodes))) { %>
+          <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletBalances))) { %>
+          <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.appointments))) { %>
+          <a href="/admin/appointments">المواعيد</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionCoupons))) { %>
+          <a href="/admin/subscription-coupons">كوبونات الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionPlans))) { %>
+          <a href="/admin/subscription-plans">خطط الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionReports))) { %>
+          <a href="/admin/subscription-reports">تقارير الاشتراك</a>
+        <% } %>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/meeting-recordings">تسجيلات الاجتماعات</a>
+          <a href="/admin/admins">إدارة الأدمنز</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.users))) { %>
+          <a href="/admin/users">المستخدمين</a>
+        <% } %>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content admin-team-page">
+      <h1>جروب الفريق</h1>
+
+      <% if (error) { %>
+        <div class="error-message"><%= error %></div>
+      <% } %>
+
+      <div class="team-toolbar">
+        <form action="/admin/team/meeting" method="POST" class="inline-form">
+          <button type="submit" class="btn btn-primary">إنشاء اجتماع</button>
+        </form>
+      </div>
+
+      <div class="team-chat">
+        <div class="team-messages" id="teamMessages">
+          <% if (!messages || messages.length === 0) { %>
+            <div class="empty-state">
+              <p>ابدأ أول رسالة في جروب الفريق</p>
+            </div>
+          <% } else { %>
+            <% messages.forEach(m => { %>
+              <div class="team-msg">
+                <div class="meta">
+                  <span class="name"><%= m.senderName || 'Admin' %></span>
+                  <span class="date"><%= m.createdAt ? new Date(m.createdAt).toLocaleString('ar-EG') : '' %></span>
+                </div>
+
+                <% if (m.type === 'text') { %>
+                  <div class="bubble"><%= m.content %></div>
+                <% } else if (m.type === 'meeting') { %>
+                  <div class="bubble">
+                    <div>اجتماع جديد</div>
+                    <a class="btn btn-secondary" href="<%= m.meetingLink %>" target="_blank">فتح الاجتماع</a>
+                  </div>
+                <% } else if (m.type === 'file') { %>
+                  <div class="bubble">
+                    <div class="file-row">
+                      <a href="/<%= m.filePath %>" target="_blank"><%= m.originalFileName || 'ملف' %></a>
+                      <a class="btn btn-secondary" href="/<%= m.filePath %>" download>تحميل</a>
+                    </div>
+                    <% if (m.mimeType && m.mimeType.startsWith('image/')) { %>
+                      <img src="/<%= m.filePath %>" class="team-media" />
+                    <% } else if (m.mimeType && m.mimeType.startsWith('video/')) { %>
+                      <video src="/<%= m.filePath %>" class="team-media" controls></video>
+                    <% } %>
+                  </div>
+                <% } else { %>
+                  <div class="bubble">-</div>
+                <% } %>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+
+        <div class="team-compose">
+          <form action="/admin/team/message" method="POST" class="compose-row">
+            <input type="text" name="content" placeholder="اكتب رسالة للفريق..." required />
+            <button type="submit" class="btn btn-primary">إرسال</button>
+          </form>
+
+          <form action="/admin/team/upload" method="POST" enctype="multipart/form-data" class="upload-row">
+            <input type="file" name="file" accept="image/*,video/*" required />
+            <button type="submit" class="btn btn-secondary">رفع</button>
+          </form>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+
+  <script>
+    const socket = io();
+    socket.emit('join-admin-team');
+
+    const teamMessages = document.getElementById('teamMessages');
+    const scrollToBottom = () => {
+      if (!teamMessages) return;
+      teamMessages.scrollTop = teamMessages.scrollHeight;
+    };
+    scrollToBottom();
+
+    const renderMsg = (m) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'team-msg';
+
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = m.senderName || 'Admin';
+      const date = document.createElement('span');
+      date.className = 'date';
+      date.textContent = m.createdAt ? new Date(m.createdAt).toLocaleString('ar-EG') : '';
+      meta.appendChild(name);
+      meta.appendChild(date);
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+
+      if (m.type === 'text') {
+        bubble.textContent = m.content || '';
+      } else if (m.type === 'meeting') {
+        const t = document.createElement('div');
+        t.textContent = 'اجتماع جديد';
+        const a = document.createElement('a');
+        a.className = 'btn btn-secondary';
+        a.href = m.meetingLink;
+        a.target = '_blank';
+        a.textContent = 'فتح الاجتماع';
+        bubble.appendChild(t);
+        bubble.appendChild(a);
+      } else if (m.type === 'file') {
+        const row = document.createElement('div');
+        row.className = 'file-row';
+        const a = document.createElement('a');
+        a.href = '/' + (m.filePath || '');
+        a.target = '_blank';
+        a.textContent = m.originalFileName || 'ملف';
+        const d = document.createElement('a');
+        d.className = 'btn btn-secondary';
+        d.href = '/' + (m.filePath || '');
+        d.setAttribute('download', '');
+        d.textContent = 'تحميل';
+        row.appendChild(a);
+        row.appendChild(d);
+        bubble.appendChild(row);
+
+        if (m.mimeType && m.mimeType.startsWith('image/')) {
+          const img = document.createElement('img');
+          img.className = 'team-media';
+          img.src = '/' + m.filePath;
+          bubble.appendChild(img);
+        } else if (m.mimeType && m.mimeType.startsWith('video/')) {
+          const video = document.createElement('video');
+          video.className = 'team-media';
+          video.src = '/' + m.filePath;
+          video.controls = true;
+          bubble.appendChild(video);
+        }
+      }
+
+      wrap.appendChild(meta);
+      wrap.appendChild(bubble);
+      return wrap;
+    };
+
+    socket.on('admin-team-message', (m) => {
+      if (!teamMessages) return;
+
+      const empty = teamMessages.querySelector('.empty-state');
+      if (empty) empty.remove();
+
+      teamMessages.appendChild(renderMsg(m));
+      scrollToBottom();
+    });
+  </script>
+</body>
+</html>

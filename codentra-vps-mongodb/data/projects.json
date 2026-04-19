@@ -1,0 +1,153 @@
+[
+  {
+    "id": "3617b9ea-425e-49c6-bb67-a04952ac921e",
+    "title": " قالب بورتفوليو حديث ",
+    "description": "قالب بورتفوليو عصري وأنيق بتصميم زجاجي عصري، يدعم اللغات المتعددة (العربية/الإنجليزية) مع حركات سلسة. مثالي للمطورين والمصممين الذين يرغبون في عرض أعمالهم بشكل احترافي.    \r\n\r\n\r\n\r\n  2026 codentra ©  ",
+    "price": 3000,
+    "category": "Web",
+    "technologies": [
+      "HTML5",
+      "CSS3",
+      "JavaScript (Vanilla JS)",
+      "JSON"
+    ],
+    "visibility": "public",
+    "filePath": "uploads/9a45a26d-9ff2-47e0-9a5c-2b4a9aa60602-portfolio-template-sales-ready.zip",
+    "originalFileName": "portfolio-template-sales-ready.zip",
+    "createdAt": "2026-03-24T17:34:03.228Z",
+    "images": [
+      "uploads/project-images/f764e4d8-4af3-4905-84e1-d4bf880b9bb0-image.png",
+      "uploads/project-images/69cc0f5a-3f35-4164-801c-6f9c8194f1b4-image.png",
+      "uploads/project-images/d44efbe7-d434-440c-a9de-0bf00d42ba6a-image.png"
+    ]
+  },
+  {
+    "id": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+    "title": "ChatForge",
+    "description": "ما هو ChatForge؟\r\nقالب ويب احترافي متكامل لإنشاء منصة شاتات ذكاء اصطناعي باللغة العربية خلال دقائق. مصمم للمطورين والشركات ورواد الأعمال.\r\n\r\nالمكونات الرئيسية\r\n🎨 واجهة المستخدم\r\nتصميم Glassmorphism عصري\r\nدعم RTL كامل للعربية\r\nتصميم متجاوب لجميع الأجهزة\r\nألوان متدرجة جذابة\r\nحركات سلسة واحترافية\r\n🤖 محرك الذكاء الاصطناعي\r\nتكامل Gemini API المتقدم\r\nشخصيات قابلة للتخصيص\r\nذاكرة سياقية للمحادثات\r\nتحليل الصور بالذكاء الاصطناعي\r\nتوليد الصور المزدوج (Pollinations + Stability)\r\n💾 نظام البيانات\r\nتخزين محلي آمن (Local Storage)\r\nلا حاجة للخوادم\r\nتصدير البيانات (TXT, PDF)\r\nإحصائيات متقدمة مع رسوم بيانية\r\nبحث وفلترة سريع\r\n\r\n\r\n\r\n\r\n\r\n\r\n                                                                                                             2026 codentra ©\r\n",
+    "price": 3400,
+    "category": "Web",
+    "technologies": [
+      "HTML",
+      "CSS",
+      "JS",
+      "json"
+    ],
+    "visibility": "public",
+    "filePath": "uploads/a95350c9-c7ea-469e-841f-caa37e7095d8-ChatForge-Template-Sale.zip",
+    "originalFileName": "ChatForge-Template-Sale.zip",
+    "createdAt": "2026-03-24T17:45:17.493Z",
+    "images": [
+      "uploads/project-images/44e94756-ee0b-4cb8-a3b4-51aba9441b1e-image.png",
+      "uploads/project-images/1f9eca42-13a8-42ce-a257-fa25af9feebe-image.png",
+      "uploads/project-images/dd719113-2ad1-4524-826a-ba2d7fc09665-image.png"
+    ]
+  },
+  {
+    "id": "13c1c09d-0357-4918-a60d-d935b86c1c5d",
+    "title": " CityShift: 2D Drive - لعبة قيادة سيارات ثنائية الأبعاد",
+    "description": "لعبة قيادة سيارات متطورة ثنائية الأبعاد مع محرك فيزيائي واقعي، نظام ناقل حركة يدوي وأوتوماتيكي، قيادة ذاتية ذكية، ورسومات عالية الجودة. تدعم اللغة العربية بالكامل مع واجهة RTL وتوفر تجربة قيادة احترافية",
+    "price": 7000,
+    "category": "Web",
+    "technologies": [
+      "JavaScript",
+      "HTML5",
+      "CSS3",
+      "Canvas API",
+      "Web Audio API",
+      "RequestAnimationFrame",
+      "CSS Grid",
+      "Flexbox",
+      "Newtonian Physics",
+      "Pathfinding Algorithms",
+      "Digital Signal Processing",
+      "Advanced Mathematics"
+    ],
+    "visibility": "public",
+    "filePath": "uploads/256c4032-c7f4-4c70-a416-1ed353be4072-CityShift-2D-Drive-Template.zip",
+    "originalFileName": "CityShift-2D-Drive-Template.zip",
+    "images": [
+      "uploads/project-images/044ed765-be56-4ded-94fd-f60d813f10a3-image.png",
+      "uploads/project-images/cee174e9-87a6-422b-a9d4-f79837dc68f3-image.png"
+    ],
+    "createdAt": "2026-03-24T18:11:02.047Z"
+  },
+  {
+    "id": "2574e809-55b6-4694-9108-2848ae7afb28",
+    "title": "NeuraConnect هو منصة اجتماعية تفاعلية متكاملة تدعم اللغة العربية وتجمع بين وسائل التواصل الاجتماعي والذكاء الاصطناعي",
+    "description": "\r\nالمشروع هو تطبيق ويب شامل يوفر:\r\n\r\nنظام تواصل اجتماعي مع منشورات وإعجابات ومشاركات\r\nقصص تفاعلية مع استطلاعات رأي وردود فعل\r\nاجتماعات فيديو/صوتية مع نظام موافقات ودردشة مباشرة\r\nمساعد ذكاء اصطناعي مدعوم بـ Gemini لتوليد المحتوى\r\nلوحة تحكم للمديرين لإدارة المستخدمين والتنبيهات\r\nدعم كامل للغة ",
+    "price": 20000,
+    "category": "Web",
+    "technologies": [
+      "JavaScript (Backend & Frontend)",
+      "HTML5",
+      "CSS3",
+      "Node.js"
+    ],
+    "visibility": "public",
+    "filePath": "uploads/a591c86b-801c-4f18-8d2d-93f485eefaec-neuraconnect-clean.zip",
+    "originalFileName": "neuraconnect-clean.zip",
+    "images": [
+      "uploads/project-images/7afa1d63-d590-499f-8a69-ab47094911ba-image.png",
+      "uploads/project-images/323f05b8-5a2a-4571-9755-f8053b729975-image.png",
+      "uploads/project-images/030b554c-0ebe-44e4-bc9a-5cef09d6a1cb-image.png"
+    ],
+    "createdAt": "2026-03-24T18:18:36.614Z"
+  },
+  {
+    "id": "2828e22e-e740-4830-952a-99c968f2e19a",
+    "title": "PDF Master Pro",
+    "description": "احترف تحويل الملفات إلى PDF بسهولة! تطبيق PDF Master Pro هو الحل الأمثل لتحويل الصور والنصوص إلى ملفات PDF احترافية بضغطة زر. مع واجهة عربية بالكامل وتصميم عصري، يمكنك الآن إنشاء مستندات PDF عالية الجودة من صور متعددة أو نصوص مكتوبة ومشاركتها مباشرة.\r\n",
+    "price": 1200,
+    "category": "Mobile",
+    "technologies": [
+      ": React Native",
+      "Expo",
+      "TypeScript",
+      "Expo Image Picker",
+      "Expo Print",
+      "Expo Sharing",
+      "JavaScript",
+      "CSS",
+      "HTML",
+      "Node.js",
+      "npm"
+    ],
+    "visibility": "public",
+    "filePath": "uploads/365bf2c6-5235-4479-830f-e3f19b32c936-PDF-Master-Pro.zip",
+    "originalFileName": "PDF-Master-Pro.zip",
+    "images": [
+      "uploads/project-images/37b64830-3b50-40a6-9bb9-4385c0823c43-image.png",
+      "uploads/project-images/ae65b738-2a8a-4823-b37a-ec48ad6ab481-image.png"
+    ],
+    "createdAt": "2026-03-24T18:54:21.319Z"
+  },
+  {
+    "id": "c208d7ef-c2fa-46f9-ba21-2d69006dbb87",
+    "title": " Smart Reminder Pro - تطبيق التذكيرات الاحترافي",
+    "description": "تطبيق ذكي لإدارة التذكيرات والرسائل المجدولة، مصمم لمساعدة المستخدمين على عدم نسيان المهام والمواعيد الهامة. يتميز بنظام إشعارات متعدد (قبل 30 دقيقة، 5 دقائق، وفي الوقت المحدد) مع واجهة عربية كاملة وتخزين دائم.",
+    "price": 1300,
+    "category": "Mobile",
+    "technologies": [
+      "React Native",
+      "Expo",
+      "TypeScript",
+      "Expo Notifications",
+      "AsyncStorage",
+      "date-fns",
+      "JavaScript",
+      "CSS",
+      "HTML",
+      "Node.js",
+      "npm"
+    ],
+    "visibility": "public",
+    "filePath": "uploads/9475bbbd-3c41-4586-810d-fb5069f8d739-Smart_Reminder_Pro_Complete_Template.zip",
+    "originalFileName": "Smart_Reminder_Pro_Complete_Template.zip",
+    "images": [
+      "uploads/project-images/70734181-e17b-4e10-9a8e-d615a24ef118-image.png",
+      "uploads/project-images/6a112173-9eb8-4791-adad-6cc4ea9bb701-image.png"
+    ],
+    "createdAt": "2026-03-24T20:24:22.160Z"
+  }
+]

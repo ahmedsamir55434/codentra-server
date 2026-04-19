@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تقارير الاشتراكات - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/projects/new">إضافة مشروع</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/admin/modifications">طلبات التعديل</a>
+        <a href="/admin/messages">الرسائل</a>
+        <a href="/admin/reviews">التقييمات</a>
+        <a href="/admin/coupons">كوبونات المشاريع</a>
+        <a href="/admin/subscription-coupons">كوبونات الاشتراكات</a>
+        <a href="/admin/subscription-reports" class="active">تقارير الاشتراكات</a>
+        <a href="/admin/referrals">الإحالات</a>
+        <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <a href="/admin/appointments">المواعيد</a>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/meeting-recordings">تسجيلات الاجتماعات</a>
+          <a href="/admin/admins">إدارة الأدمنز</a>
+        <% } %>
+        <a href="/admin/users">المستخدمين</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>تقارير الاشتراكات</h1>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <h2>فلترة</h2>
+        </div>
+
+        <div class="form-container">
+          <form method="GET" action="/admin/subscription-reports">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="from">من</label>
+                <input id="from" name="from" type="date" value="<%= filters && filters.from ? filters.from : '' %>">
+              </div>
+              <div class="form-group">
+                <label for="to">إلى</label>
+                <input id="to" name="to" type="date" value="<%= filters && filters.to ? filters.to : '' %>">
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">تطبيق</button>
+            <a href="/admin/subscription-reports" class="btn btn-secondary" style="margin-right:8px;">مسح الفلتر</a>
+          </form>
+        </div>
+      </section>
+
+      <div class="stats-grid" style="margin-top: 18px;">
+        <div class="stat-card">
+          <div class="stat-value"><%= summary && Number.isFinite(Number(summary.totalRevenue)) ? summary.totalRevenue : 0 %> ج</div>
+          <div class="stat-label">إيرادات الاشتراكات (بعد الخصم)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= summary && Number.isFinite(Number(summary.totalDiscounts)) ? summary.totalDiscounts : 0 %> ج</div>
+          <div class="stat-label">إجمالي الخصومات</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= summary && Number.isFinite(Number(summary.count)) ? summary.count : 0 %></div>
+          <div class="stat-label">عدد عمليات الدفع</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= summary && Number.isFinite(Number(summary.uniqueUsers)) ? summary.uniqueUsers : 0 %></div>
+          <div class="stat-label">عدد العملاء</div>
+        </div>
+      </div>
+
+      <section class="admin-section" style="margin-top: 26px;">
+        <div class="section-header">
+          <h2>آخر عمليات الدفع</h2>
+        </div>
+
+        <% if (!rows || rows.length === 0) { %>
+          <div class="empty-state">
+            <p>لا توجد بيانات ضمن الفترة المحددة</p>
+          </div>
+        <% } else { %>
+          <div class="admin-table-container">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>العميل</th>
+                  <th>الخطة</th>
+                  <th>المبلغ</th>
+                  <th>قبل</th>
+                  <th>الخصم</th>
+                  <th>الكوبون</th>
+                  <th>التاريخ</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% rows.forEach(r => { %>
+                  <tr>
+                    <td><%= r.userLabel %></td>
+                    <td><%= r.planLabel %></td>
+                    <td><strong><%= r.amount %></strong> ج</td>
+                    <td><%= r.priceBefore %> ج</td>
+                    <td><%= r.discountAmount %> ج</td>
+                    <td><%= r.couponCode ? r.couponCode : '-' %></td>
+                    <td><%= r.createdAt ? new Date(r.createdAt).toLocaleString('ar-EG') : '-' %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </section>
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

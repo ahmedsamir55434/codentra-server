@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الحساب محظور - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .blocked-page{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:40px 15px}
+    .blocked-card{width:100%;max-width:720px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:18px;padding:28px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.25);color:#fff}
+    .lock-icon{width:86px;height:86px;margin:0 auto 14px;border-radius:22px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, rgba(220,53,69,0.22), rgba(102,126,234,0.12));border:1px solid rgba(220,53,69,0.25)}
+    .blocked-title{margin:0 0 10px;font-size:1.6rem;color:#fff}
+    .blocked-sub{margin:0 0 18px;color:rgba(255,255,255,0.85);line-height:1.7}
+    .blocked-details{text-align:right;margin:18px auto 0;max-width:560px;background:rgba(0,0,0,0.18);border:1px solid rgba(255,255,255,0.10);border-radius:14px;padding:16px}
+    .detail-row{display:flex;gap:10px;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.08)}
+    .detail-row:last-child{border-bottom:none}
+    .detail-label{color:rgba(255,255,255,0.7)}
+    .detail-value{color:#fff;font-weight:600;text-align:left;max-width:65%;word-break:break-word}
+    .blocked-actions{margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+    .blocked-card a{color:inherit}
+    .btn-ghost{background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.14);padding:10px 16px;border-radius:10px;display:inline-block;text-decoration:none;transition:transform .15s ease,background .15s ease}
+    .btn-ghost:hover{transform:translateY(-1px);background:rgba(255,255,255,0.12)}
+    .btn-danger{background:rgba(220,53,69,0.15);color:#fff;border:1px solid rgba(220,53,69,0.35);padding:10px 16px;border-radius:10px;display:inline-block;text-decoration:none;transition:transform .15s ease,background .15s ease}
+    .btn-danger:hover{transform:translateY(-1px);background:rgba(220,53,69,0.22)}
+  </style>
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="blocked-page">
+    <div class="blocked-card">
+      <div class="lock-icon" aria-hidden="true">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 10V8a5 5 0 0 1 10 0v2" stroke="rgba(255,255,255,0.95)" stroke-width="2" stroke-linecap="round"/>
+          <path d="M6.5 10h11A1.5 1.5 0 0 1 19 11.5v8A2.5 2.5 0 0 1 16.5 22h-9A2.5 2.5 0 0 1 5 19.5v-8A1.5 1.5 0 0 1 6.5 10Z" stroke="rgba(255,255,255,0.95)" stroke-width="2"/>
+          <path d="M12 14v4" stroke="rgba(255,255,255,0.95)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <h1 class="blocked-title">حسابك محظور</h1>
+      <p class="blocked-sub">لا يمكنك استخدام الموقع حاليًا. إذا كنت ترى أن هذا بالخطأ تواصل مع الدعم.</p>
+
+      <div class="blocked-details">
+        <div class="detail-row">
+          <div class="detail-label">نوع الحظر</div>
+          <div class="detail-value"><%= blockedUntil ? 'مؤقت' : 'دائم' %></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">السبب</div>
+          <div class="detail-value"><%= blockedReason || 'غير محدد' %></div>
+        </div>
+        <% if (blockedUntil) { %>
+          <div class="detail-row">
+            <div class="detail-label">ينتهي في</div>
+            <div class="detail-value"><%= new Date(blockedUntil).toLocaleString('ar-EG') %></div>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="blocked-actions">
+        <a class="btn-ghost" href="/">الصفحة الرئيسية</a>
+        <a class="btn-danger" href="/logout">تسجيل الخروج</a>
+      </div>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

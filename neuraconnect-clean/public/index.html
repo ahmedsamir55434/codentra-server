@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Neura</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand__logo">N</div>
+          <div class="brand__text">
+            <div class="brand__name">Neura</div>
+            <div class="brand__tag">Social + AI Assistant</div>
+          </div>
+        </div>
+
+        <div class="topbar__right">
+          <button class="btn btn--ghost" id="notifBtn" hidden>
+            الإشعارات
+            <span class="badge" id="notifBadge" hidden></span>
+          </button>
+          <div class="userchip" id="userChip" hidden>
+            <img class="userchip__avatar" id="userChipAvatar" alt="" />
+            <div class="userchip__meta">
+              <div class="userchip__name" id="userChipName"></div>
+              <div class="userchip__sub" id="userChipSub"></div>
+            </div>
+          </div>
+          <button class="btn btn--ghost" id="logoutBtn" hidden>تسجيل خروج</button>
+        </div>
+      </header>
+
+      <div class="layout">
+        <aside class="sidebar" id="sidebar" hidden>
+          <nav class="nav">
+            <button class="nav__item" data-view="feed" aria-label="الصفحة الرئيسية">
+              <span class="nav__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 10.5L12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span class="nav__label">الصفحة الرئيسية</span>
+            </button>
+
+            <button class="nav__item" data-view="create" aria-label="إنشاء بوست">
+              <span class="nav__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </span>
+              <span class="nav__label">إنشاء بوست</span>
+            </button>
+
+            <button class="nav__item" data-view="reels" aria-label="ريلز">
+              <span class="nav__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M10 8.5v7l6-3.5-6-3.5Z" fill="currentColor"/>
+                  <path d="M3 7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7Z" stroke="currentColor" stroke-width="2"/>
+                  <path d="M8 4l3 3M13 4l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <span class="nav__label">ريلز</span>
+            </button>
+
+            <button class="nav__item" data-view="saved" aria-label="المحفوظات">
+              <span class="nav__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M7 3h10a2 2 0 0 1 2 2v16l-7-4-7 4V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span class="nav__label">المحفوظات</span>
+            </button>
+
+            <button class="nav__item" data-view="chats" aria-label="الشات">
+              <span class="nav__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 12a8 8 0 0 1-8 8H7l-4 2 2-4v-6a8 8 0 0 1 16 0Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span class="nav__label">الشات</span>
+            </button>
+
+            <button class="nav__item" data-view="meetings" aria-label="ميتنج">
+              <span class="nav__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M15 10l6-3v10l-6-3v-4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                  <path d="M3 8a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span class="nav__label">ميتنج</span>
+            </button>
+
+
+            <button class="nav__item" data-view="dashboard" id="adminNavItem" aria-label="لوحة الإدارة" hidden>
+              <span class="nav__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 2l8 4v6c0 5-3.4 9.4-8 10-4.6-.6-8-5-8-10V6l8-4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                  <path d="M9.5 12.5l1.6 1.6L14.8 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <span class="nav__label">لوحة الإدارة</span>
+            </button>
+
+            <button class="nav__item" data-view="profile" aria-label="الملف الشخصي">
+              <span class="nav__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="currentColor" stroke-width="2"/>
+                  <path d="M4 21a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <span class="nav__label">الملف الشخصي</span>
+            </button>
+          </nav>
+
+          <div class="sidebar__card">
+            <div class="muted">نصيحة</div>
+            <div class="sidebar__hint">الـ AI هنا مساعد فقط. أنت صاحب القرار النهائي في النشر.</div>
+          </div>
+        </aside>
+
+        <main class="main">
+          <section class="view" id="view-auth">
+            <div class="card auth">
+              <h1 class="h1">ابدأ في NeuraConnect</h1>
+              <p class="muted">سوشيال بسيط + مساعد ذكي جوّا التجربة.</p>
+
+              <div class="tabs">
+                <button class="tab tab--active" id="tabLogin">تسجيل دخول</button>
+                <button class="tab" id="tabRegister">حساب جديد</button>
+              </div>
+
+              <form class="form" id="loginForm">
+                <label class="label">الإيميل</label>
+                <input class="input" name="email" type="email" placeholder="you@email.com" required />
+
+                <label class="label">كلمة المرور</label>
+                <input class="input" name="password" type="password" placeholder="••••••••" required />
+
+                <button class="btn btn--primary" type="submit">دخول</button>
+              </form>
+
+              <form class="form" id="registerForm" hidden>
+                <label class="label">الاسم</label>
+                <input class="input" name="username" type="text" placeholder="Ahmed" required />
+
+                <label class="label">الإيميل</label>
+                <input class="input" name="email" type="email" placeholder="you@email.com" required />
+
+                <label class="label">كلمة المرور</label>
+                <input class="input" name="password" type="password" placeholder="••••••••" required />
+
+                <button class="btn btn--primary" type="submit">إنشاء حساب</button>
+              </form>
+
+              <div class="alert" id="authAlert" hidden></div>
+
+              <div class="footerNote">Backend: <code>/api/health</code> • Storage: <code>data/db.json</code></div>
+            </div>
+          </section>
+
+          <section class="view" id="view-meetings" hidden>
+            <div class="pageHead">
+              <h2 class="h2">Meetings</h2>
+              <div class="pageHead__actions">
+                <button class="btn" id="meetingCopyLinkBtn" hidden>Copy link</button>
+                <button class="btn btn--danger" id="meetingHangupBtn" hidden>Hang up</button>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="card">
+                <div class="card__title">إنشاء Meeting</div>
+                <label class="label">العنوان (اختياري)</label>
+                <input class="input" id="meetingTitleInput" placeholder="Team meeting" />
+                <div class="row row--wrap">
+                  <button class="btn btn--primary" id="meetingCreateBtn">Create</button>
+                </div>
+                <div class="alert" id="meetingAlert" hidden></div>
+              </div>
+
+              <div class="card">
+                <div class="card__title">غرفة Meeting</div>
+                <div class="muted" id="meetingRoomTitle">لم يتم فتح ميتنج بعد.</div>
+
+                <div class="divider"></div>
+
+                <div class="row row--wrap meetingDevicesRow">
+                  <div class="field field--grow">
+                    <label class="label">الكاميرا</label>
+                    <select class="input" id="meetingCamSelect"></select>
+                  </div>
+                  <div class="field field--grow">
+                    <label class="label">الميكروفون</label>
+                    <select class="input" id="meetingMicSelect"></select>
+                  </div>
+                </div>
+
+                <div class="row row--wrap">
+                  <button class="btn" id="meetingToggleCamBtn" disabled>Cam</button>
+                  <button class="btn" id="meetingToggleMicBtn" disabled>Mic</button>
+                  <button class="btn" id="meetingMuteRemoteBtn" disabled>Mute remote</button>
+                  <button class="btn" id="meetingShareScreenBtn" disabled>Share screen</button>
+                  <button class="btn" id="meetingFullscreenBtn" disabled>Fullscreen</button>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="meetingVideosGrid">
+                  <div>
+                    <div class="muted">You</div>
+                    <video id="meetingLocalVideo" autoplay playsinline muted class="meetingVideo"></video>
+                  </div>
+                  <div>
+                    <div class="muted">Remote</div>
+                    <div class="meetingRemoteMainWrap">
+                      <div class="meetingReactionOverlay" id="meetingRemoteMainReaction" hidden></div>
+                      <video id="meetingRemoteMainVideo" autoplay playsinline class="meetingVideo meetingRemoteMainVideo"></video>
+                    </div>
+                    <div class="mediaGrid meetingRemoteThumbGrid" id="meetingRemoteGrid"></div>
+                  </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="meetingExtrasGrid">
+                  <div class="meetingChatCard">
+                    <div class="card__title">Chat</div>
+                    <div class="meetingChatList" id="meetingChatList"></div>
+                    <div class="row">
+                      <input class="input" id="meetingChatInput" placeholder="اكتب رسالة..." />
+                      <button class="btn" id="meetingChatSendBtn" type="button">Send</button>
+                    </div>
+                  </div>
+
+                  <div class="meetingActionsCard">
+                    <div class="card__title">Actions</div>
+                    <div class="row row--wrap" id="meetingReactionsRow">
+                      <button class="btn" type="button" data-meeting-reaction="hand">✋ Raise hand</button>
+                      <button class="btn" type="button" data-meeting-reaction="👍">👍</button>
+                      <button class="btn" type="button" data-meeting-reaction="❤️">❤️</button>
+                      <button class="btn" type="button" data-meeting-reaction="😂">😂</button>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="row row--wrap">
+                      <button class="btn" id="meetingRecordBtn" disabled>Start recording</button>
+                      <a class="btn" id="meetingDownloadRecordingBtn" hidden download="meeting.webm">Download</a>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div id="meetingApprovalWrap" hidden>
+                  <div class="card__title">طلبات الدخول (Approval)</div>
+                  <div class="list" id="meetingPendingList"></div>
+                </div>
+
+                <div class="alert" id="meetingRoomAlert" hidden></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="view" id="view-reels" hidden>
+            <div class="pageHead">
+              <h2 class="h2">ريلز</h2>
+              <div class="pageHead__actions">
+                <button class="btn" id="refreshReelsBtn">تحديث</button>
+              </div>
+            </div>
+
+            <div class="stack" id="reelsList"></div>
+          </section>
+
+          <section class="view" id="view-feed" hidden>
+            <div class="pageHead">
+              <h2 class="h2">المنشورات</h2>
+              <div class="pageHead__actions">
+                <button class="btn" id="refreshFeedBtn">تحديث</button>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="card">
+                <div class="card__title">بحث عن مستخدم</div>
+                <div class="row">
+                  <input class="input" id="userSearchInput" placeholder="ابحث بالاسم أو الإيميل" />
+                  <button class="btn" id="userSearchBtn">بحث</button>
+                </div>
+                <div class="list" id="usersList"></div>
+              </div>
+
+              <div>
+                <div class="storiesBar" id="storiesBar" hidden>
+                  <button class="storyBubble storyBubble--create" id="createStoryFromFeedBtn" type="button">
+                    <div class="storyBubble__ring">
+                      <img class="storyBubble__avatar" id="createStoryFromFeedAvatar" alt="" />
+                    </div>
+                    <div class="storyBubble__name">قصتك</div>
+                  </button>
+                  <div class="storiesBar__list" id="storiesList"></div>
+                </div>
+                <div class="stack" id="feedList"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="view" id="view-create" hidden>
+            <div class="pageHead">
+              <h2 class="h2">إنشاء بوست</h2>
+            </div>
+
+            <div class="grid">
+              <div class="card">
+                <div class="card__title">محتوى البوست</div>
+
+                <div class="tabs">
+                  <button class="tab tab--active" id="createModePostBtn">بوست</button>
+                  <button class="tab" id="createModeReelBtn">ريل</button>
+                  <button class="tab" id="createModeStoryBtn">ستوري</button>
+                </div>
+
+                <div id="createPostWrap">
+                  <textarea class="textarea" id="postText" rows="8" placeholder="اكتب هنا..."></textarea>
+
+                  <div class="row row--wrap">
+                    <input class="file" id="postMedia" type="file" accept="image/*,video/*" multiple />
+                  </div>
+                </div>
+
+                <div id="createStoryWrap" hidden>
+                  <div class="card__title">Story</div>
+                  <div class="muted">ستوري كتابة أو صورة/فيديو + كتابة (24 ساعة).</div>
+
+                  <label class="label">النص</label>
+                  <textarea class="textarea" id="storyText" rows="4" placeholder="اكتب ستوري..."></textarea>
+
+                  <div class="row row--wrap">
+                    <div class="field">
+                      <label class="label">لون الخلفية</label>
+                      <input class="input" id="storyBg" type="color" value="#0b0d10" />
+                    </div>
+                    <div class="field">
+                      <label class="label">لون النص</label>
+                      <input class="input" id="storyColor" type="color" value="#ffffff" />
+                    </div>
+                  </div>
+
+                  <div class="row row--wrap">
+                    <div class="field field--grow">
+                      <label class="label">حجم الخط</label>
+                      <input class="input" id="storyFontSize" type="range" min="14" max="72" value="32" />
+                    </div>
+                    <div class="field field--grow">
+                      <label class="label">تكبير/تصغير الصورة</label>
+                      <input class="input" id="storyMediaScale" type="range" min="1" max="2" step="0.01" value="1" />
+                    </div>
+                  </div>
+
+                  <div class="row row--wrap">
+                    <input class="file" id="storyMedia" type="file" accept="image/*,video/*" />
+                  </div>
+
+                  <div class="divider"></div>
+
+                  <div class="card__title">Interactive Sticker</div>
+                  <div class="muted">Poll / Question / Quiz / Slider / Link / Mention / Location / Countdown</div>
+
+                  <label class="label">النوع</label>
+                  <select class="input" id="storyInteractiveKind">
+                    <option value="">بدون</option>
+                    <option value="poll">Poll</option>
+                    <option value="question">Question</option>
+                    <option value="quiz">Quiz</option>
+                    <option value="slider">Emoji Slider</option>
+                    <option value="link">Link</option>
+                    <option value="mention">Mention</option>
+                    <option value="location">Location</option>
+                    <option value="countdown">Countdown</option>
+                  </select>
+
+                  <div id="storyInteractiveFields" hidden>
+                    <div id="storyInteractiveQuestionWrap">
+                      <label class="label">السؤال</label>
+                      <input class="input" id="storyInteractiveQuestion" placeholder="اكتب السؤال..." />
+                    </div>
+
+                    <div id="storyLinkFields" hidden>
+                      <label class="label">عنوان الرابط (اختياري)</label>
+                      <input class="input" id="storyLinkTitle" placeholder="مثال: شاهد التفاصيل" />
+                      <label class="label">الرابط (https://)</label>
+                      <input class="input" id="storyLinkUrl" placeholder="https://..." />
+                    </div>
+
+                    <div id="storyMentionFields" hidden>
+                      <label class="label">Username</label>
+                      <input class="input" id="storyMentionUsername" placeholder="@username" />
+                    </div>
+
+                    <div id="storyLocationFields" hidden>
+                      <label class="label">المكان</label>
+                      <input class="input" id="storyLocationName" placeholder="Cairo" />
+                    </div>
+
+                    <div id="storyCountdownFields" hidden>
+                      <label class="label">العنوان</label>
+                      <input class="input" id="storyCountdownTitle" placeholder="مثال: إطلاق المنتج" />
+                      <label class="label">وقت الانتهاء</label>
+                      <input class="input" id="storyCountdownEndAt" type="datetime-local" />
+                    </div>
+
+                    <div id="storySliderFields" hidden>
+                      <label class="label">Emoji</label>
+                      <input class="input" id="storySliderEmoji" placeholder="❤️" />
+                    </div>
+
+                    <div id="storyPollFields" hidden>
+                      <div class="muted">اكتب 2 إلى 4 اختيارات.</div>
+                      <div class="row row--wrap">
+                        <input class="input" id="storyPollOpt1" placeholder="اختيار 1" />
+                        <input class="input" id="storyPollOpt2" placeholder="اختيار 2" />
+                      </div>
+                      <div class="row row--wrap">
+                        <input class="input" id="storyPollOpt3" placeholder="اختيار 3 (اختياري)" />
+                        <input class="input" id="storyPollOpt4" placeholder="اختيار 4 (اختياري)" />
+                      </div>
+                    </div>
+
+                    <div id="storyQuizFields" hidden>
+                      <label class="label">الإجابة الصحيحة (اختياري)</label>
+                      <select class="input" id="storyQuizCorrectIndex">
+                        <option value="">بدون</option>
+                        <option value="0">اختيار 1</option>
+                        <option value="1">اختيار 2</option>
+                        <option value="2">اختيار 3</option>
+                        <option value="3">اختيار 4</option>
+                      </select>
+                      <div class="muted">الـ Quiz يستخدم نفس اختيارات Poll.</div>
+                    </div>
+                  </div>
+
+                  <div class="storyStage" id="storyStage">
+                    <div class="storyStage__media" id="storyStageMedia"></div>
+                    <div class="storyStage__text" id="storyStageText"></div>
+                    <div class="storyStage__sticker" id="storyStageSticker" hidden></div>
+                  </div>
+                </div>
+
+                <div class="mediaGrid" id="postMediaPreview" hidden></div>
+
+                <div class="divider"></div>
+
+                <div id="soundPickerWrap" hidden>
+                  <div class="card__title">المكتبة الصوتية</div>
+                  <label class="label">اختر صوت</label>
+                  <select class="input" id="soundSelect"></select>
+                  <audio id="soundPreview" class="audioPlayer" controls hidden></audio>
+                  <div class="muted" id="soundHint" hidden></div>
+
+                  <div id="addSoundWrap" hidden>
+                    <div class="divider"></div>
+                    <div class="card__title">إضافة صوت جديد (للموثقين فقط)</div>
+                    <label class="label">عنوان الصوت</label>
+                    <input class="input" id="createSoundTitle" placeholder="مثال: صوت ترند" />
+                    <label class="label">رابط الصوت (mp3)</label>
+                    <input class="input" id="createSoundUrl" placeholder="https://..." />
+                    <input class="file" id="createSoundFile" type="file" accept="audio/mpeg,.mp3" hidden />
+                    <div class="row row--wrap">
+                      <button class="btn" id="createPickSoundFileBtn">اختيار ملف mp3</button>
+                    </div>
+                    <div class="row row--wrap">
+                      <button class="btn" id="createAddSoundBtn">إضافة الصوت</button>
+                    </div>
+                    <div class="alert" id="createSoundAlert" hidden></div>
+                  </div>
+                </div>
+
+                <div class="row row--wrap">
+                  <button class="btn" id="aiSummarizeBtn">تلخيص</button>
+                  <button class="btn" id="aiImproveBtn">تحسين</button>
+                  <button class="btn" id="aiRewriteFormalBtn">إعادة صياغة (رسمي)</button>
+                  <button class="btn" id="aiRewriteCasualBtn">إعادة صياغة (ودّي)</button>
+                  <button class="btn" id="aiTranslateEnBtn">ترجمة (EN)</button>
+                </div>
+
+                <div class="divider"></div>
+
+                <button class="btn btn--primary" id="publishPostBtn">نشر</button>
+                <div class="alert" id="createAlert" hidden></div>
+              </div>
+
+              <div class="card">
+                <div class="card__title">نتيجة AI (خاصة بك)</div>
+                <div class="muted">ملاحظة: الأدوات تعمل عبر Gemini. لو حصل خطأ هتظهر رسالة السبب.</div>
+                <pre class="pre" id="aiOutput">...</pre>
+                <button class="btn btn--ghost" id="applyAiToPostBtn" disabled>استخدم النص في البوست</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="view" id="view-chats" hidden>
+            <div class="pageHead">
+              <h2 class="h2">الشات</h2>
+              <div class="pageHead__actions">
+                <button class="btn" id="openAiChatBtn">فتح شات AI</button>
+              </div>
+            </div>
+
+            <div class="grid grid--chats">
+              <div class="card">
+                <div class="card__title">المحادثات</div>
+                <div class="list" id="chatsList"></div>
+
+                <div class="divider"></div>
+
+                <div class="card__title">ابحث وابدأ شات</div>
+                <div class="row">
+                  <input class="input" id="chatUserSearchInput" placeholder="اكتب اسم المستخدم..." />
+                  <button class="btn" id="chatUserSearchBtn">بحث</button>
+                </div>
+                <div class="list" id="chatUserSearchList"></div>
+              </div>
+
+              <div class="card">
+                <div class="card__title" id="chatTitle">اختر محادثة</div>
+                <div class="chat" id="messagesList"></div>
+
+                <div class="composer">
+                  <input class="input" id="messageInput" placeholder="اكتب رسالة..." />
+                  <button class="btn btn--primary" id="sendMessageBtn">إرسال</button>
+                </div>
+                <div class="alert" id="chatAlert" hidden></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="view" id="view-profile" hidden>
+            <div class="pageHead">
+              <h2 class="h2">الملف الشخصي</h2>
+            </div>
+
+            <div class="grid">
+              <div class="card">
+                <div class="card__title">بياناتي</div>
+                <div class="profileHeader">
+                  <img class="profileAvatar" id="profileAvatar" alt="" />
+                  <div>
+                    <div class="h3" id="profileName"></div>
+                    <div class="muted" id="profileEmail"></div>
+                    <div class="row row--wrap">
+                      <span class="pill" id="followersCount"></span>
+                      <span class="pill" id="followingCount"></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <label class="label">الاسم</label>
+                <input class="input" id="editUsername" />
+
+                <label class="label">Bio</label>
+                <textarea class="textarea" id="editBio" rows="4"></textarea>
+
+                <label class="label">Avatar URL</label>
+                <input class="input" id="editAvatarUrl" placeholder="https://..." />
+
+                <button class="btn btn--primary" id="saveProfileBtn">حفظ</button>
+                <div class="alert" id="profileAlert" hidden></div>
+              </div>
+
+              <div class="card">
+                <div class="card__title">Highlights</div>
+                <div class="row">
+                  <input class="input" id="highlightTitleInput" placeholder="اسم الهايلايت..." />
+                  <button class="btn" id="createHighlightBtn">إنشاء</button>
+                </div>
+                <div class="alert" id="highlightsAlert" hidden></div>
+                <div class="highlights" id="myHighlightsList"></div>
+              </div>
+
+              <div class="card">
+                <div class="card__title">بوستاتي</div>
+                <div class="stack" id="myPostsList"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="view" id="view-user" hidden>
+            <div class="pageHead">
+              <h2 class="h2">صفحة المستخدم</h2>
+              <div class="pageHead__actions">
+                <button class="btn" id="backToFeedBtn">رجوع</button>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="card">
+                <div class="card__title">الملف</div>
+                <div class="profileHeader">
+                  <img class="profileAvatar" id="otherAvatar" alt="" />
+                  <div>
+                    <div class="h3" id="otherName"></div>
+                    <div class="muted" id="otherEmail"></div>
+                    <div class="row row--wrap">
+                      <span class="pill" id="otherFollowers"></span>
+                      <span class="pill" id="otherFollowing"></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="row row--wrap" id="otherActions">
+                  <button class="btn btn--primary" id="otherFollowBtn">متابعة</button>
+                  <button class="btn btn--ghost" id="otherUnfollowBtn">إلغاء متابعة</button>
+                </div>
+                <div class="alert" id="otherAlert" hidden></div>
+              </div>
+
+              <div class="card">
+                <div class="card__title">Highlights</div>
+                <div class="highlights" id="otherHighlightsList"></div>
+              </div>
+
+              <div class="card">
+                <div class="card__title">منشورات المستخدم</div>
+                <div class="stack" id="otherPostsList"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="view" id="view-saved" hidden>
+            <div class="pageHead">
+              <h2 class="h2">المحفوظات</h2>
+              <div class="pageHead__actions">
+                <button class="btn" id="refreshSavedBtn">تحديث</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="stack" id="savedPostsList"></div>
+            </div>
+          </section>
+
+          <section class="view" id="view-notifications" hidden>
+            <div class="pageHead">
+              <h2 class="h2">الإشعارات</h2>
+              <div class="pageHead__actions">
+                <button class="btn" id="refreshNotifBtn">تحديث</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="alert" id="notificationsAlert" hidden></div>
+              <div class="list" id="notificationsList"></div>
+            </div>
+          </section>
+
+          <section class="view" id="view-dashboard" hidden>
+            <div class="pageHead">
+              <h2 class="h2">لوحة الإدارة</h2>
+              <div class="pageHead__actions">
+                <button class="btn" id="refreshDashboardBtn">تحديث</button>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="card">
+                <div class="card__title">ملخص + آخر 30 يوم</div>
+                <div class="muted" id="dashboardAccessHint" hidden></div>
+                <div class="list" id="dashboardOverview"></div>
+              </div>
+
+              <div class="card">
+                <div class="card__title">تفاعل الحسابات</div>
+                <div class="row">
+                  <input class="input" id="adminUserSearchInput" placeholder="ابحث بالاسم أو الإيميل" />
+                  <button class="btn" id="adminUserSearchBtn">بحث</button>
+                </div>
+                <div class="list" id="adminUsersStats"></div>
+              </div>
+            </div>
+
+            <div class="grid grid--mt">
+              <div class="card">
+                <div class="card__title">المنشورات والريلز (آخر 30 يوم)</div>
+                <div class="row row--wrap">
+                  <button class="btn" id="adminFilterAllBtn">الكل</button>
+                  <button class="btn" id="adminFilterPostsBtn">بوستات</button>
+                  <button class="btn" id="adminFilterReelsBtn">ريلز</button>
+                </div>
+                <div class="list" id="adminRecentPosts"></div>
+              </div>
+
+              <div class="card">
+                <div class="card__title">إرسال إنذار / رسالة إشعار</div>
+                <label class="label">User ID</label>
+                <input class="input" id="adminNotifyUserId" placeholder="اكتب ID المستخدم" />
+                <label class="label">العنوان (اختياري)</label>
+                <input class="input" id="adminNotifyTitle" placeholder="تحذير" />
+                <label class="label">الرسالة</label>
+                <textarea class="textarea" id="adminNotifyMessage" rows="5" placeholder="اكتب رسالة الإدارة هنا..."></textarea>
+                <div class="row row--wrap">
+                  <button class="btn btn--primary" id="adminSendNotifyBtn">إرسال</button>
+                </div>
+                <div class="alert" id="adminNotifyAlert" hidden></div>
+              </div>
+
+              <div class="card">
+                <div class="card__title">المكتبة الصوتية</div>
+                <label class="label">عنوان الصوت</label>
+                <input class="input" id="adminSoundTitle" placeholder="مثال: صوت ترند" />
+                <label class="label">رابط الصوت (mp3)</label>
+                <input class="input" id="adminSoundUrl" placeholder="https://..." />
+                <div class="row row--wrap">
+                  <button class="btn btn--primary" id="adminAddSoundBtn">إضافة</button>
+                </div>
+                <div class="alert" id="adminSoundsAlert" hidden></div>
+                <div class="divider"></div>
+                <div class="list" id="adminSoundsList"></div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div class="modal" id="storyModal" hidden>
+      <div class="storyViewer" role="dialog" aria-modal="true">
+        <div class="storyViewer__top">
+          <div class="storyProgress" id="storyProgress"></div>
+          <div class="storyViewer__head">
+            <div class="storyViewer__author" id="storyViewerAuthor"></div>
+            <div class="row row--wrap">
+              <button class="btn" id="saveStoryToHighlightBtn" type="button" hidden>حفظ في Highlights</button>
+              <button class="btn btn--ghost" id="closeStoryBtn" type="button">إغلاق</button>
+            </div>
+          </div>
+        </div>
+        <div class="storyViewer__body" id="storyViewerBody"></div>
+        <div class="storyComments" id="storyCommentsWrap">
+          <div class="storyComments__list" id="storyCommentsList"></div>
+          <div class="storyComments__composer">
+            <input class="input storyComments__input" id="storyCommentInput" placeholder="اكتب تعليق على الستوري..." />
+            <button class="btn btn--primary" id="storyCommentSendBtn" type="button">إرسال</button>
+          </div>
+          <div class="alert" id="storyCommentsAlert" hidden></div>
+        </div>
+        <button class="storyNav storyNav--left" id="storyPrevBtn" type="button" aria-label="السابق"></button>
+        <button class="storyNav storyNav--right" id="storyNextBtn" type="button" aria-label="التالي"></button>
+      </div>
+    </div>
+
+    <div class="modal" id="highlightModal" hidden>
+      <div class="storyViewer" role="dialog" aria-modal="true">
+        <div class="storyViewer__top">
+          <div class="storyViewer__head">
+            <div class="storyViewer__author" id="highlightViewerTitle"></div>
+            <button class="btn btn--ghost" id="closeHighlightBtn" type="button">إغلاق</button>
+          </div>
+        </div>
+        <div class="storyViewer__body" id="highlightViewerBody"></div>
+        <button class="storyNav storyNav--left" id="highlightPrevBtn" type="button" aria-label="السابق"></button>
+        <button class="storyNav storyNav--right" id="highlightNextBtn" type="button" aria-label="التالي"></button>
+      </div>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

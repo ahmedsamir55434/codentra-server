@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Codentra Presentations</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/presentations.css">
+</head>
+<body class="presentations-page">
+  <%- include('../partials/header') %>
+
+  <main class="presentations-shell">
+    <section class="presentations-hero">
+      <div class="container presentations-hero-grid">
+        <div class="presentations-card presentations-hero-copy">
+          <span class="presentations-kicker">Codentra AI Product</span>
+          <h1>اكتب فكرتك وسيب Codentra Presentations يبني لك بريزنتيشن جاهز للعرض والتنزيل.</h1>
+          <p>
+            المنتج الجديد داخل نفس كودنترا، بنفس الحساب، ونفس بطاقة المحفظة. اشترك شهريًا أو سنويًا
+            وأنشئ عروضًا PowerPoint بالذكاء الاصطناعي خلال دقائق.
+          </p>
+
+          <div class="presentations-actions">
+            <% if (presentationUser) { %>
+              <a class="btn btn-primary" href="/codentra-presentations/generate">إنشاء عرض جديد</a>
+              <a class="btn btn-secondary" href="#plans">عرض الخطط</a>
+            <% } else { %>
+              <a class="btn btn-primary" href="/login">سجّل الدخول</a>
+              <a class="btn btn-secondary" href="#plans">استكشف الخطط</a>
+            <% } %>
+          </div>
+
+          <div class="presentations-mini-grid">
+            <div class="presentations-mini-card">
+              <strong>نفس الحساب</strong>
+              <span>تسجيل الدخول بنفس حساب Codentra.</span>
+            </div>
+            <div class="presentations-mini-card">
+              <strong>نفس البطاقة</strong>
+              <span>الدفع يتم من نفس محفظة كودنترا.</span>
+            </div>
+            <div class="presentations-mini-card">
+              <strong>ملف جاهز</strong>
+              <span>تنزيل PowerPoint حقيقي بصيغة <code>.pptx</code>.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="presentations-card presentations-side-panel">
+          <div class="presentations-stat">
+            <span>الحالة الحالية</span>
+            <strong><%= activeSubscription ? (activePlan ? activePlan.name : 'اشتراك نشط') : 'بدون اشتراك' %></strong>
+            <small>
+              <%= activeSubscription ? `ينتهي في ${new Date(activeSubscription.currentPeriodEnd).toLocaleDateString('ar-EG')}` : 'اختر خطة للبدء' %>
+            </small>
+          </div>
+
+          <div class="presentations-stat">
+            <span>بطاقة المحفظة</span>
+            <strong><%= walletCardNumber || 'سجّل الدخول لعرض بطاقتك' %></strong>
+            <small><%= presentationUser ? `${Number(presentationUser.walletBalance || 0).toFixed(2)} جنيه رصيد متاح` : 'مرتبطة بنفس محفظة Codentra' %></small>
+          </div>
+
+          <div class="presentations-stat presentations-stat-highlight">
+            <span>الرصيد الحالي</span>
+            <strong><%= presentationUser ? `${Number(presentationUser.walletBalance || 0).toFixed(2)} جنيه` : 'سجّل الدخول' %></strong>
+            <small>يُخصم مباشرة من نفس الحساب</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="container">
+      <% if (error) { %>
+        <div class="presentations-flash presentations-flash-error"><%= error %></div>
+      <% } %>
+      <% if (success) { %>
+        <div class="presentations-flash presentations-flash-success"><%= success %></div>
+      <% } %>
+    </section>
+
+    <% if (presentationUser) { %>
+      <section class="container presentations-dashboard">
+        <div class="presentations-section-head">
+          <div>
+            <span class="presentations-kicker">لوحة سريعة</span>
+            <h2>إدارة Codentra Presentations</h2>
+          </div>
+          <% if (activeSubscription) { %>
+            <a class="btn btn-primary" href="/codentra-presentations/generate">إنشاء بريزنتيشن</a>
+          <% } %>
+        </div>
+
+        <div class="presentations-overview-grid">
+          <div class="presentations-card">
+            <span>الاشتراك</span>
+            <strong><%= activeSubscription ? (activePlan ? activePlan.name : 'نشط') : 'لا يوجد' %></strong>
+            <small><%= activeSubscription ? `${activeSubscription.remainingCredits} عملية إنشاء متبقية` : 'اختر خطة من الأسفل' %></small>
+          </div>
+          <div class="presentations-card">
+            <span>الرصيد</span>
+            <strong><%= Number(presentationUser.walletBalance || 0).toFixed(2) %> جنيه</strong>
+            <small>يستخدم نفس بطاقة Codentra</small>
+          </div>
+          <div class="presentations-card">
+            <span>آخر 6 عروض</span>
+            <strong><%= decks.length %></strong>
+            <small>يمكنك فتحها أو تحميلها من هنا</small>
+          </div>
+        </div>
+
+        <div class="presentations-main-grid">
+          <div class="presentations-card">
+            <div class="presentations-section-head compact">
+              <div>
+                <span class="presentations-kicker">أكواد التحقق</span>
+                <h3>طلبات بطاقتك الحالية</h3>
+              </div>
+            </div>
+            <% if (incomingApprovals.length) { %>
+              <div class="presentations-list">
+                <% incomingApprovals.forEach((attempt) => { %>
+                  <div class="presentations-list-item">
+                    <div>
+                      <strong>كود التحقق: <span class="presentations-code"><%= attempt.ownerVisibleCode %></span></strong>
+                      <p>
+                        مبلغ <%= Number(attempt.amount || 0).toFixed(2) %> جنيه
+                        • آخر 4 أرقام <%= attempt.payerCardLast4 %>
+                      </p>
+                    </div>
+                    <small>ينتهي <%= new Date(attempt.expiresAt).toLocaleString('ar-EG') %></small>
+                  </div>
+                <% }) %>
+              </div>
+            <% } else { %>
+              <div class="presentations-empty">لا توجد طلبات تحقق معلقة على بطاقتك الآن.</div>
+            <% } %>
+          </div>
+
+          <div class="presentations-card">
+            <div class="presentations-section-head compact">
+              <div>
+                <span class="presentations-kicker">العروض</span>
+                <h3>آخر العروض التي أنشأتها</h3>
+              </div>
+            </div>
+            <% if (decks.length) { %>
+              <div class="presentations-list">
+                <% decks.forEach((deck) => { %>
+                  <div class="presentations-list-item">
+                    <div>
+                      <strong><%= deck.title %></strong>
+                      <p><%= deck.topic %> • <%= deck.slides.length %> شرائح</p>
+                    </div>
+                    <div class="presentations-inline-actions">
+                      <a class="btn btn-secondary btn-sm" href="/codentra-presentations/decks/<%= deck.id %>">فتح</a>
+                      <a class="btn btn-primary btn-sm" href="/codentra-presentations/decks/<%= deck.id %>/download.pptx">تحميل</a>
+                    </div>
+                  </div>
+                <% }) %>
+              </div>
+            <% } else { %>
+              <div class="presentations-empty">لم تنشئ أي عرض حتى الآن.</div>
+            <% } %>
+          </div>
+        </div>
+      </section>
+    <% } %>
+
+    <section class="container presentations-plans" id="plans">
+      <div class="presentations-section-head">
+        <div>
+          <span class="presentations-kicker">الخطط</span>
+          <h2>اشتراكات شهرية وسنوية مخصصة للعروض</h2>
+        </div>
+      </div>
+
+      <div class="presentations-plans-grid">
+        <% plans.forEach((plan) => { %>
+          <div class="presentations-card presentations-plan-card">
+            <span class="presentations-plan-badge"><%= plan.badge %></span>
+            <h3><%= plan.name %></h3>
+            <p><%= plan.description %></p>
+
+            <div class="presentations-price">
+              <strong><%= Number(plan.price || 0).toFixed(2) %></strong>
+              <span>جنيه</span>
+            </div>
+
+            <ul>
+              <li><%= plan.generationCredits %> عملية إنشاء</li>
+              <li><%= plan.durationDays %> يوم صلاحية</li>
+              <li>تحميل PPTX جاهز</li>
+            </ul>
+
+            <% if (presentationUser) { %>
+              <form action="/codentra-presentations/subscribe/<%= plan.id %>" method="POST" class="presentations-plan-form">
+                <label>
+                  <span>رقم بطاقة المحفظة</span>
+                  <input type="text" name="walletCardNumber" value="<%= walletCardNumber %>" placeholder="يمكنك الدفع ببطاقتك أو بطاقة مستخدم آخر">
+                </label>
+                <button type="submit" class="btn btn-primary btn-full">اشترك الآن</button>
+              </form>
+            <% } else { %>
+              <a class="btn btn-primary btn-full" href="/login">سجل الدخول للاشتراك</a>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
+    </section>
+  </main>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

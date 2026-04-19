@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>المشتريات - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.projects))) { %>
+          <a href="/admin/projects/new">إضافة مشروع</a>
+        <% } %>
+        <a href="/admin/purchases" class="active">المشتريات</a>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.modifications))) { %>
+          <a href="/admin/modifications">طلبات التعديل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.messages))) { %>
+          <a href="/admin/messages">الرسائل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.reviews))) { %>
+          <a href="/admin/reviews">التقييمات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.coupons))) { %>
+          <a href="/admin/coupons">الكوبونات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.referrals))) { %>
+          <a href="/admin/referrals">الإحالات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletCodes))) { %>
+          <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletBalances))) { %>
+          <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.appointments))) { %>
+          <a href="/admin/appointments">المواعيد</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionCoupons))) { %>
+          <a href="/admin/subscription-coupons">كوبونات الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionPlans))) { %>
+          <a href="/admin/subscription-plans">خطط الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionReports))) { %>
+          <a href="/admin/subscription-reports">تقارير الاشتراك</a>
+        <% } %>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/meeting-recordings">تسجيلات الاجتماعات</a>
+          <a href="/admin/admins">إدارة الأدمنز</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.users))) { %>
+          <a href="/admin/users">المستخدمين</a>
+        <% } %>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>المشتريات</h1>
+      
+      <% if (purchases.length === 0) { %>
+        <div class="empty-state">
+          <p>لا توجد مشتريات بعد</p>
+        </div>
+      <% } else { %>
+        <div class="admin-table-container">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>الأوردر</th>
+                <th>المشروع</th>
+                <th>المشتري</th>
+                <th>السعر</th>
+                <th>التاريخ</th>
+                <th>الحالة</th>
+                <th>الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% 
+              // Group purchases by orderId
+              const orders = {};
+              purchases.forEach(purchase => {
+                const orderId = purchase.orderId || purchase.id; // single purchase uses its own id
+                if (!orders[orderId]) orders[orderId] = [];
+                orders[orderId].push(purchase);
+              });
+              
+              // Sort orders by date
+              const sortedOrderIds = Object.keys(orders).sort((a, b) => {
+                const dateA = new Date(orders[a][0].purchasedAt);
+                const dateB = new Date(orders[b][0].purchasedAt);
+                return dateB - dateA;
+              });
+              %>
+              <% sortedOrderIds.forEach(orderId => { 
+                const orderPurchases = orders[orderId];
+                const firstPurchase = orderPurchases[0];
+                const user = users.find(u => u.id === firstPurchase.userId);
+                const isMultiItem = orderPurchases.length > 1;
+              %>
+                <tr>
+                  <td>
+                    <%= isMultiItem ? `أوردر #${orderId.slice(0, 8)}...` : 'شراء فردي' %>
+                    <% if (isMultiItem) { %>
+                      <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                        <%= orderPurchases.length %> منتج
+                      </div>
+                    <% } %>
+                  </td>
+                  <td>
+                    <%= firstPurchase.projectTitle %>
+                    <% if (isMultiItem) { %>
+                      <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">
+                        <% orderPurchases.slice(1).forEach(p => { %>
+                          • <%= p.projectTitle %><br>
+                        <% }) %>
+                      </div>
+                    <% } %>
+                  </td>
+                  <td><%= user ? user.name : 'غير معروف' %> (<%= user ? user.email : '' %>)</td>
+                  <td>
+                    <% const orderTotal = orderPurchases.reduce((sum, p) => sum + Number(p.price || 0), 0); %>
+                    <%= orderTotal %> ج
+                    <% if (firstPurchase.couponCode) { %>
+                      <div style="margin-top: 6px; color: var(--text-secondary); font-size: 0.85rem;">
+                        كوبون: <%= firstPurchase.couponCode %>
+                      </div>
+                    <% } %>
+                    <% if (orderPurchases.some(p => p.walletRefundAmount)) { %>
+                      <div style="margin-top: 6px; color: #28a745; font-size: 0.85rem;">
+                        تم استرداد: <%= orderPurchases.reduce((sum, p) => sum + Number(p.walletRefundAmount || 0), 0) %> ج
+                      </div>
+                    <% } %>
+                  </td>
+                  <td><%= new Date(firstPurchase.purchasedAt).toLocaleDateString('ar-EG') %></td>
+                  <td>
+                    <% 
+                    const allApproved = orderPurchases.every(p => p.status === 'approved');
+                    const allRejected = orderPurchases.every(p => p.status === 'rejected');
+                    const anyPending = orderPurchases.some(p => p.status === 'pending');
+                    %>
+                    <% if (allApproved) { %>
+                      <span class="status-badge approved">✓ تمت الموافقة</span>
+                    <% } else if (allRejected) { %>
+                      <span class="status-badge rejected">✗ مرفوض</span>
+                    <% } else if (anyPending) { %>
+                      <span class="status-badge pending">⏳ معلق</span>
+                    <% } %>
+                  </td>
+                  <td class="actions">
+                    <% if (anyPending) { %>
+                      <% orderPurchases.filter(p => p.status === 'pending').forEach(p => { %>
+                        <div style="margin-bottom: 6px;">
+                          <%= p.projectTitle %><br>
+                          <form action="/admin/purchases/<%= p.id %>/approve" method="POST" class="inline-form">
+                            <button type="submit" class="btn btn-sm btn-success">✓ موافقة</button>
+                          </form>
+                          <form action="/admin/purchases/<%= p.id %>/reject" method="POST" class="inline-form">
+                            <button type="submit" class="btn btn-sm btn-danger">✗ رفض</button>
+                          </form>
+                        </div>
+                      <% }) %>
+                    <% } %>
+                    <% if (allApproved) { %>
+                      <% orderPurchases.forEach(p => { %>
+                        <form action="/admin/purchases/<%= p.id %>/upload" method="POST" enctype="multipart/form-data" class="inline-form upload-form">
+                          <input type="file" name="modifiedFile" accept=".zip" class="file-input">
+                          <button type="submit" class="btn btn-sm btn-primary">📤 <%= p.projectTitle %></button>
+                        </form>
+                      <% }) %>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

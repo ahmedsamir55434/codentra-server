@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تأكيد الدفع - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/auth.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="auth-page">
+    <div class="container">
+      <div class="auth-box" style="max-width: 520px;">
+        <h2>تأكيد الدفع</h2>
+
+        <% if (error) { %>
+          <div class="error-message"><%= error %></div>
+        <% } %>
+
+        <div style="text-align:right; margin-bottom:16px; color:#444;">
+          <p style="margin:0 0 8px;">سيتم الخصم من البطاقة: <strong><%= walletCardMasked || '-' %></strong></p>
+          <p style="margin:0 0 8px;">صاحب البطاقة: <strong><%= payerName %></strong></p>
+          <p style="margin:0 0 8px;">تم إرسال كود التحقق إلى: <strong><%= payerEmailMasked %></strong></p>
+          <p style="margin:0;">المبلغ المطلوب: <strong><%= amount %></strong> جنيه</p>
+        </div>
+
+        <form action="/payment/verify/<%= attempt.id %>" method="POST">
+          <div class="form-group">
+            <label for="code">كود التحقق</label>
+            <input type="text" id="code" name="code" required maxlength="6" placeholder="أدخل الكود المرسل على البريد">
+          </div>
+
+          <% if (requiresPassword) { %>
+            <div class="form-group">
+              <label for="paymentPassword">كلمة مرور البطاقة</label>
+              <input type="password" id="paymentPassword" name="paymentPassword" required placeholder="مطلوبة لأن المبلغ أكبر من 5000 جنيه">
+            </div>
+          <% } %>
+
+          <button type="submit" class="btn btn-primary btn-full">تأكيد الدفع</button>
+        </form>
+
+        <p class="auth-link" style="margin-top: 16px;"><a href="/cart">العودة إلى السلة</a></p>
+      </div>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

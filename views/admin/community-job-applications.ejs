@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Applications - Admin</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <%- include('../partials/header', { user: user }) %>
+
+  <main class="container" style="padding: 30px 0;">
+    <h1 style="margin-bottom: 10px;">طلبات التوظيف</h1>
+    <div style="opacity:0.8;margin-bottom:20px;">
+      <strong>الوظيفة:</strong> <%= job.title %>
+    </div>
+
+    <% if (!applications || applications.length === 0) { %>
+      <div class="empty-state"><p>لا توجد طلبات</p></div>
+    <% } else { %>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <% applications.forEach(a => { %>
+          <div style="background: var(--card-bg, #fff); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08);">
+            <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+              <div>
+                <div><strong><%= a.name %></strong> - <%= a.age %> سنة</div>
+                <div style="opacity:0.75;font-size:12px;">الحساب: <%= a.accountEmail || a.userId %></div>
+                <div style="opacity:0.75;font-size:12px;">تاريخ الإرسال: <%= new Date(a.createdAt).toLocaleString('ar-EG') %></div>
+              </div>
+              <div>
+                <a class="btn btn-primary" href="<%= a.cvUrl %>" target="_blank">فتح CV</a>
+              </div>
+            </div>
+            <div style="margin-top:10px;white-space:pre-wrap;"><%= a.about %></div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+
+    <div style="margin-top: 20px;">
+      <a href="/admin/community/jobs">رجوع للوظائف</a>
+    </div>
+  </main>
+
+  <%- include('../partials/footer') %>
+  <script src="/js/theme.js"></script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مشترياتي - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/purchases.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="purchases-page">
+    <div class="container">
+      <h1>مشترياتي</h1>
+
+      <% if (user && (user.referralCode || Number(user.walletBalance || 0) > 0)) { %>
+        <div class="purchase-card" style="margin-bottom: 16px;">
+          <div class="purchase-info">
+            <% if (user.referralCode) { %>
+              <p style="margin: 0 0 8px;">كود الإحالة الخاص بك: <strong><%= user.referralCode %></strong></p>
+            <% } %>
+            <p style="margin: 0;">رصيد المحفظة: <strong><%= Number(user.walletBalance || 0) %></strong> جنيه</p>
+          </div>
+        </div>
+      <% } %>
+
+      <div class="purchase-card" style="margin-bottom: 16px;">
+        <div class="purchase-info">
+          <h3 style="margin-top: 0;">شحن الرصيد</h3>
+          <% if (redeemError) { %>
+            <div class="error-message"><%= redeemError %></div>
+          <% } %>
+          <% if (redeemSuccess) { %>
+            <div class="success-message"><%= redeemSuccess %></div>
+          <% } %>
+          <form action="/wallet/redeem" method="POST" style="margin-top: 10px;">
+            <div class="form-group">
+              <label for="walletCode">كود الشحن</label>
+              <input type="text" id="walletCode" name="code" placeholder="مثال: TOPUP100" required>
+            </div>
+            <button type="submit" class="btn btn-primary">إضافة الرصيد</button>
+          </form>
+        </div>
+      </div>
+
+      <% if (subscriptionPayments && subscriptionPayments.length) { %>
+        <div class="purchase-card" style="margin-bottom: 16px;">
+          <div class="purchase-info">
+            <h3 style="margin-top: 0;">اشتراكاتي</h3>
+            <div class="purchase-meta" style="margin-top: 10px;">
+              <span>عدد عمليات الاشتراك: <strong><%= subscriptionPayments.length %></strong></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="purchases-list">
+          <% 
+            const _subPlans = Array.isArray(subscriptionPlans) ? subscriptionPlans : [];
+            const _subs = Array.isArray(subscriptions) ? subscriptions : [];
+            const _subPayments = Array.isArray(subscriptionPayments) ? subscriptionPayments : [];
+            const _sortedSubPayments = _subPayments.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          %>
+          <% _sortedSubPayments.forEach(pay => { 
+            const plan = _subPlans.find(p => p.id === pay.planId) || null;
+            const sub = _subs.find(s => s.id === pay.subscriptionId) || null;
+            const before = (pay.priceBefore != null) ? Number(pay.priceBefore) : Number(pay.amount || 0);
+            const discount = Number(pay.discountAmount || 0);
+            const after = Number(pay.amount || 0);
+          %>
+            <div class="purchase-card">
+              <div class="purchase-info">
+                <h3><%= plan ? plan.name : (pay.planId || 'Subscription') %></h3>
+                <div class="purchase-meta">
+                  <span class="purchase-date"><%= pay.createdAt ? new Date(pay.createdAt).toLocaleDateString('ar-EG') : '-' %></span>
+                  <span class="purchase-price"><%= after %> جنيه</span>
+                  <% if (sub && sub.status === 'active') { %>
+                    <span class="status-badge approved">✓ نشط</span>
+                  <% } else if (sub && sub.status === 'canceled') { %>
+                    <span class="status-badge rejected">✗ ملغي</span>
+                  <% } %>
+                </div>
+
+                <% if (pay.couponCode && discount) { %>
+                  <p class="modification-note">
+                    كوبون: <strong><%= pay.couponCode %></strong>
+                    | قبل: <%= before %> ج
+                    | خصم: <%= discount %> ج
+                    | بعد: <%= after %> ج
+                  </p>
+                <% } %>
+
+                <% if (sub && sub.currentPeriodEnd) { %>
+                  <p class="modification-note">ينتهي في: <%= new Date(sub.currentPeriodEnd).toLocaleDateString('ar-EG') %></p>
+                <% } %>
+              </div>
+              <div class="purchase-actions">
+                <a href="/subscriptions" class="btn btn-secondary">إدارة الاشتراك</a>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+      
+      <% if (purchases.length === 0) { %>
+        <div class="empty-state">
+          <div class="empty-icon">🛒</div>
+          <h2>لم تقم بأي مشتريات بعد</h2>
+          <p>تصفح المشاريع واشتري ما يناسبك</p>
+          <a href="/" class="btn btn-primary">تصفح المشاريع</a>
+        </div>
+      <% } else { %>
+        <div class="purchases-list">
+          <% purchases.forEach(purchase => { %>
+            <% const orderId = purchase.orderId || purchase.id; %>
+            <% const inv = (invoices || []).find(i => i && i.orderId === orderId); %>
+            <div class="purchase-card">
+              <div class="purchase-info">
+                <h3><%= purchase.projectTitle %></h3>
+                <div class="purchase-meta">
+                  <span class="purchase-date">
+                    <%= new Date(purchase.purchasedAt).toLocaleDateString('ar-EG') %>
+                  </span>
+                  <span class="purchase-price"><%= purchase.price %> جنيه</span>
+                  <% if (purchase.status === 'pending') { %>
+                    <span class="status-badge pending">⏳ بانتظار الموافقة</span>
+                  <% } else if (purchase.status === 'approved') { %>
+                    <span class="status-badge approved">✓ تمت الموافقة</span>
+                  <% } else if (purchase.status === 'rejected') { %>
+                    <span class="status-badge rejected">✗ تم الرفض</span>
+                  <% } %>
+                  <% if (purchase.isModified) { %>
+                    <span class="modified-badge">📝 معدّل</span>
+                  <% } %>
+                </div>
+                <% if (purchase.couponCode && purchase.discountAmount) { %>
+                  <p class="modification-note">
+                    كوبون: <strong><%= purchase.couponCode %></strong>
+                    | قبل: <%= purchase.priceBefore %> ج
+                    | خصم: <%= purchase.discountAmount %> ج
+                    | بعد: <%= purchase.price %> ج
+                  </p>
+                <% } %>
+                <% if (purchase.modificationNote) { %>
+                  <p class="modification-note"><%= purchase.modificationNote %></p>
+                <% } %>
+                <% if (purchase.walletRefundAmount) { %>
+                  <p class="modification-note" style="color: #28a745;">
+                    تم استرداد مبلغ: <strong><%= purchase.walletRefundAmount %></strong> جنيه للمحفظة
+                  </p>
+                <% } %>
+              </div>
+              <div class="purchase-actions">
+                <% if (purchase.status === 'approved') { %>
+                  <% if (purchase.filePath) { %>
+                    <a href="/download/<%= purchase.id %>" class="btn btn-primary">تحميل الملفات</a>
+                  <% } else { %>
+                    <span class="no-files">الملفات غير متوفرة</span>
+                  <% } %>
+                  <% if (inv) { %>
+                    <a href="/invoice/<%= orderId %>.pdf" class="btn btn-secondary" target="_blank">تحميل الفاتورة PDF</a>
+                  <% } %>
+                  <a href="/request-modification/<%= purchase.id %>" class="btn btn-secondary">طلب تعديل</a>
+                <% } else if (purchase.status === 'pending') { %>
+                  <span class="waiting-text">بانتظار موافقة الأدمن</span>
+                <% } else { %>
+                  <span class="rejected-text">تم رفض الطلب</span>
+                <% } %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= deck.title %> - Codentra Presentations</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/presentations.css">
+</head>
+<body class="presentations-page">
+  <%- include('../partials/header') %>
+
+  <main class="presentations-shell">
+    <section class="container">
+      <div class="presentations-card presentations-deck-hero">
+        <div>
+          <span class="presentations-kicker">Generated Deck</span>
+          <h1><%= deck.title %></h1>
+          <p><%= deck.subtitle %></p>
+        </div>
+        <div class="presentations-inline-actions">
+          <a class="btn btn-primary" href="/codentra-presentations/decks/<%= deck.id %>/download.pptx">تحميل PowerPoint</a>
+          <a class="btn btn-secondary" href="/codentra-presentations/generate">إنشاء عرض آخر</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="container">
+      <% if (success) { %>
+        <div class="presentations-flash presentations-flash-success"><%= success %></div>
+      <% } %>
+    </section>
+
+    <section class="container presentations-slides-grid">
+      <% deck.slides.forEach((slide, index) => { %>
+        <div class="presentations-card presentations-slide-card">
+          <div class="presentations-slide-head">
+            <span>شريحة <%= index + 1 %></span>
+            <strong><%= slide.title %></strong>
+          </div>
+
+          <ul class="presentations-slide-list">
+            <% slide.bullets.forEach((bullet) => { %>
+              <li><%= bullet %></li>
+            <% }) %>
+          </ul>
+
+          <% if (slide.speakerNotes) { %>
+            <div class="presentations-notes">
+              <span>ملاحظات المتحدث</span>
+              <p><%= slide.speakerNotes %></p>
+            </div>
+          <% } %>
+        </div>
+      <% }) %>
+    </section>
+  </main>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>
