@@ -5400,60 +5400,64 @@ app.post('/admin/messages/:userId', requireAdmin, (req, res) => {
   res.redirect(`/admin/messages/${req.params.userId}`);
 });
 
-const httpServer = http.createServer(app);
-const io = new Server(httpServer, {
-  cors: {
-    origin: ["http://localhost:3000", "http://192.168.8.110:3000", "*"],
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-});
-
-io.on('connection', (socket) => {
-  socket.on('join-room', (roomId) => {
-    if (!roomId) return;
-    socket.join(roomId);
-    socket.to(roomId).emit('peer-joined');
-  });
-
-  socket.on('webrtc-offer', ({ roomId, offer }) => {
-    if (!roomId || !offer) return;
-    socket.to(roomId).emit('webrtc-offer', { offer });
-  });
-
-  socket.on('webrtc-answer', ({ roomId, answer }) => {
-    if (!roomId || !answer) return;
-    socket.to(roomId).emit('webrtc-answer', { answer });
-  });
-
-  socket.on('webrtc-ice-candidate', ({ roomId, candidate }) => {
-    if (!roomId || !candidate) return;
-    socket.to(roomId).emit('webrtc-ice-candidate', { candidate });
-  });
-
-  socket.on('leave-room', (roomId) => {
-    if (!roomId) return;
-    socket.leave(roomId);
-    socket.to(roomId).emit('peer-left');
-  });
-
-  socket.on('join-admin-team', () => {
-    socket.join('admin-team');
-  });
-
-  socket.on('admin-team-message', (payload) => {
-    try {
-      if (!payload || typeof payload !== 'object') return;
-      socket.to('admin-team').emit('admin-team-message', payload);
-    } catch (e) {
-      // ignore
+if (process.env.VERCEL) {
+  module.exports = app;
+} else {
+  const httpServer = http.createServer(app);
+  const io = new Server(httpServer, {
+    cors: {
+      origin: ["http://localhost:3000", "http://192.168.8.110:3000", "*"],
+      methods: ["GET", "POST"],
+      credentials: true
     }
   });
-});
 
-// Start server
-httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`Codentra running on http://localhost:${PORT}`);
-  console.log(`Network access: http://192.168.8.110:${PORT}`);
-  console.log(`Admin: admin@codentra.com / admin123`);
-});
+  io.on('connection', (socket) => {
+    socket.on('join-room', (roomId) => {
+      if (!roomId) return;
+      socket.join(roomId);
+      socket.to(roomId).emit('peer-joined');
+    });
+
+    socket.on('webrtc-offer', ({ roomId, offer }) => {
+      if (!roomId || !offer) return;
+      socket.to(roomId).emit('webrtc-offer', { offer });
+    });
+
+    socket.on('webrtc-answer', ({ roomId, answer }) => {
+      if (!roomId || !answer) return;
+      socket.to(roomId).emit('webrtc-answer', { answer });
+    });
+
+    socket.on('webrtc-ice-candidate', ({ roomId, candidate }) => {
+      if (!roomId || !candidate) return;
+      socket.to(roomId).emit('webrtc-ice-candidate', { candidate });
+    });
+
+    socket.on('leave-room', (roomId) => {
+      if (!roomId) return;
+      socket.leave(roomId);
+      socket.to(roomId).emit('peer-left');
+    });
+
+    socket.on('join-admin-team', () => {
+      socket.join('admin-team');
+    });
+
+    socket.on('admin-team-message', (payload) => {
+      try {
+        if (!payload || typeof payload !== 'object') return;
+        socket.to('admin-team').emit('admin-team-message', payload);
+      } catch (e) {
+        // ignore
+      }
+    });
+  });
+
+  // Start server
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`Codentra running on http://localhost:${PORT}`);
+    console.log(`Network access: http://192.168.8.110:${PORT}`);
+    console.log(`Admin: admin@codentra.com / admin123`);
+  });
+}
