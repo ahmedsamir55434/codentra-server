@@ -10,10 +10,12 @@ const fs = require('fs');
 const http = require('http');
 const crypto = require('crypto');
 const os = require('os');
+const { AsyncLocalStorage } = require('async_hooks');
 const { v4: uuidv4 } = require('uuid');
 const { Server } = require('socket.io');
 const PDFDocument = require('pdfkit');
 const jwt = require('jsonwebtoken');
+const { Pool } = require('pg');
 const PptxGenJS = require('pptxgenjs');
 const WatermarkProcessor = require('./utils/watermark');
 
@@ -22,6 +24,7 @@ const PORT = process.env.PORT || 3000;
 const SESSION_SECRET = process.env.SESSION_SECRET || 'codentra-secret-key-2024';
 const AUTH_COOKIE_NAME = 'codentra_auth';
 const AUTH_COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 7;
+const DATABASE_URL = String(process.env.DATABASE_URL || '').trim();
 
 // CORS middleware
 app.use((req, res, next) => {
@@ -447,235 +450,357 @@ if (IS_VERCEL && fs.existsSync(BUNDLED_DATA_DIR)) {
   });
 }
 
-// JSON storage helpers
-const db = {
-  users: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'users.json'), 'utf8') || '[]'),
-  projects: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'projects.json'), 'utf8') || '[]'),
-  purchases: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'purchases.json'), 'utf8') || '[]'),
-  modifications: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'modifications.json'), 'utf8') || '[]'),
-  coupons: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'coupons.json'), 'utf8') || '[]'),
-  referrals: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'referrals.json'), 'utf8') || '[]'),
-  walletCodes: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'wallet-codes.json'), 'utf8') || '[]'),
-  walletPaymentAttempts: () => {
-    const filePath = path.join(DATA_DIR, 'wallet-payment-attempts.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  },
-  appointments: () => {
-    const filePath = path.join(DATA_DIR, 'appointments.json');
-    if (!fs.existsSync(filePath)) {
-      const initial = { timeSlots: [], bookings: [] };
-      fs.writeFileSync(filePath, JSON.stringify(initial, null, 2));
-      return initial;
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '{"timeSlots":[],"bookings":[]}');
-  },
-  saveUsers: (data) => fs.writeFileSync(path.join(DATA_DIR, 'users.json'), JSON.stringify(data, null, 2)),
-  saveProjects: (data) => fs.writeFileSync(path.join(DATA_DIR, 'projects.json'), JSON.stringify(data, null, 2)),
-  savePurchases: (data) => fs.writeFileSync(path.join(DATA_DIR, 'purchases.json'), JSON.stringify(data, null, 2)),
-  saveModifications: (data) => fs.writeFileSync(path.join(DATA_DIR, 'modifications.json'), JSON.stringify(data, null, 2)),
-  saveCoupons: (data) => fs.writeFileSync(path.join(DATA_DIR, 'coupons.json'), JSON.stringify(data, null, 2)),
-  saveReferrals: (data) => fs.writeFileSync(path.join(DATA_DIR, 'referrals.json'), JSON.stringify(data, null, 2)),
-  saveWalletCodes: (data) => fs.writeFileSync(path.join(DATA_DIR, 'wallet-codes.json'), JSON.stringify(data, null, 2)),
-  saveWalletPaymentAttempts: (data) => fs.writeFileSync(path.join(DATA_DIR, 'wallet-payment-attempts.json'), JSON.stringify(data, null, 2)),
-  reviews: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'reviews.json'), 'utf8') || '[]'),
-  saveReviews: (data) => fs.writeFileSync(path.join(DATA_DIR, 'reviews.json'), JSON.stringify(data, null, 2)),
-  messages: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'messages.json'), 'utf8') || '[]'),
-  saveMessages: (data) => fs.writeFileSync(path.join(DATA_DIR, 'messages.json'), JSON.stringify(data, null, 2)),
-  communityPosts: () => {
-    const filePath = path.join(DATA_DIR, 'community-posts.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveCommunityPosts: (data) => fs.writeFileSync(path.join(DATA_DIR, 'community-posts.json'), JSON.stringify(data, null, 2)),
-  communityJobs: () => {
-    const filePath = path.join(DATA_DIR, 'community-jobs.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveCommunityJobs: (data) => fs.writeFileSync(path.join(DATA_DIR, 'community-jobs.json'), JSON.stringify(data, null, 2)),
-  communityJobApplications: () => {
-    const filePath = path.join(DATA_DIR, 'community-job-applications.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveCommunityJobApplications: (data) => fs.writeFileSync(path.join(DATA_DIR, 'community-job-applications.json'), JSON.stringify(data, null, 2)),
-  adminTeamMessages: () => {
-    const filePath = path.join(DATA_DIR, 'admin-team-messages.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveAdminTeamMessages: (data) => fs.writeFileSync(path.join(DATA_DIR, 'admin-team-messages.json'), JSON.stringify(data, null, 2)),
-  carts: () => {
-    const filePath = path.join(DATA_DIR, 'carts.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveCarts: (data) => fs.writeFileSync(path.join(DATA_DIR, 'carts.json'), JSON.stringify(data, null, 2)),
-  invoices: () => {
-    const filePath = path.join(DATA_DIR, 'invoices.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveInvoices: (data) => fs.writeFileSync(path.join(DATA_DIR, 'invoices.json'), JSON.stringify(data, null, 2)),
-  saveAppointments: (data) => fs.writeFileSync(path.join(DATA_DIR, 'appointments.json'), JSON.stringify(data, null, 2))
-  ,
-  meetingRecordings: () => {
-    const filePath = path.join(DATA_DIR, 'meeting-recordings.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveMeetingRecordings: (data) => fs.writeFileSync(path.join(DATA_DIR, 'meeting-recordings.json'), JSON.stringify(data, null, 2)),
-  subscriptionPlans: () => {
-    const filePath = path.join(DATA_DIR, 'subscription-plans.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  subscriptions: () => {
-    const filePath = path.join(DATA_DIR, 'subscriptions.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  subscriptionPayments: () => {
-    const filePath = path.join(DATA_DIR, 'subscription-payments.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveSubscriptionPlans: (data) => fs.writeFileSync(path.join(DATA_DIR, 'subscription-plans.json'), JSON.stringify(data, null, 2)),
-  saveSubscriptions: (data) => fs.writeFileSync(path.join(DATA_DIR, 'subscriptions.json'), JSON.stringify(data, null, 2)),
-  saveSubscriptionPayments: (data) => fs.writeFileSync(path.join(DATA_DIR, 'subscription-payments.json'), JSON.stringify(data, null, 2)),
-  subscriptionCoupons: () => {
-    const filePath = path.join(DATA_DIR, 'subscription-coupons.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  saveSubscriptionCoupons: (data) => fs.writeFileSync(path.join(DATA_DIR, 'subscription-coupons.json'), JSON.stringify(data, null, 2)),
-  presentationPlans: () => {
-    const filePath = path.join(DATA_DIR, 'presentation-plans.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  presentationSubscriptions: () => {
-    const filePath = path.join(DATA_DIR, 'presentation-subscriptions.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  presentationDecks: () => {
-    const filePath = path.join(DATA_DIR, 'presentation-decks.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  presentationPaymentAttempts: () => {
-    const filePath = path.join(DATA_DIR, 'presentation-payment-attempts.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-  },
-  savePresentationPlans: (data) => fs.writeFileSync(path.join(DATA_DIR, 'presentation-plans.json'), JSON.stringify(data, null, 2)),
-  savePresentationSubscriptions: (data) => fs.writeFileSync(path.join(DATA_DIR, 'presentation-subscriptions.json'), JSON.stringify(data, null, 2)),
-  savePresentationDecks: (data) => fs.writeFileSync(path.join(DATA_DIR, 'presentation-decks.json'), JSON.stringify(data, null, 2)),
-  savePresentationPaymentAttempts: (data) => fs.writeFileSync(path.join(DATA_DIR, 'presentation-payment-attempts.json'), JSON.stringify(data, null, 2)),
-  loyaltySettings: () => {
-    const filePath = path.join(DATA_DIR, 'loyalty-settings.json');
-    const defaults = {
-      enabled: true,
-      pointsPerEGP: 0.1,
-      redeem: { enabled: true, pointsToEGP: 0.1, minPoints: 100 }
-    };
+const cloneStoredValue = (value) => JSON.parse(JSON.stringify(value));
 
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify(defaults, null, 2));
-      return defaults;
-    }
+const createDefaultAppointmentsState = () => ({ timeSlots: [], bookings: [] });
 
-    const raw = fs.readFileSync(filePath, 'utf8').trim();
-    let parsed = {};
-    try {
-      parsed = raw ? JSON.parse(raw) : {};
-    } catch (error) {
-      parsed = {};
-    }
+const createDefaultLoyaltySettingsState = () => ({
+  enabled: true,
+  pointsPerEGP: 0.1,
+  redeem: {
+    enabled: true,
+    pointsToEGP: 0.1,
+    minPoints: 100
+  }
+});
 
-    let changed = false;
-    if (parsed.enabled === undefined) {
-      parsed.enabled = defaults.enabled;
-      changed = true;
-    }
-    if (!parsed.pointsPerEGP) {
-      parsed.pointsPerEGP = defaults.pointsPerEGP;
-      changed = true;
-    }
+const normalizeLoyaltySettingsState = (value) => {
+  const defaults = createDefaultLoyaltySettingsState();
+  const parsed = value && typeof value === 'object' && !Array.isArray(value) ? cloneStoredValue(value) : {};
 
-    parsed.redeem = parsed.redeem || {};
-    if (parsed.redeem.enabled === undefined) {
-      parsed.redeem.enabled = defaults.redeem.enabled;
-      changed = true;
-    }
-    if (!parsed.redeem.pointsToEGP) {
-      parsed.redeem.pointsToEGP = defaults.redeem.pointsToEGP;
-      changed = true;
-    }
-    if (!parsed.redeem.minPoints) {
-      parsed.redeem.minPoints = defaults.redeem.minPoints;
-      changed = true;
-    }
+  if (parsed.enabled === undefined) parsed.enabled = defaults.enabled;
+  if (!Number.isFinite(Number(parsed.pointsPerEGP)) || Number(parsed.pointsPerEGP) <= 0) {
+    parsed.pointsPerEGP = defaults.pointsPerEGP;
+  } else {
+    parsed.pointsPerEGP = Number(parsed.pointsPerEGP);
+  }
 
-    if (changed) {
-      fs.writeFileSync(filePath, JSON.stringify(parsed, null, 2));
-    }
+  parsed.redeem = parsed.redeem && typeof parsed.redeem === 'object' && !Array.isArray(parsed.redeem)
+    ? parsed.redeem
+    : {};
 
-    return parsed;
-  },
-  saveLoyaltySettings: (data) => fs.writeFileSync(path.join(DATA_DIR, 'loyalty-settings.json'), JSON.stringify(data, null, 2))
+  if (parsed.redeem.enabled === undefined) parsed.redeem.enabled = defaults.redeem.enabled;
+  if (!Number.isFinite(Number(parsed.redeem.pointsToEGP)) || Number(parsed.redeem.pointsToEGP) <= 0) {
+    parsed.redeem.pointsToEGP = defaults.redeem.pointsToEGP;
+  } else {
+    parsed.redeem.pointsToEGP = Number(parsed.redeem.pointsToEGP);
+  }
+  if (!Number.isFinite(Number(parsed.redeem.minPoints)) || Number(parsed.redeem.minPoints) <= 0) {
+    parsed.redeem.minPoints = defaults.redeem.minPoints;
+  } else {
+    parsed.redeem.minPoints = Number(parsed.redeem.minPoints);
+  }
+
+  return parsed;
 };
+
+const STORAGE_TABLE_NAME = 'data_store';
+const STORAGE_DATASET_NAME = process.env.NEON_DATASET_NAME || 'codentra-server';
+const storageRequestContext = new AsyncLocalStorage();
+let storageReadyPromise = null;
+let storagePersistQueue = Promise.resolve();
+let pgPool = null;
+
+const STORAGE_FILE_DEFINITIONS = {
+  users: { fileName: 'users.json', createDefault: () => [] },
+  projects: { fileName: 'projects.json', createDefault: () => [] },
+  purchases: { fileName: 'purchases.json', createDefault: () => [] },
+  modifications: { fileName: 'modifications.json', createDefault: () => [] },
+  coupons: { fileName: 'coupons.json', createDefault: () => [] },
+  referrals: { fileName: 'referrals.json', createDefault: () => [] },
+  walletCodes: { fileName: 'wallet-codes.json', createDefault: () => [] },
+  walletPaymentAttempts: { fileName: 'wallet-payment-attempts.json', createDefault: () => [] },
+  reviews: { fileName: 'reviews.json', createDefault: () => [] },
+  messages: { fileName: 'messages.json', createDefault: () => [] },
+  communityPosts: { fileName: 'community-posts.json', createDefault: () => [] },
+  communityJobs: { fileName: 'community-jobs.json', createDefault: () => [] },
+  communityJobApplications: { fileName: 'community-job-applications.json', createDefault: () => [] },
+  adminTeamMessages: { fileName: 'admin-team-messages.json', createDefault: () => [] },
+  carts: { fileName: 'carts.json', createDefault: () => [] },
+  invoices: { fileName: 'invoices.json', createDefault: () => [] },
+  appointments: { fileName: 'appointments.json', createDefault: createDefaultAppointmentsState },
+  meetingRecordings: { fileName: 'meeting-recordings.json', createDefault: () => [] },
+  subscriptionPlans: { fileName: 'subscription-plans.json', createDefault: () => [] },
+  subscriptions: { fileName: 'subscriptions.json', createDefault: () => [] },
+  subscriptionPayments: { fileName: 'subscription-payments.json', createDefault: () => [] },
+  subscriptionCoupons: { fileName: 'subscription-coupons.json', createDefault: () => [] },
+  presentationPlans: { fileName: 'presentation-plans.json', createDefault: () => [] },
+  presentationSubscriptions: { fileName: 'presentation-subscriptions.json', createDefault: () => [] },
+  presentationDecks: { fileName: 'presentation-decks.json', createDefault: () => [] },
+  presentationPaymentAttempts: { fileName: 'presentation-payment-attempts.json', createDefault: () => [] },
+  loyaltySettings: {
+    fileName: 'loyalty-settings.json',
+    createDefault: createDefaultLoyaltySettingsState,
+    normalize: normalizeLoyaltySettingsState
+  }
+};
+
+const STORAGE_READ_ACCESSORS = {
+  users: 'users',
+  projects: 'projects',
+  purchases: 'purchases',
+  modifications: 'modifications',
+  coupons: 'coupons',
+  referrals: 'referrals',
+  walletCodes: 'walletCodes',
+  walletPaymentAttempts: 'walletPaymentAttempts',
+  reviews: 'reviews',
+  messages: 'messages',
+  communityPosts: 'communityPosts',
+  communityJobs: 'communityJobs',
+  communityJobApplications: 'communityJobApplications',
+  adminTeamMessages: 'adminTeamMessages',
+  carts: 'carts',
+  invoices: 'invoices',
+  appointments: 'appointments',
+  meetingRecordings: 'meetingRecordings',
+  subscriptionPlans: 'subscriptionPlans',
+  subscriptions: 'subscriptions',
+  subscriptionPayments: 'subscriptionPayments',
+  subscriptionCoupons: 'subscriptionCoupons',
+  presentationPlans: 'presentationPlans',
+  presentationSubscriptions: 'presentationSubscriptions',
+  presentationDecks: 'presentationDecks',
+  presentationPaymentAttempts: 'presentationPaymentAttempts',
+  loyaltySettings: 'loyaltySettings'
+};
+
+const STORAGE_WRITE_ACCESSORS = {
+  saveUsers: 'users',
+  saveProjects: 'projects',
+  savePurchases: 'purchases',
+  saveModifications: 'modifications',
+  saveCoupons: 'coupons',
+  saveReferrals: 'referrals',
+  saveWalletCodes: 'walletCodes',
+  saveWalletPaymentAttempts: 'walletPaymentAttempts',
+  saveReviews: 'reviews',
+  saveMessages: 'messages',
+  saveCommunityPosts: 'communityPosts',
+  saveCommunityJobs: 'communityJobs',
+  saveCommunityJobApplications: 'communityJobApplications',
+  saveAdminTeamMessages: 'adminTeamMessages',
+  saveCarts: 'carts',
+  saveInvoices: 'invoices',
+  saveAppointments: 'appointments',
+  saveMeetingRecordings: 'meetingRecordings',
+  saveSubscriptionPlans: 'subscriptionPlans',
+  saveSubscriptions: 'subscriptions',
+  saveSubscriptionPayments: 'subscriptionPayments',
+  saveSubscriptionCoupons: 'subscriptionCoupons',
+  savePresentationPlans: 'presentationPlans',
+  savePresentationSubscriptions: 'presentationSubscriptions',
+  savePresentationDecks: 'presentationDecks',
+  savePresentationPaymentAttempts: 'presentationPaymentAttempts',
+  saveLoyaltySettings: 'loyaltySettings'
+};
+
+const usePostgresStorage = () => Boolean(DATABASE_URL);
+
+const readStateValueFromDisk = (definition) => {
+  const filePath = path.join(DATA_DIR, definition.fileName);
+  const fallback = definition.createDefault();
+
+  if (!fs.existsSync(filePath)) return fallback;
+
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8').trim();
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch (error) {
+    return fallback;
+  }
+};
+
+const buildStorageState = ({ seedFromDisk = false, source = null } = {}) => {
+  const state = {};
+
+  Object.entries(STORAGE_FILE_DEFINITIONS).forEach(([key, definition]) => {
+    const hasSourceValue = source && Object.prototype.hasOwnProperty.call(source, key);
+    let value = hasSourceValue
+      ? source[key]
+      : (seedFromDisk ? readStateValueFromDisk(definition) : definition.createDefault());
+
+    if (value == null) value = definition.createDefault();
+    if (definition.normalize) value = definition.normalize(value);
+    state[key] = cloneStoredValue(value);
+  });
+
+  return state;
+};
+
+const writeStateValueToDisk = (key, value) => {
+  const definition = STORAGE_FILE_DEFINITIONS[key];
+  if (!definition) return;
+
+  const normalizedValue = definition.normalize ? definition.normalize(value) : value;
+  const filePath = path.join(DATA_DIR, definition.fileName);
+  ensureDirectory(path.dirname(filePath));
+  fs.writeFileSync(filePath, JSON.stringify(normalizedValue, null, 2));
+};
+
+const persistRuntimeStateToDisk = () => {
+  Object.keys(STORAGE_FILE_DEFINITIONS).forEach((key) => {
+    writeStateValueToDisk(key, runtimeDbState[key]);
+  });
+};
+
+let runtimeDbState = buildStorageState({ seedFromDisk: true });
+
+const getDbPool = () => {
+  if (!usePostgresStorage()) return null;
+  if (!pgPool) {
+    pgPool = new Pool({
+      connectionString: DATABASE_URL,
+      max: IS_VERCEL ? 3 : 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000
+    });
+  }
+  return pgPool;
+};
+
+const ensurePostgresStore = async () => {
+  const pool = getDbPool();
+  if (!pool) return;
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${STORAGE_TABLE_NAME} (
+      name TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+};
+
+const writeRuntimeStateToNeon = async (state) => {
+  const pool = getDbPool();
+  if (!pool) return;
+
+  await pool.query(
+    `
+      INSERT INTO ${STORAGE_TABLE_NAME} (name, data, updated_at)
+      VALUES ($1, $2::jsonb, NOW())
+      ON CONFLICT (name)
+      DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
+    `,
+    [STORAGE_DATASET_NAME, JSON.stringify(state)]
+  );
+};
+
+const loadRuntimeStateFromNeon = async () => {
+  await ensurePostgresStore();
+
+  const pool = getDbPool();
+  const result = await pool.query(
+    `SELECT data FROM ${STORAGE_TABLE_NAME} WHERE name = $1 LIMIT 1`,
+    [STORAGE_DATASET_NAME]
+  );
+
+  if (!result.rowCount) {
+    const seededState = buildStorageState({ seedFromDisk: false, source: runtimeDbState });
+    await writeRuntimeStateToNeon(seededState);
+    return seededState;
+  }
+
+  return buildStorageState({ seedFromDisk: false, source: result.rows[0].data });
+};
+
+const queueRuntimeStatePersist = () => {
+  if (!usePostgresStorage()) return Promise.resolve();
+
+  const snapshot = buildStorageState({ seedFromDisk: false, source: runtimeDbState });
+  const persistPromise = storagePersistQueue
+    .catch(() => {})
+    .then(() => writeRuntimeStateToNeon(snapshot));
+
+  storagePersistQueue = persistPromise.catch((error) => {
+    console.error('Failed to persist runtime state to Neon:', error);
+    throw error;
+  });
+
+  const context = storageRequestContext.getStore();
+  if (context) context.pendingPersists.push(persistPromise);
+
+  return persistPromise;
+};
+
+const readStorageValue = (key) => {
+  const definition = STORAGE_FILE_DEFINITIONS[key];
+  if (!definition) return null;
+
+  const currentValue = runtimeDbState && Object.prototype.hasOwnProperty.call(runtimeDbState, key)
+    ? runtimeDbState[key]
+    : definition.createDefault();
+
+  const normalizedValue = definition.normalize ? definition.normalize(currentValue) : currentValue;
+  return cloneStoredValue(normalizedValue == null ? definition.createDefault() : normalizedValue);
+};
+
+const saveStorageValue = (key, value) => {
+  const definition = STORAGE_FILE_DEFINITIONS[key];
+  if (!definition) return null;
+
+  const normalizedValue = definition.normalize ? definition.normalize(value) : value;
+  runtimeDbState[key] = cloneStoredValue(normalizedValue == null ? definition.createDefault() : normalizedValue);
+
+  if (usePostgresStorage()) {
+    queueRuntimeStatePersist().catch(() => {});
+  } else {
+    writeStateValueToDisk(key, runtimeDbState[key]);
+  }
+
+  return runtimeDbState[key];
+};
+
+const ensureStorageReady = () => {
+  if (!storageReadyPromise) {
+    storageReadyPromise = (async () => {
+      if (usePostgresStorage()) {
+        runtimeDbState = await loadRuntimeStateFromNeon();
+      }
+
+      const changed = applyRuntimeDataFixups(runtimeDbState);
+      if (changed) {
+        if (usePostgresStorage()) {
+          await writeRuntimeStateToNeon(runtimeDbState);
+        } else {
+          persistRuntimeStateToDisk();
+        }
+      }
+
+      return runtimeDbState;
+    })().catch((error) => {
+      storageReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return storageReadyPromise;
+};
+
+const refreshRuntimeStateFromNeon = async () => {
+  if (!usePostgresStorage()) return runtimeDbState;
+
+  runtimeDbState = await loadRuntimeStateFromNeon();
+  const changed = applyRuntimeDataFixups(runtimeDbState);
+  if (changed) {
+    await writeRuntimeStateToNeon(runtimeDbState);
+  }
+
+  return runtimeDbState;
+};
+
+const db = {};
+
+Object.entries(STORAGE_READ_ACCESSORS).forEach(([accessorName, key]) => {
+  db[accessorName] = () => readStorageValue(key);
+});
+
+Object.entries(STORAGE_WRITE_ACCESSORS).forEach(([accessorName, key]) => {
+  db[accessorName] = (value) => saveStorageValue(key, value);
+});
 
 const normalizeCouponCode = (code) => {
   if (!code || typeof code !== 'string') return '';
@@ -1332,6 +1457,93 @@ const saveWalletPaymentAttemptsState = (attempts) => {
   db.saveWalletPaymentAttempts(Array.isArray(attempts) ? attempts : []);
 };
 
+function applyRuntimeDataFixups(state) {
+  if (!state || typeof state !== 'object') return false;
+
+  let changed = false;
+  const arrayKeys = [
+    'users',
+    'projects',
+    'purchases',
+    'modifications',
+    'coupons',
+    'referrals',
+    'walletCodes',
+    'walletPaymentAttempts',
+    'reviews',
+    'messages',
+    'communityPosts',
+    'communityJobs',
+    'communityJobApplications',
+    'adminTeamMessages',
+    'carts',
+    'invoices',
+    'meetingRecordings',
+    'subscriptionPlans',
+    'subscriptions',
+    'subscriptionPayments',
+    'subscriptionCoupons',
+    'presentationPlans',
+    'presentationSubscriptions',
+    'presentationDecks',
+    'presentationPaymentAttempts'
+  ];
+
+  arrayKeys.forEach((key) => {
+    if (!Array.isArray(state[key])) {
+      state[key] = [];
+      changed = true;
+    }
+  });
+
+  if (!state.appointments || typeof state.appointments !== 'object' || Array.isArray(state.appointments)) {
+    state.appointments = createDefaultAppointmentsState();
+    changed = true;
+  } else {
+    if (!Array.isArray(state.appointments.timeSlots)) {
+      state.appointments.timeSlots = [];
+      changed = true;
+    }
+    if (!Array.isArray(state.appointments.bookings)) {
+      state.appointments.bookings = [];
+      changed = true;
+    }
+  }
+
+  const normalizedPosts = state.communityPosts.map(normalizeCommunityPost);
+  if (JSON.stringify(normalizedPosts) !== JSON.stringify(state.communityPosts)) {
+    state.communityPosts = normalizedPosts;
+    changed = true;
+  }
+
+  const normalizedLoyaltySettings = normalizeLoyaltySettingsState(state.loyaltySettings);
+  if (JSON.stringify(normalizedLoyaltySettings) !== JSON.stringify(state.loyaltySettings)) {
+    state.loyaltySettings = normalizedLoyaltySettings;
+    changed = true;
+  }
+
+  if (!state.users.find((user) => user && user.email === 'admin@codentra.com')) {
+    state.users.push({
+      id: uuidv4(),
+      name: 'Admin',
+      email: 'admin@codentra.com',
+      password: bcrypt.hashSync('admin123', 10),
+      role: 'admin',
+      isSuperAdmin: true,
+      createdAt: new Date().toISOString()
+    });
+    changed = true;
+  }
+
+  state.users.forEach((user) => {
+    if (ensureUserPaymentProfile({ user, users: state.users })) {
+      changed = true;
+    }
+  });
+
+  return changed;
+}
+
 const purgeExpiredWalletPaymentAttempts = () => {
   const attempts = getWalletPaymentAttemptsState();
   const nextAttempts = attempts.filter(attempt => !isPaymentAttemptExpired(attempt) && !attempt.usedAt);
@@ -1786,38 +1998,9 @@ const buildPresentationPptxFile = async (deck) => {
   return { fileName, filePath };
 };
 
-// Initialize empty JSON files if they don't exist
-['users.json', 'projects.json', 'purchases.json', 'modifications.json', 'messages.json', 'admin-team-messages.json', 'community-posts.json', 'community-jobs.json', 'community-job-applications.json', 'carts.json', 'invoices.json', 'reviews.json', 'coupons.json', 'referrals.json', 'wallet-codes.json', 'wallet-payment-attempts.json'].forEach(file => {
-  const filePath = path.join(DATA_DIR, file);
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, '[]');
-  }
+ensureStorageReady().catch((error) => {
+  console.error('Storage warmup failed:', error);
 });
-
-// Create default admin user if none exists
-const users = db.users();
-if (!users.find(u => u.email === 'admin@codentra.com')) {
-  users.push({
-    id: uuidv4(),
-    name: 'Admin',
-    email: 'admin@codentra.com',
-    password: bcrypt.hashSync('admin123', 10),
-    role: 'admin',
-    isSuperAdmin: true,
-    createdAt: new Date().toISOString()
-  });
-  db.saveUsers(users);
-}
-
-let didUpdateUsersForPaymentProfile = false;
-users.forEach(user => {
-  if (ensureUserPaymentProfile({ user, users })) {
-    didUpdateUsersForPaymentProfile = true;
-  }
-});
-if (didUpdateUsersForPaymentProfile) {
-  db.saveUsers(users);
-}
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
@@ -1833,6 +2016,49 @@ app.get('/uploads/*', (req, res, next) => {
   return res.sendFile(absolutePath);
 });
 app.use('/uploads', express.static(UPLOADS_DIR));
+
+app.use((req, res, next) => {
+  storageRequestContext.run({ pendingPersists: [] }, () => {
+    const context = storageRequestContext.getStore();
+    const originalEnd = res.end.bind(res);
+    let endIntercepted = false;
+
+    res.end = (...args) => {
+      if (endIntercepted) return;
+      endIntercepted = true;
+
+      const pendingPersists = context ? context.pendingPersists.slice() : [];
+      if (!pendingPersists.length) {
+        return originalEnd(...args);
+      }
+
+      Promise.allSettled(pendingPersists).then((results) => {
+        const failedPersist = results.find((result) => result.status === 'rejected');
+        if (failedPersist && !res.headersSent) {
+          res.statusCode = 500;
+          return originalEnd('Storage persistence error');
+        }
+
+        return originalEnd(...args);
+      });
+    };
+
+    next();
+  });
+});
+
+app.use(async (req, res, next) => {
+  try {
+    await ensureStorageReady();
+    await refreshRuntimeStateFromNeon();
+    next();
+  } catch (error) {
+    console.error('Storage initialization error:', error);
+    if (!res.headersSent) {
+      res.status(500).send('Storage connection error');
+    }
+  }
+});
 
 if (IS_VERCEL) {
   app.set('trust proxy', 1);
