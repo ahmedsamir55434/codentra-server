@@ -11,6 +11,7 @@ const http = require('http');
 const crypto = require('crypto');
 const os = require('os');
 const { AsyncLocalStorage } = require('async_hooks');
+const mammoth = require('mammoth');
 const { v4: uuidv4 } = require('uuid');
 const { Server } = require('socket.io');
 const PDFDocument = require('pdfkit');
@@ -1389,10 +1390,9 @@ const COMMUNITY_MEDIA_SIZE_LIMIT_MB = 150;
 const COMMUNITY_CV_SIZE_LIMIT_MB = 10;
 const COMMUNITY_CV_MIME_TYPES = new Set([
   'application/pdf',
-  'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ]);
-const COMMUNITY_CV_EXTENSIONS = new Set(['.pdf', '.doc', '.docx']);
+const COMMUNITY_CV_EXTENSIONS = new Set(['.pdf', '.docx']);
 const COMMUNITY_APPLICATION_TRACKING_NOTE_LIMIT = 600;
 const COMMUNITY_AI_SCREENING_SUMMARY_LIMIT = 300;
 const COMMUNITY_AI_SCREENING_REASON_LIMIT = 160;
@@ -1439,10 +1439,10 @@ const COMMUNITY_APPLICATION_STATUSES = [
   },
   {
     key: 'accepted',
-    label: 'تم القبول',
+    label: 'قبول مبدئي',
     shortLabel: 'قبول',
     badgeClass: 'approved',
-    description: 'تم قبولك مبدئيًا، ونستكمل الآن خطوات الانضمام.',
+    description: 'تم قبولك مبدئيًا، وبانتظار استكمال الخطوات التالية مع الإدارة.',
     order: 4,
     isFinal: false,
     isPositive: true
@@ -1730,6 +1730,47 @@ const extractGeminiTextResponse = (payload) => {
   return textPart ? textPart.text.trim() : null;
 };
 
+const buildCommunityCvContentParts = async ({ cvBuffer, mimeType, fileName }) => {
+  const normalizedMimeType = String(mimeType || '').toLowerCase();
+  const normalizedFileName = String(fileName || '').toLowerCase();
+
+  if (normalizedMimeType === 'application/pdf' || normalizedFileName.endsWith('.pdf')) {
+    return {
+      parts: [
+        {
+          inline_data: {
+            mime_type: 'application/pdf',
+            data: cvBuffer.toString('base64')
+          }
+        }
+      ],
+      sourceLabel: 'PDF'
+    };
+  }
+
+  if (
+    normalizedMimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    normalizedFileName.endsWith('.docx')
+  ) {
+    const extraction = await mammoth.extractRawText({ buffer: cvBuffer });
+    const extractedText = String(extraction?.value || '').replace(/\s+/g, ' ').trim();
+    if (!extractedText) {
+      throw new Error('empty_docx_text');
+    }
+
+    return {
+      parts: [
+        {
+          text: `نص السيرة الذاتية المستخرج من ملف DOCX:\n${extractedText.slice(0, 18000)}`
+        }
+      ],
+      sourceLabel: 'DOCX'
+    };
+  }
+
+  throw new Error('unsupported_cv_ai_format');
+};
+
 const screenCommunityCvWithGemini = async ({ job, applicant, cvBuffer, mimeType, fileName }) => {
   if (!GEMINI_API_KEY) {
     return normalizeCommunityAiScreening({
@@ -1743,6 +1784,8 @@ const screenCommunityCvWithGemini = async ({ job, applicant, cvBuffer, mimeType,
     throw new Error('missing_cv_buffer');
   }
 
+  const cvContent = await buildCommunityCvContentParts({ cvBuffer, mimeType, fileName });
+
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
     method: 'POST',
     headers: {
@@ -1754,6 +1797,7 @@ const screenCommunityCvWithGemini = async ({ job, applicant, cvBuffer, mimeType,
         {
           role: 'user',
           parts: [
+            ...cvContent.parts,
             {
               text: [
                 'أنت مسؤول توظيف أولي في Codentra.',
@@ -1771,15 +1815,10 @@ const screenCommunityCvWithGemini = async ({ job, applicant, cvBuffer, mimeType,
                 `بيانات المتقدم: الاسم ${applicant.name}، العمر ${applicant.age}`,
                 `نبذة المتقدم: ${applicant.about}`,
                 `اسم الملف: ${fileName || 'cv'}`,
+                `صيغة السيرة الذاتية المستخدمة في التقييم: ${cvContent.sourceLabel}`,
                 '',
                 'أعد JSON فقط وفق المخطط المطلوب.'
               ].join('\n')
-            },
-            {
-              inline_data: {
-                mime_type: mimeType || 'application/pdf',
-                data: cvBuffer.toString('base64')
-              }
             }
           ]
         }
@@ -3044,7 +3083,7 @@ app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadH
       return res.redirect(buildRedirectUrl({
         pathName: '/community',
         hash: '#jobs',
-        error: 'صيغة السيرة الذاتية يجب أن تكون PDF أو DOC أو DOCX'
+        error: 'صيغة السيرة الذاتية يجب أن تكون PDF أو DOCX'
       }));
     }
 
@@ -3133,13 +3172,19 @@ app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadH
       ],
       aiScreening: normalizeCommunityAiScreening({
         decision: GEMINI_API_KEY ? 'pending' : 'skipped',
-        summary: GEMINI_API_KEY ? 'جارٍ تقييم السيرة الذاتية عبر Gemini...' : 'لم يتم تفعيل التقييم الذكي بعد.',
+        summary: GEMINI_API_KEY
+          ? 'جارٍ تقييم السيرة الذاتية عبر Gemini...'
+          : 'التقييم الذكي غير مفعل حاليًا، وسيتم تحويل الطلب للمراجعة اليدوية إلى أن يتم تفعيله.',
         reasons: [],
         evaluatedAt: GEMINI_API_KEY ? now : null,
         model: GEMINI_API_KEY ? GEMINI_MODEL : null
       }),
       createdAt: now
     };
+
+    if (!GEMINI_API_KEY) {
+      application.trackingNote = 'التقييم الذكي غير مفعل حاليًا، لذلك تم استلام طلبك وتحويله للمراجعة اليدوية.';
+    }
 
     if (GEMINI_API_KEY) {
       try {
@@ -3155,10 +3200,10 @@ app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadH
         application.statusUpdatedAt = aiScreening.evaluatedAt || new Date().toISOString();
 
         if (aiScreening.decision === 'accepted') {
-          application.status = 'reviewing';
-          application.trackingNote = aiScreening.summary || 'تم قبولك مبدئيًا عبر التقييم الذكي، والطلب الآن بانتظار مراجعة الإدارة.';
+          application.status = 'accepted';
+          application.trackingNote = aiScreening.summary || 'تم قبولك مبدئيًا عبر التقييم الذكي، وبانتظار استكمال الإدارة للخطوة التالية.';
           application.statusHistory.push(buildCommunityApplicationHistoryEntry({
-            status: 'reviewing',
+            status: 'accepted',
             note: `تم قبول الطلب مبدئيًا عبر Gemini.${aiScreening.summary ? ` ${aiScreening.summary}` : ''}`.trim(),
             updatedAt: application.statusUpdatedAt,
             updatedByName: 'Gemini AI',
@@ -3178,15 +3223,23 @@ app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadH
         }
       } catch (aiError) {
         console.error('Community AI screening error:', aiError);
+        const aiErrorMessage = String(aiError && aiError.message ? aiError.message : aiError);
+        const unsupportedFormat = aiErrorMessage.includes('unsupported_cv_ai_format');
+        const emptyDocxText = aiErrorMessage.includes('empty_docx_text');
+        const fallbackSummary = unsupportedFormat
+          ? 'التقييم الذكي يدعم حاليًا ملفات PDF و DOCX فقط. ارفع السيرة الذاتية بإحدى هاتين الصيغتين للحصول على قرار فوري.'
+          : emptyDocxText
+            ? 'تعذر قراءة محتوى ملف الـ DOCX لتقييمه تلقائيًا، وسيتم تحويل الطلب للمراجعة اليدوية.'
+            : 'تعذر تنفيذ التقييم الذكي الآن، وتم تحويل طلبك للمراجعة اليدوية.';
         application.aiScreening = normalizeCommunityAiScreening({
           decision: 'error',
-          summary: 'تعذر تنفيذ التقييم الذكي الآن، وتم تحويل طلبك للمراجعة اليدوية.',
+          summary: fallbackSummary,
           reasons: [],
           evaluatedAt: new Date().toISOString(),
           model: GEMINI_MODEL,
-          error: String(aiError && aiError.message ? aiError.message : aiError)
+          error: aiErrorMessage
         });
-        application.trackingNote = 'تم استلام طلبك وبانتظار مراجعة فريق Codentra.';
+        application.trackingNote = fallbackSummary;
       }
     }
 
@@ -3198,6 +3251,8 @@ app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadH
       submitMessage = 'تم إرسال طلبك وحصل على قبول مبدئي من التقييم الذكي';
     } else if (application.aiScreening.decision === 'rejected') {
       submitMessage = 'تم إرسال طلبك لكن التقييم الذكي أعطى رفضًا مبدئيًا، ويمكن للإدارة مراجعته';
+    } else if (application.aiScreening.decision === 'skipped') {
+      submitMessage = 'تم إرسال طلبك، لكن التقييم الذكي غير مفعل حاليًا لذلك تم تحويله للمراجعة اليدوية';
     }
 
     return res.redirect(buildRedirectUrl({

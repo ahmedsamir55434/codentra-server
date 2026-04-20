@@ -207,7 +207,7 @@
                           <a href="/admin/community/applications/<%= application.id %>/cv" class="btn btn-sm btn-primary">تحميل CV</a>
                         </td>
                         <td style="min-width: 330px;">
-                          <% if (application.aiScreeningView && application.aiScreeningView.decision !== 'skipped') { %>
+                          <% if (application.aiScreeningView && application.aiScreeningView.summary) { %>
                             <div class="community-ai-review admin">
                               <div class="community-ai-review-head">
                                 <span class="status-badge <%= application.aiScreeningView.meta.badgeClass %>"><%= application.aiScreeningView.meta.label %></span>

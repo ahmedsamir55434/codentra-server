@@ -177,7 +177,7 @@
 
                   <p class="community-tracking-description"><%= application.trackingNote || application.statusMeta.description %></p>
 
-                  <% if (application.aiScreeningView && application.aiScreeningView.decision !== 'skipped') { %>
+                  <% if (application.aiScreeningView && application.aiScreeningView.summary) { %>
                     <div class="community-ai-review">
                       <div class="community-ai-review-head">
                         <span class="status-badge <%= application.aiScreeningView.meta.badgeClass %>"><%= application.aiScreeningView.meta.label %></span>
@@ -215,7 +215,7 @@
                         reviewing: { label: 'قيد المراجعة', badgeClass: 'review' },
                         shortlisted: { label: 'تم ترشيحك', badgeClass: 'shortlisted' },
                         interview: { label: 'مرحلة المقابلة', badgeClass: 'interview' },
-                        accepted: { label: 'تم القبول', badgeClass: 'approved' },
+                        accepted: { label: 'قبول مبدئي', badgeClass: 'approved' },
                         hired: { label: 'تم التوظيف', badgeClass: 'hired' },
                         rejected: { label: 'تم الرفض', badgeClass: 'rejected' }
                       }[entry.status] || { label: entry.status, badgeClass: 'pending' }; %>
@@ -277,7 +277,7 @@
                         حالته الآن: <strong><%= job.applicationStatus.statusMeta.label %></strong>
                       <% } %>
                     </div>
-                    <% if (job.applicationStatus && job.applicationStatus.aiScreeningView && job.applicationStatus.aiScreeningView.decision !== 'skipped') { %>
+                    <% if (job.applicationStatus && job.applicationStatus.aiScreeningView && job.applicationStatus.aiScreeningView.summary) { %>
                       <div class="community-ai-review compact">
                         <div class="community-ai-review-head">
                           <span class="status-badge <%= job.applicationStatus.aiScreeningView.meta.badgeClass %>"><%= job.applicationStatus.aiScreeningView.meta.label %></span>
