@@ -12,7 +12,6 @@ const crypto = require('crypto');
 const os = require('os');
 const { AsyncLocalStorage } = require('async_hooks');
 const mammoth = require('mammoth');
-const pdfParse = require('pdf-parse');
 const { v4: uuidv4 } = require('uuid');
 const { Server } = require('socket.io');
 const PDFDocument = require('pdfkit');
@@ -1781,9 +1780,10 @@ const getCommunityKeywordCandidates = (job) => {
 };
 
 const buildCommunityLocalAiScreening = ({ job, applicant, cvText, sourceLabel, failureReason }) => {
+  const normalizedCvText = String(cvText || '').trim();
   const jobKeywords = getCommunityKeywordCandidates(job);
   const applicantTokens = new Set(
-    tokenizeCommunityScreeningText(`${applicant && applicant.about ? applicant.about : ''}\n${cvText || ''}`)
+    tokenizeCommunityScreeningText(`${applicant && applicant.about ? applicant.about : ''}\n${normalizedCvText}`)
   );
   const matchedKeywords = jobKeywords.filter((token) => applicantTokens.has(token));
   const scoreBase = Math.max(4, Math.min(jobKeywords.length, 12));
@@ -1792,6 +1792,9 @@ const buildCommunityLocalAiScreening = ({ job, applicant, cvText, sourceLabel, f
   const missingKeywords = jobKeywords.filter((token) => !applicantTokens.has(token)).slice(0, 3);
 
   const reasons = [];
+  if (!normalizedCvText) {
+    reasons.push('تعذر استخراج نص واضح من السيرة الذاتية بالكامل، لذا تم الاعتماد أكثر على نبذة المتقدم والملف المرفوع.');
+  }
   if (matchedKeywords.length) {
     reasons.push(`تم العثور على تقاطع واضح مع متطلبات الوظيفة في: ${matchedKeywords.slice(0, 4).join('، ')}`);
   }
@@ -1818,6 +1821,50 @@ const buildCommunityLocalAiScreening = ({ job, applicant, cvText, sourceLabel, f
     model: failureReason ? `fallback:${sourceLabel}` : `heuristic:${sourceLabel}`,
     error: failureReason || null
   });
+};
+
+const decodePdfEscapedText = (value) => {
+  return String(value || '')
+    .replace(/\\([\\()])/g, '$1')
+    .replace(/\\n/g, ' ')
+    .replace(/\\r/g, ' ')
+    .replace(/\\t/g, ' ')
+    .replace(/\\b/g, ' ')
+    .replace(/\\f/g, ' ')
+    .replace(/\\([0-7]{3})/g, (_, octal) => {
+      try {
+        return String.fromCharCode(parseInt(octal, 8));
+      } catch (_) {
+        return ' ';
+      }
+    });
+};
+
+const extractPdfFallbackText = (cvBuffer) => {
+  const latinText = Buffer.isBuffer(cvBuffer) ? cvBuffer.toString('latin1') : '';
+  if (!latinText) return '';
+
+  const collected = [];
+  const parenthesizedMatches = latinText.match(/\((?:\\.|[^\\()]){2,}\)/g) || [];
+  parenthesizedMatches.forEach((match) => {
+    const decoded = decodePdfEscapedText(match.slice(1, -1)).replace(/\s+/g, ' ').trim();
+    if (/[A-Za-z\u0600-\u06FF]/.test(decoded)) {
+      collected.push(decoded);
+    }
+  });
+
+  const tokenMatches = latinText.match(/[A-Za-z\u0600-\u06FF][A-Za-z0-9\u0600-\u06FF+#./:_ -]{2,}/g) || [];
+  tokenMatches.forEach((match) => {
+    const cleaned = match.replace(/\s+/g, ' ').trim();
+    if (cleaned.length >= 3) collected.push(cleaned);
+  });
+
+  return collected
+    .join(' ')
+    .replace(/[^\S\r\n]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 18000);
 };
 
 const getCommunityAiScreeningSchema = () => ({
@@ -1866,13 +1913,13 @@ const buildCommunityAiPromptText = ({ job, applicant, fileName, sourceLabel, cvT
   `نبذة المتقدم: ${applicant.about}`,
   `اسم الملف: ${fileName || 'cv'}`,
   `صيغة السيرة الذاتية المستخدمة في التقييم: ${sourceLabel}`,
-  '',
-  'نص السيرة الذاتية:',
-  String(cvText || '').slice(0, 18000),
+  cvText ? '' : 'قد لا يتوفر نص مستخرج من الملف، لذلك اعتمد على الملف المرفوع نفسه إن وُجد ضمن المرفقات.',
+  cvText ? 'نص السيرة الذاتية:' : '',
+  cvText ? String(cvText || '').slice(0, 18000) : '',
   plainJsonOnly ? 'استخدم هذا الشكل حرفيًا: {"decision":"accepted","score":75,"summary":"...","reasons":["..."]}' : ''
 ].filter(Boolean).join('\n');
 
-const requestCommunityGeminiScreening = async ({ cvText, sourceLabel, job, applicant, fileName, useSchema }) => {
+const requestCommunityGeminiScreening = async ({ cvText, sourceLabel, job, applicant, fileName, useSchema, attachmentParts = [] }) => {
   const generationConfig = {
     temperature: 0.1
   };
@@ -1893,6 +1940,7 @@ const requestCommunityGeminiScreening = async ({ cvText, sourceLabel, job, appli
         {
           role: 'user',
           parts: [
+            ...attachmentParts,
             {
               text: buildCommunityAiPromptText({
                 job,
@@ -1924,20 +1972,22 @@ const requestCommunityGeminiScreening = async ({ cvText, sourceLabel, job, appli
   return parseGeminiJsonResponse(responseText);
 };
 
-const extractCommunityCvText = async ({ cvBuffer, mimeType, fileName }) => {
+const extractCommunityCvContent = async ({ cvBuffer, mimeType, fileName }) => {
   const normalizedMimeType = String(mimeType || '').toLowerCase();
   const normalizedFileName = String(fileName || '').toLowerCase();
 
   if (normalizedMimeType === 'application/pdf' || normalizedFileName.endsWith('.pdf')) {
-    const extraction = await pdfParse(cvBuffer);
-    const extractedText = String(extraction?.text || '').replace(/\s+/g, ' ').trim();
-    if (!extractedText) {
-      throw new Error('empty_pdf_text');
-    }
-
     return {
-      cvText: extractedText,
-      sourceLabel: 'PDF'
+      cvText: extractPdfFallbackText(cvBuffer),
+      sourceLabel: 'PDF',
+      attachmentParts: [
+        {
+          inline_data: {
+            mime_type: 'application/pdf',
+            data: cvBuffer.toString('base64')
+          }
+        }
+      ]
     };
   }
 
@@ -1953,7 +2003,8 @@ const extractCommunityCvText = async ({ cvBuffer, mimeType, fileName }) => {
 
     return {
       cvText: extractedText,
-      sourceLabel: 'DOCX'
+      sourceLabel: 'DOCX',
+      attachmentParts: []
     };
   }
 
@@ -1961,19 +2012,11 @@ const extractCommunityCvText = async ({ cvBuffer, mimeType, fileName }) => {
 };
 
 const screenCommunityCvWithGemini = async ({ job, applicant, cvBuffer, mimeType, fileName }) => {
-  if (!GEMINI_API_KEY) {
-    return normalizeCommunityAiScreening({
-      decision: 'skipped',
-      summary: 'لم يتم تفعيل التقييم الذكي بعد.',
-      reasons: []
-    });
-  }
-
   if (!Buffer.isBuffer(cvBuffer) || !cvBuffer.length) {
     throw new Error('missing_cv_buffer');
   }
 
-  const cvContent = await extractCommunityCvText({ cvBuffer, mimeType, fileName });
+  const cvContent = await extractCommunityCvContent({ cvBuffer, mimeType, fileName });
 
   if (!GEMINI_API_KEY) {
     return buildCommunityLocalAiScreening({
@@ -1994,7 +2037,8 @@ const screenCommunityCvWithGemini = async ({ job, applicant, cvBuffer, mimeType,
       job,
       applicant,
       fileName,
-      useSchema: true
+      useSchema: true,
+      attachmentParts: cvContent.attachmentParts
     });
   } catch (primaryError) {
     try {
@@ -2004,7 +2048,8 @@ const screenCommunityCvWithGemini = async ({ job, applicant, cvBuffer, mimeType,
         job,
         applicant,
         fileName,
-        useSchema: false
+        useSchema: false,
+        attachmentParts: cvContent.attachmentParts
       });
     } catch (fallbackError) {
       return buildCommunityLocalAiScreening({
