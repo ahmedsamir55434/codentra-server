@@ -34,6 +34,11 @@ app.use((req, res, next) => {
 
 // Initialize watermark processor
 const watermarkProcessor = new WatermarkProcessor();
+const IS_VERCEL = Boolean(process.env.VERCEL);
+const APP_ROOT_DIR = __dirname;
+const BUNDLED_DATA_DIR = path.join(APP_ROOT_DIR, 'data');
+const BUNDLED_UPLOADS_DIR = path.join(APP_ROOT_DIR, 'uploads');
+const BUNDLED_PRIVATE_UPLOADS_DIR = path.join(APP_ROOT_DIR, 'private_uploads');
 
 const normalizeStoredPath = (storedPath) => {
   if (!storedPath) return null;
@@ -44,7 +49,26 @@ const normalizeStoredPath = (storedPath) => {
 const toAbsolutePath = (storedPath) => {
   const normalized = normalizeStoredPath(storedPath);
   if (!normalized) return null;
-  return path.join(__dirname, normalized);
+
+  const candidates = [];
+
+  if (normalized.startsWith('uploads/')) {
+    const relativeUploadPath = normalized.slice('uploads/'.length);
+    candidates.push(path.join(UPLOADS_DIR, relativeUploadPath));
+    if (IS_VERCEL) candidates.push(path.join(BUNDLED_UPLOADS_DIR, relativeUploadPath));
+  } else if (normalized.startsWith('private_uploads/')) {
+    const relativePrivatePath = normalized.slice('private_uploads/'.length);
+    candidates.push(path.join(PRIVATE_UPLOADS_DIR, relativePrivatePath));
+    if (IS_VERCEL) candidates.push(path.join(BUNDLED_PRIVATE_UPLOADS_DIR, relativePrivatePath));
+  } else {
+    candidates.push(path.join(APP_ROOT_DIR, normalized));
+  }
+
+  for (const candidate of candidates) {
+    if (candidate && fs.existsSync(candidate)) return candidate;
+  }
+
+  return candidates[0] || path.join(APP_ROOT_DIR, normalized);
 };
 
 const formatMoney = (v) => {
@@ -382,18 +406,35 @@ const calculateRefundForRejectedItem = ({ rejectedPurchase, allPurchases }) => {
 };
 
 // Data storage paths
-const DATA_DIR = path.join(__dirname, 'data');
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const RUNTIME_ROOT_DIR = IS_VERCEL ? path.join('/tmp', 'codentra-runtime') : APP_ROOT_DIR;
+const DATA_DIR = IS_VERCEL ? path.join(RUNTIME_ROOT_DIR, 'data') : BUNDLED_DATA_DIR;
+const UPLOADS_DIR = IS_VERCEL ? path.join(RUNTIME_ROOT_DIR, 'uploads') : BUNDLED_UPLOADS_DIR;
 const MEETING_RECORDINGS_DIR = path.join(UPLOADS_DIR, 'meeting-recordings');
 const ADMIN_TEAM_UPLOADS_DIR = path.join(UPLOADS_DIR, 'admin-team');
-const PRIVATE_UPLOADS_DIR = path.join(__dirname, 'private_uploads');
+const PRIVATE_UPLOADS_DIR = IS_VERCEL ? path.join(RUNTIME_ROOT_DIR, 'private_uploads') : BUNDLED_PRIVATE_UPLOADS_DIR;
 const COMMUNITY_MEDIA_DIR = path.join(UPLOADS_DIR, 'community-media');
 const COMMUNITY_CVS_DIR = path.join(PRIVATE_UPLOADS_DIR, 'community-cvs');
+const ensureDirectory = (dirPath) => {
+  if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
+};
+
+const copyFileIfMissing = (sourcePath, targetPath) => {
+  if (!sourcePath || !targetPath) return;
+  if (!fs.existsSync(sourcePath) || fs.existsSync(targetPath)) return;
+  ensureDirectory(path.dirname(targetPath));
+  fs.copyFileSync(sourcePath, targetPath);
+};
 
 // Ensure directories exist
-[DATA_DIR, UPLOADS_DIR, MEETING_RECORDINGS_DIR, ADMIN_TEAM_UPLOADS_DIR, PRIVATE_UPLOADS_DIR, COMMUNITY_MEDIA_DIR, COMMUNITY_CVS_DIR].forEach(dir => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-});
+[DATA_DIR, UPLOADS_DIR, MEETING_RECORDINGS_DIR, ADMIN_TEAM_UPLOADS_DIR, PRIVATE_UPLOADS_DIR, COMMUNITY_MEDIA_DIR, COMMUNITY_CVS_DIR].forEach(ensureDirectory);
+
+if (IS_VERCEL && fs.existsSync(BUNDLED_DATA_DIR)) {
+  fs.readdirSync(BUNDLED_DATA_DIR).forEach((entry) => {
+    const sourcePath = path.join(BUNDLED_DATA_DIR, entry);
+    if (!fs.statSync(sourcePath).isFile()) return;
+    copyFileIfMissing(sourcePath, path.join(DATA_DIR, entry));
+  });
+}
 
 // JSON storage helpers
 const db = {
@@ -1680,7 +1721,16 @@ if (didUpdateUsersForPaymentProfile) {
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
-app.use('/uploads', express.static('uploads'));
+app.get('/uploads/*', (req, res, next) => {
+  const requestedPath = req.params[0];
+  if (!requestedPath || requestedPath.includes('..')) return next();
+
+  const absolutePath = toAbsolutePath(`uploads/${requestedPath}`);
+  if (!absolutePath || !fs.existsSync(absolutePath)) return next();
+
+  return res.sendFile(absolutePath);
+});
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 app.use(session({
   secret: 'codentra-secret-key-2024',
@@ -3864,7 +3914,7 @@ app.get('/admin/community/applications/:id/cv', requireSuperAdmin, (req, res) =>
     return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('السيرة الذاتية غير موجودة'));
   }
 
-  const absolutePath = path.join(__dirname, application.cvFilePath);
+  const absolutePath = toAbsolutePath(application.cvFilePath);
   if (!fs.existsSync(absolutePath)) {
     return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('ملف السيرة الذاتية غير موجود على الخادم'));
   }
