@@ -19,6 +19,9 @@ const WatermarkProcessor = require('./utils/watermark');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const SESSION_SECRET = process.env.SESSION_SECRET || 'codentra-secret-key-2024';
+const AUTH_COOKIE_NAME = 'codentra_auth';
+const AUTH_COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 7;
 
 // CORS middleware
 app.use((req, res, next) => {
@@ -39,6 +42,14 @@ const APP_ROOT_DIR = __dirname;
 const BUNDLED_DATA_DIR = path.join(APP_ROOT_DIR, 'data');
 const BUNDLED_UPLOADS_DIR = path.join(APP_ROOT_DIR, 'uploads');
 const BUNDLED_PRIVATE_UPLOADS_DIR = path.join(APP_ROOT_DIR, 'private_uploads');
+const AUTH_COOKIE_SECRET = process.env.AUTH_COOKIE_SECRET || `${SESSION_SECRET}-auth`;
+const AUTH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: IS_VERCEL,
+  path: '/',
+  maxAge: AUTH_COOKIE_MAX_AGE
+};
 
 const normalizeStoredPath = (storedPath) => {
   if (!storedPath) return null;
@@ -1101,6 +1112,97 @@ const buildSessionUser = (user) => {
   };
 };
 
+const parseCookieHeader = (cookieHeader) => {
+  if (!cookieHeader || typeof cookieHeader !== 'string') return {};
+  return cookieHeader.split(';').reduce((acc, part) => {
+    const trimmed = part.trim();
+    if (!trimmed) return acc;
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex === -1) return acc;
+    const key = trimmed.slice(0, separatorIndex).trim();
+    const value = trimmed.slice(separatorIndex + 1).trim();
+    if (!key) return acc;
+    acc[key] = decodeURIComponent(value);
+    return acc;
+  }, {});
+};
+
+const getAuthCookieToken = (req) => {
+  const cookies = parseCookieHeader(req && req.headers ? req.headers.cookie : '');
+  return cookies[AUTH_COOKIE_NAME] || null;
+};
+
+const setAuthCookie = (res, userId) => {
+  if (!res || !userId) return;
+  const token = jwt.sign({ userId }, AUTH_COOKIE_SECRET, { expiresIn: '7d' });
+  res.cookie(AUTH_COOKIE_NAME, token, AUTH_COOKIE_OPTIONS);
+};
+
+const clearAuthCookie = (res) => {
+  if (!res) return;
+  res.clearCookie(AUTH_COOKIE_NAME, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: IS_VERCEL,
+    path: '/'
+  });
+};
+
+const hydrateSessionUserFromAuthCookie = ({ req, res }) => {
+  if (!req || !req.session) return;
+
+  const existingSessionUserId = req.session.user && req.session.user.id ? req.session.user.id : null;
+  const token = getAuthCookieToken(req);
+
+  if (existingSessionUserId && !token) {
+    setAuthCookie(res, existingSessionUserId);
+    return;
+  }
+
+  if (!token) return;
+
+  let payload = null;
+  try {
+    payload = jwt.verify(token, AUTH_COOKIE_SECRET);
+  } catch (error) {
+    if (!existingSessionUserId) clearAuthCookie(res);
+    return;
+  }
+
+  if (!payload || !payload.userId) {
+    if (!existingSessionUserId) clearAuthCookie(res);
+    return;
+  }
+
+  if (existingSessionUserId === payload.userId) return;
+
+  const users = db.users();
+  const userIndex = users.findIndex((item) => item && item.id === payload.userId);
+  if (userIndex === -1) {
+    clearAuthCookie(res);
+    return;
+  }
+
+  const fullUser = users[userIndex];
+  let shouldSaveUsers = false;
+
+  if (ensureUserPaymentProfile({ user: fullUser, users })) {
+    shouldSaveUsers = true;
+  }
+
+  if (isBlockedExpired(fullUser)) {
+    unblockUserInPlace(fullUser);
+    shouldSaveUsers = true;
+  }
+
+  if (shouldSaveUsers) {
+    users[userIndex] = fullUser;
+    db.saveUsers(users);
+  }
+
+  req.session.user = buildSessionUser(fullUser);
+};
+
 const COMMUNITY_POST_CONTENT_LIMIT = 4000;
 const COMMUNITY_COMMENT_CONTENT_LIMIT = 1000;
 const COMMUNITY_JOB_TEXT_LIMIT = 4000;
@@ -1732,14 +1834,29 @@ app.get('/uploads/*', (req, res, next) => {
 });
 app.use('/uploads', express.static(UPLOADS_DIR));
 
+if (IS_VERCEL) {
+  app.set('trust proxy', 1);
+}
+
 app.use(session({
-  secret: 'codentra-secret-key-2024',
+  secret: SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
+    maxAge: AUTH_COOKIE_MAX_AGE,
+    sameSite: 'lax',
+    secure: IS_VERCEL
   }
 }));
+
+app.use((req, res, next) => {
+  try {
+    hydrateSessionUserFromAuthCookie({ req, res });
+  } catch (error) {
+    // ignore auth cookie hydration failures
+  }
+  next();
+});
 
 const isBlockedExpired = (u) => {
   if (!u) return false;
@@ -2404,6 +2521,7 @@ app.post('/login', (req, res) => {
       db.saveUsers(users);
     }
     req.session.user = buildSessionUser(user);
+    setAuthCookie(res, user.id);
     return res.redirect('/blocked');
   }
 
@@ -2424,6 +2542,7 @@ app.post('/login', (req, res) => {
   }
 
   req.session.user = buildSessionUser(user);
+  setAuthCookie(res, user.id);
   syncRecentlyViewedProjectsForUser({ req, userId: user.id });
   res.redirect(user.role === 'admin' ? '/admin' : '/');
 });
@@ -2493,13 +2612,17 @@ app.post('/register', (req, res) => {
   db.saveUsers(users);
 
   req.session.user = buildSessionUser(newUser);
+  setAuthCookie(res, newUser.id);
   syncRecentlyViewedProjectsForUser({ req, userId: newUser.id });
   res.redirect('/');
 });
 
 app.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/');
+  clearAuthCookie(res);
+  if (!req.session) return res.redirect('/');
+  req.session.destroy(() => {
+    res.redirect('/');
+  });
 });
 
 // API Routes for Mobile App
