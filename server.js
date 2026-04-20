@@ -5720,9 +5720,14 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start server
-httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`Codentra running on http://localhost:${PORT}`);
-  console.log(`Network access: http://192.168.8.110:${PORT}`);
-  console.log(`Admin: admin@codentra.com / admin123`);
-});
+// Vercel auto-detects Express apps from supported entry files like server.js.
+// Keep the local port listener for normal development, but export the app for Vercel.
+if (!process.env.VERCEL) {
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`Codentra running on http://localhost:${PORT}`);
+    console.log(`Network access: http://192.168.8.110:${PORT}`);
+    console.log(`Admin: admin@codentra.com / admin123`);
+  });
+}
+
+module.exports = app;
