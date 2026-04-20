@@ -177,6 +177,25 @@
 
                   <p class="community-tracking-description"><%= application.trackingNote || application.statusMeta.description %></p>
 
+                  <% if (application.aiScreeningView && application.aiScreeningView.decision !== 'skipped') { %>
+                    <div class="community-ai-review">
+                      <div class="community-ai-review-head">
+                        <span class="status-badge <%= application.aiScreeningView.meta.badgeClass %>"><%= application.aiScreeningView.meta.label %></span>
+                        <% if (application.aiScreeningView.score) { %>
+                          <span class="community-meta-badge">التوافق: <%= application.aiScreeningView.score %>%</span>
+                        <% } %>
+                      </div>
+                      <p><%= application.aiScreeningView.summary || application.aiScreeningView.meta.description %></p>
+                      <% if (application.aiScreeningView.reasons && application.aiScreeningView.reasons.length) { %>
+                        <ul class="community-ai-reasons">
+                          <% application.aiScreeningView.reasons.forEach(reason => { %>
+                            <li><%= reason %></li>
+                          <% }) %>
+                        </ul>
+                      <% } %>
+                    </div>
+                  <% } %>
+
                   <div class="community-progress-steps">
                     <% application.progressSteps.forEach(step => { %>
                       <span class="community-progress-step <%= step.isCurrent ? 'current' : '' %> <%= step.isDone ? 'done' : '' %>">
@@ -258,6 +277,17 @@
                         حالته الآن: <strong><%= job.applicationStatus.statusMeta.label %></strong>
                       <% } %>
                     </div>
+                    <% if (job.applicationStatus && job.applicationStatus.aiScreeningView && job.applicationStatus.aiScreeningView.decision !== 'skipped') { %>
+                      <div class="community-ai-review compact">
+                        <div class="community-ai-review-head">
+                          <span class="status-badge <%= job.applicationStatus.aiScreeningView.meta.badgeClass %>"><%= job.applicationStatus.aiScreeningView.meta.label %></span>
+                          <% if (job.applicationStatus.aiScreeningView.score) { %>
+                            <span class="community-meta-badge">التوافق: <%= job.applicationStatus.aiScreeningView.score %>%</span>
+                          <% } %>
+                        </div>
+                        <p><%= job.applicationStatus.aiScreeningView.summary || job.applicationStatus.aiScreeningView.meta.description %></p>
+                      </div>
+                    <% } %>
                     <% if (job.applicationStatus && job.applicationStatus.trackingNote) { %>
                       <p class="community-tracking-description"><%= job.applicationStatus.trackingNote %></p>
                     <% } %>

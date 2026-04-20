@@ -25,6 +25,8 @@ const SESSION_SECRET = process.env.SESSION_SECRET || 'codentra-secret-key-2024';
 const AUTH_COOKIE_NAME = 'codentra_auth';
 const AUTH_COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 7;
 const DATABASE_URL = String(process.env.DATABASE_URL || '').trim();
+const GEMINI_API_KEY = String(process.env.GEMINI_API_KEY || '').trim();
+const GEMINI_MODEL = String(process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim() || 'gemini-2.5-flash';
 
 // CORS middleware
 app.use((req, res, next) => {
@@ -1392,6 +1394,8 @@ const COMMUNITY_CV_MIME_TYPES = new Set([
 ]);
 const COMMUNITY_CV_EXTENSIONS = new Set(['.pdf', '.doc', '.docx']);
 const COMMUNITY_APPLICATION_TRACKING_NOTE_LIMIT = 600;
+const COMMUNITY_AI_SCREENING_SUMMARY_LIMIT = 300;
+const COMMUNITY_AI_SCREENING_REASON_LIMIT = 160;
 const COMMUNITY_APPLICATION_STATUSES = [
   {
     key: 'pending',
@@ -1467,6 +1471,38 @@ const COMMUNITY_APPLICATION_STATUSES = [
 const COMMUNITY_APPLICATION_STATUS_MAP = new Map(
   COMMUNITY_APPLICATION_STATUSES.map((status) => [status.key, status])
 );
+const COMMUNITY_AI_DECISION_META = {
+  accepted: {
+    key: 'accepted',
+    label: 'قبول مبدئي AI',
+    badgeClass: 'approved',
+    description: 'الذكاء الاصطناعي يرى أن السيرة الذاتية مناسبة مبدئيًا للوظيفة.'
+  },
+  rejected: {
+    key: 'rejected',
+    label: 'رفض مبدئي AI',
+    badgeClass: 'rejected',
+    description: 'الذكاء الاصطناعي يرى أن السيرة الذاتية غير مرتبطة بالوظيفة بشكل كافٍ.'
+  },
+  pending: {
+    key: 'pending',
+    label: 'جارٍ التقييم',
+    badgeClass: 'pending',
+    description: 'الذكاء الاصطناعي لم يُكمل التقييم بعد.'
+  },
+  skipped: {
+    key: 'skipped',
+    label: 'بدون تقييم AI',
+    badgeClass: 'review',
+    description: 'لم يتم تشغيل التقييم الذكي على هذا الطلب.'
+  },
+  error: {
+    key: 'error',
+    label: 'تعذر التقييم AI',
+    badgeClass: 'review',
+    description: 'حدثت مشكلة أثناء التقييم الذكي وتم تحويل الطلب للمراجعة اليدوية.'
+  }
+};
 
 const buildSafeUploadFileName = ({ file, fallbackBaseName }) => {
   const safeOriginal = (file && file.originalname ? file.originalname : fallbackBaseName || 'file')
@@ -1497,6 +1533,37 @@ const getCommunityApplicationStatusMeta = (statusKey) => {
 };
 
 const normalizeCommunityApplicationStatus = (statusKey) => getCommunityApplicationStatusMeta(statusKey).key;
+
+const getCommunityAiDecisionMeta = (decisionKey) => {
+  return COMMUNITY_AI_DECISION_META[decisionKey] || COMMUNITY_AI_DECISION_META.pending;
+};
+
+const normalizeCommunityAiDecision = (decisionKey) => getCommunityAiDecisionMeta(decisionKey).key;
+
+const normalizeCommunityAiScreening = (screening) => {
+  const normalized = screening && typeof screening === 'object' ? { ...screening } : {};
+  normalized.decision = normalizeCommunityAiDecision(normalized.decision || (normalized.recommendedStatus === 'rejected' ? 'rejected' : 'pending'));
+  normalized.summary = (normalized.summary || '').toString().trim().slice(0, COMMUNITY_AI_SCREENING_SUMMARY_LIMIT);
+  normalized.reasons = Array.isArray(normalized.reasons)
+    ? normalized.reasons
+      .map((reason) => String(reason || '').trim().slice(0, COMMUNITY_AI_SCREENING_REASON_LIMIT))
+      .filter(Boolean)
+      .slice(0, 4)
+    : [];
+  normalized.score = Math.max(0, Math.min(100, Math.round(Number(normalized.score || 0))));
+  normalized.evaluatedAt = normalized.evaluatedAt || null;
+  normalized.model = (normalized.model || '').toString().trim() || null;
+  normalized.error = (normalized.error || '').toString().trim() || null;
+  return normalized;
+};
+
+const buildCommunityAiScreeningView = (screening) => {
+  const normalized = normalizeCommunityAiScreening(screening);
+  return {
+    ...normalized,
+    meta: getCommunityAiDecisionMeta(normalized.decision)
+  };
+};
 
 const buildCommunityApplicationHistoryEntry = ({
   status,
@@ -1552,6 +1619,7 @@ const normalizeCommunityJobApplication = (application) => {
   normalized.trackingNote = (normalized.trackingNote || normalized.lastStatusNote || '').toString().trim();
   normalized.hiredAt = normalized.hiredAt || (currentStatus === 'hired' ? normalized.statusUpdatedAt : null);
   normalized.rejectedAt = normalized.rejectedAt || (currentStatus === 'rejected' ? normalized.statusUpdatedAt : null);
+  normalized.aiScreening = normalizeCommunityAiScreening(normalized.aiScreening);
 
   return normalized;
 };
@@ -1653,6 +1721,123 @@ const buildCommunityJobApplicationsMap = (applications) => {
     map.get(application.jobId).push(application);
   }
   return map;
+};
+
+const extractGeminiTextResponse = (payload) => {
+  const parts = payload?.candidates?.[0]?.content?.parts;
+  if (!Array.isArray(parts)) return null;
+  const textPart = parts.find((part) => typeof part?.text === 'string' && part.text.trim());
+  return textPart ? textPart.text.trim() : null;
+};
+
+const screenCommunityCvWithGemini = async ({ job, applicant, cvBuffer, mimeType, fileName }) => {
+  if (!GEMINI_API_KEY) {
+    return normalizeCommunityAiScreening({
+      decision: 'skipped',
+      summary: 'لم يتم تفعيل التقييم الذكي بعد.',
+      reasons: []
+    });
+  }
+
+  if (!Buffer.isBuffer(cvBuffer) || !cvBuffer.length) {
+    throw new Error('missing_cv_buffer');
+  }
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': GEMINI_API_KEY
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: [
+                'أنت مسؤول توظيف أولي في Codentra.',
+                'قيّم السيرة الذاتية المرفوعة مقارنة بالوظيفة المعروضة.',
+                'أعطِ قرارًا ثنائيًا فقط: accepted أو rejected.',
+                'اختر rejected فقط إذا كانت السيرة الذاتية بعيدة بوضوح عن الوظيفة أو تفتقد الحد الأدنى من الصلة المطلوبة.',
+                'اختر accepted إذا كانت هناك صلة معقولة أو قابلية للانتقال للمرحلة التالية.',
+                'اكتب النتيجة بالعربية المختصرة والواضحة.',
+                '',
+                `اسم الوظيفة: ${job.title}`,
+                `الوصف الوظيفي: ${job.description}`,
+                `الأجر: ${job.salary}`,
+                `سنوات الخبرة المطلوبة: ${formatYearsOfExperience(job.experienceYears)}`,
+                '',
+                `بيانات المتقدم: الاسم ${applicant.name}، العمر ${applicant.age}`,
+                `نبذة المتقدم: ${applicant.about}`,
+                `اسم الملف: ${fileName || 'cv'}`,
+                '',
+                'أعد JSON فقط وفق المخطط المطلوب.'
+              ].join('\n')
+            },
+            {
+              inline_data: {
+                mime_type: mimeType || 'application/pdf',
+                data: cvBuffer.toString('base64')
+              }
+            }
+          ]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: 'application/json',
+        responseJsonSchema: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            decision: {
+              type: 'string',
+              enum: ['accepted', 'rejected']
+            },
+            score: {
+              type: 'integer',
+              minimum: 0,
+              maximum: 100
+            },
+            summary: {
+              type: 'string'
+            },
+            reasons: {
+              type: 'array',
+              items: {
+                type: 'string'
+              },
+              minItems: 1,
+              maxItems: 4
+            }
+          },
+          required: ['decision', 'score', 'summary', 'reasons']
+        }
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`gemini_http_${response.status}:${errorText}`);
+  }
+
+  const payload = await response.json();
+  const responseText = extractGeminiTextResponse(payload);
+  if (!responseText) {
+    throw new Error(`gemini_empty_response:${JSON.stringify(payload?.promptFeedback || {})}`);
+  }
+
+  const parsed = JSON.parse(responseText);
+  return normalizeCommunityAiScreening({
+    decision: parsed.decision,
+    score: parsed.score,
+    summary: parsed.summary,
+    reasons: parsed.reasons,
+    evaluatedAt: new Date().toISOString(),
+    model: GEMINI_MODEL
+  });
 };
 
 const formatYearsOfExperience = (value) => {
@@ -2649,7 +2834,8 @@ app.get('/community', (req, res) => {
           progressSteps: buildCommunityApplicationProgress(
             currentUserApplicationsByJobId.get(job.id).status,
             currentUserApplicationsByJobId.get(job.id).statusHistory
-          )
+          ),
+          aiScreeningView: buildCommunityAiScreeningView(currentUserApplicationsByJobId.get(job.id).aiScreening)
         }
       : null,
     hasApplied: currentUserApplicationsByJobId.has(job.id),
@@ -2663,7 +2849,8 @@ app.get('/community', (req, res) => {
     myApplications: currentUserApplications.map((application) => ({
       ...application,
       statusMeta: getCommunityApplicationStatusMeta(application.status),
-      progressSteps: buildCommunityApplicationProgress(application.status, application.statusHistory)
+      progressSteps: buildCommunityApplicationProgress(application.status, application.statusHistory),
+      aiScreeningView: buildCommunityAiScreeningView(application.aiScreening)
     })),
     error: req.query.error || null,
     success: req.query.success || null
@@ -2901,6 +3088,7 @@ app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadH
 
     const applicationId = uuidv4();
     const relativeCvPath = path.relative(__dirname, file.path).split(path.sep).join('/');
+    const cvBuffer = fs.readFileSync(file.path);
     let cvFilePath = relativeCvPath;
     let cvStorageKey = null;
 
@@ -2908,7 +3096,7 @@ app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadH
       cvStorageKey = `community-cv:${applicationId}`;
       await saveBinaryAsset({
         key: cvStorageKey,
-        buffer: fs.readFileSync(file.path),
+        buffer: cvBuffer,
         mimeType: file.mimetype,
         fileName: file.originalname
       });
@@ -2916,7 +3104,8 @@ app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadH
       cvFilePath = null;
     }
 
-    applications.unshift({
+    const now = new Date().toISOString();
+    const application = {
       id: applicationId,
       jobId: job.id,
       jobTitle: job.title,
@@ -2931,25 +3120,90 @@ app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadH
       cvMimeType: file.mimetype,
       status: 'pending',
       trackingNote: 'تم استلام طلبك وبانتظار مراجعة فريق Codentra.',
-      statusUpdatedAt: new Date().toISOString(),
+      statusUpdatedAt: now,
       statusHistory: [
         buildCommunityApplicationHistoryEntry({
           status: 'pending',
           note: 'تم استلام طلب التقديم.',
-          updatedAt: new Date().toISOString(),
+          updatedAt: now,
           updatedById: req.session.user.id,
           updatedByName: req.session.user.name,
           actorType: 'applicant'
         })
       ],
-      createdAt: new Date().toISOString()
-    });
+      aiScreening: normalizeCommunityAiScreening({
+        decision: GEMINI_API_KEY ? 'pending' : 'skipped',
+        summary: GEMINI_API_KEY ? 'جارٍ تقييم السيرة الذاتية عبر Gemini...' : 'لم يتم تفعيل التقييم الذكي بعد.',
+        reasons: [],
+        evaluatedAt: GEMINI_API_KEY ? now : null,
+        model: GEMINI_API_KEY ? GEMINI_MODEL : null
+      }),
+      createdAt: now
+    };
+
+    if (GEMINI_API_KEY) {
+      try {
+        const aiScreening = await screenCommunityCvWithGemini({
+          job,
+          applicant: { name, age, about },
+          cvBuffer,
+          mimeType: file.mimetype,
+          fileName: file.originalname
+        });
+
+        application.aiScreening = aiScreening;
+        application.statusUpdatedAt = aiScreening.evaluatedAt || new Date().toISOString();
+
+        if (aiScreening.decision === 'accepted') {
+          application.status = 'reviewing';
+          application.trackingNote = aiScreening.summary || 'تم قبولك مبدئيًا عبر التقييم الذكي، والطلب الآن بانتظار مراجعة الإدارة.';
+          application.statusHistory.push(buildCommunityApplicationHistoryEntry({
+            status: 'reviewing',
+            note: `تم قبول الطلب مبدئيًا عبر Gemini.${aiScreening.summary ? ` ${aiScreening.summary}` : ''}`.trim(),
+            updatedAt: application.statusUpdatedAt,
+            updatedByName: 'Gemini AI',
+            actorType: 'system'
+          }));
+        } else if (aiScreening.decision === 'rejected') {
+          application.status = 'rejected';
+          application.trackingNote = aiScreening.summary || 'تم رفض الطلب مبدئيًا عبر التقييم الذكي لعدم ارتباط السيرة الذاتية بالوظيفة.';
+          application.rejectedAt = application.statusUpdatedAt;
+          application.statusHistory.push(buildCommunityApplicationHistoryEntry({
+            status: 'rejected',
+            note: `تم رفض الطلب مبدئيًا عبر Gemini.${aiScreening.summary ? ` ${aiScreening.summary}` : ''}`.trim(),
+            updatedAt: application.statusUpdatedAt,
+            updatedByName: 'Gemini AI',
+            actorType: 'system'
+          }));
+        }
+      } catch (aiError) {
+        console.error('Community AI screening error:', aiError);
+        application.aiScreening = normalizeCommunityAiScreening({
+          decision: 'error',
+          summary: 'تعذر تنفيذ التقييم الذكي الآن، وتم تحويل طلبك للمراجعة اليدوية.',
+          reasons: [],
+          evaluatedAt: new Date().toISOString(),
+          model: GEMINI_MODEL,
+          error: String(aiError && aiError.message ? aiError.message : aiError)
+        });
+        application.trackingNote = 'تم استلام طلبك وبانتظار مراجعة فريق Codentra.';
+      }
+    }
+
+    applications.unshift(application);
     saveCommunityJobApplicationsState(applications);
+
+    let submitMessage = 'تم إرسال طلب التقديم بنجاح';
+    if (application.aiScreening.decision === 'accepted') {
+      submitMessage = 'تم إرسال طلبك وحصل على قبول مبدئي من التقييم الذكي';
+    } else if (application.aiScreening.decision === 'rejected') {
+      submitMessage = 'تم إرسال طلبك لكن التقييم الذكي أعطى رفضًا مبدئيًا، ويمكن للإدارة مراجعته';
+    }
 
     return res.redirect(buildRedirectUrl({
       pathName: '/community',
       hash: '#jobs',
-      success: 'تم إرسال طلب التقديم بنجاح'
+      success: submitMessage
     }));
   } catch (error) {
     if (file) safeDeleteFile(file.path);
@@ -4467,7 +4721,8 @@ app.get('/admin/community/jobs', requireSuperAdmin, (req, res) => {
       ...application,
       statusMeta: getCommunityApplicationStatusMeta(application.status),
       progressSteps: buildCommunityApplicationProgress(application.status, application.statusHistory),
-      latestHistory: application.statusHistory[application.statusHistory.length - 1] || null
+      latestHistory: application.statusHistory[application.statusHistory.length - 1] || null,
+      aiScreeningView: buildCommunityAiScreeningView(application.aiScreening)
     }))
   }));
 

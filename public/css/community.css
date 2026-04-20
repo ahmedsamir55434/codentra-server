@@ -308,6 +308,40 @@
   white-space: pre-wrap;
 }
 
+.community-ai-review {
+  margin: 14px 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.community-ai-review.compact {
+  margin-top: 12px;
+}
+
+.community-ai-review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.community-ai-review p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.community-ai-reasons {
+  margin: 12px 0 0;
+  padding-right: 18px;
+  color: var(--text-secondary);
+  display: grid;
+  gap: 6px;
+}
+
 .community-progress-steps {
   display: flex;
   flex-wrap: wrap;

@@ -406,6 +406,41 @@
   gap: 10px;
 }
 
+.community-ai-review.admin {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.community-ai-review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.community-ai-review.admin p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.community-ai-score {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.community-ai-reasons.admin {
+  margin: 10px 0 0;
+  padding-right: 18px;
+  color: var(--text-secondary);
+  display: grid;
+  gap: 6px;
+}
+
 .community-status-form textarea,
 .community-status-form select {
   width: 100%;

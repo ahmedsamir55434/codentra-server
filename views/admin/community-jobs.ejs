@@ -207,6 +207,24 @@
                           <a href="/admin/community/applications/<%= application.id %>/cv" class="btn btn-sm btn-primary">تحميل CV</a>
                         </td>
                         <td style="min-width: 330px;">
+                          <% if (application.aiScreeningView && application.aiScreeningView.decision !== 'skipped') { %>
+                            <div class="community-ai-review admin">
+                              <div class="community-ai-review-head">
+                                <span class="status-badge <%= application.aiScreeningView.meta.badgeClass %>"><%= application.aiScreeningView.meta.label %></span>
+                                <% if (application.aiScreeningView.score) { %>
+                                  <span class="community-ai-score"><%= application.aiScreeningView.score %>%</span>
+                                <% } %>
+                              </div>
+                              <p><%= application.aiScreeningView.summary || application.aiScreeningView.meta.description %></p>
+                              <% if (application.aiScreeningView.reasons && application.aiScreeningView.reasons.length) { %>
+                                <ul class="community-ai-reasons admin">
+                                  <% application.aiScreeningView.reasons.forEach(reason => { %>
+                                    <li><%= reason %></li>
+                                  <% }) %>
+                                </ul>
+                              <% } %>
+                            </div>
+                          <% } %>
                           <form action="/admin/community/applications/<%= application.id %>/status" method="POST" class="community-status-form">
                             <select name="status" class="community-status-select">
                               <% applicationStatuses.forEach(status => { %>
