@@ -89,8 +89,20 @@
           <div class="stat-label">طلبات التقديم</div>
         </div>
         <div class="stat-card">
+          <div class="stat-value"><%= stats.inProgressApplications %></div>
+          <div class="stat-label">قيد المتابعة</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= stats.hiredApplications %></div>
+          <div class="stat-label">قبول / توظيف</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= stats.rejectedApplications %></div>
+          <div class="stat-label">طلبات مرفوضة</div>
+        </div>
+        <div class="stat-card">
           <div class="stat-value"><a href="/community#jobs" style="color: inherit; text-decoration: none;">عرض</a></div>
-          <div class="stat-label">قسم التوظيف</div>
+          <div class="stat-label">قسم التوظيف بالموقع</div>
         </div>
       </div>
 
@@ -171,23 +183,61 @@
                   <thead>
                     <tr>
                       <th>الاسم</th>
+                      <th>الحالة الحالية</th>
                       <th>العمر</th>
                       <th>عن المتقدم</th>
                       <th>الحساب</th>
-                      <th>التاريخ</th>
+                      <th>آخر تحديث</th>
                       <th>السيرة الذاتية</th>
+                      <th>المتابعة</th>
                     </tr>
                   </thead>
                   <tbody>
                     <% job.applications.forEach(application => { %>
                       <tr>
                         <td><strong><%= application.applicantName %></strong></td>
+                        <td>
+                          <span class="status-badge <%= application.statusMeta.badgeClass %>"><%= application.statusMeta.label %></span>
+                        </td>
                         <td><%= application.applicantAge %></td>
                         <td style="min-width: 280px;"><%= application.about %></td>
                         <td><%= application.userEmail %></td>
-                        <td><%= new Date(application.createdAt).toLocaleString('ar-EG') %></td>
+                        <td><%= new Date(application.statusUpdatedAt || application.createdAt).toLocaleString('ar-EG') %></td>
                         <td>
                           <a href="/admin/community/applications/<%= application.id %>/cv" class="btn btn-sm btn-primary">تحميل CV</a>
+                        </td>
+                        <td style="min-width: 330px;">
+                          <form action="/admin/community/applications/<%= application.id %>/status" method="POST" class="community-status-form">
+                            <select name="status" class="community-status-select">
+                              <% applicationStatuses.forEach(status => { %>
+                                <option value="<%= status.key %>" <%= application.status === status.key ? 'selected' : '' %>><%= status.label %></option>
+                              <% }) %>
+                            </select>
+                            <textarea name="note" rows="3" placeholder="ملاحظة تظهر للمتقدم داخل الموقع"><%= application.trackingNote || '' %></textarea>
+                            <div class="community-status-form-actions">
+                              <button type="submit" class="btn btn-sm btn-success">حفظ الحالة</button>
+                              <details class="community-status-history-admin">
+                                <summary>السجل</summary>
+                                <div class="community-status-history-list admin">
+                                  <% application.statusHistory.slice().reverse().forEach(entry => { const entryMeta = applicationStatuses.find(item => item.key === entry.status) || application.statusMeta; %>
+                                    <div class="community-history-item">
+                                      <div class="community-history-head">
+                                        <span class="status-badge <%= entryMeta.badgeClass %>"><%= entryMeta.label %></span>
+                                        <span><%= new Date(entry.updatedAt).toLocaleString('ar-EG') %></span>
+                                      </div>
+                                      <% if (entry.note) { %>
+                                        <p><%= entry.note %></p>
+                                      <% } %>
+                                      <small>
+                                        <%= entry.actorType === 'admin' ? 'تحديث من الإدارة' : (entry.actorType === 'applicant' ? 'أنشأه المتقدم' : 'تحديث تلقائي') %>
+                                        <% if (entry.updatedByName) { %>- <%= entry.updatedByName %><% } %>
+                                      </small>
+                                    </div>
+                                  <% }) %>
+                                </div>
+                              </details>
+                            </div>
+                          </form>
                         </td>
                       </tr>
                     <% }) %>

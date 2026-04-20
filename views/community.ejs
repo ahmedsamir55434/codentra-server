@@ -154,6 +154,74 @@
           <span class="community-meta-badge"><%= jobs.length %> وظيفة مفتوحة</span>
         </div>
 
+        <% if (user && user.role === 'user' && myApplications && myApplications.length) { %>
+          <div class="community-tracking-panel community-card">
+            <div class="section-header">
+              <div>
+                <h3>متابعة طلباتك</h3>
+                <p>تابع حالة كل طلب من لحظة الاستلام وحتى القبول أو التوظيف النهائي.</p>
+              </div>
+              <span class="community-meta-badge"><%= myApplications.length %> طلب</span>
+            </div>
+
+            <div class="community-tracking-grid">
+              <% myApplications.forEach(application => { %>
+                <article class="community-tracking-card">
+                  <div class="community-tracking-head">
+                    <div>
+                      <h4><%= application.jobTitle %></h4>
+                      <p>آخر تحديث: <%= new Date(application.statusUpdatedAt || application.createdAt).toLocaleString('ar-EG') %></p>
+                    </div>
+                    <span class="status-badge <%= application.statusMeta.badgeClass %>"><%= application.statusMeta.label %></span>
+                  </div>
+
+                  <p class="community-tracking-description"><%= application.trackingNote || application.statusMeta.description %></p>
+
+                  <div class="community-progress-steps">
+                    <% application.progressSteps.forEach(step => { %>
+                      <span class="community-progress-step <%= step.isCurrent ? 'current' : '' %> <%= step.isDone ? 'done' : '' %>">
+                        <%= step.shortLabel %>
+                      </span>
+                    <% }) %>
+                    <% if (application.status === 'rejected') { %>
+                      <span class="community-progress-step rejected current">رفض</span>
+                    <% } %>
+                  </div>
+
+                  <details class="community-status-history">
+                    <summary>سجل المتابعة</summary>
+                    <div class="community-status-history-list">
+                      <% application.statusHistory.slice().reverse().forEach(entry => { const entryMeta = {
+                        pending: { label: 'تم الاستلام', badgeClass: 'pending' },
+                        reviewing: { label: 'قيد المراجعة', badgeClass: 'review' },
+                        shortlisted: { label: 'تم ترشيحك', badgeClass: 'shortlisted' },
+                        interview: { label: 'مرحلة المقابلة', badgeClass: 'interview' },
+                        accepted: { label: 'تم القبول', badgeClass: 'approved' },
+                        hired: { label: 'تم التوظيف', badgeClass: 'hired' },
+                        rejected: { label: 'تم الرفض', badgeClass: 'rejected' }
+                      }[entry.status] || { label: entry.status, badgeClass: 'pending' }; %>
+                        <div class="community-history-item">
+                          <div class="community-history-head">
+                            <span class="status-badge <%= entryMeta.badgeClass %>"><%= entryMeta.label %></span>
+                            <span><%= new Date(entry.updatedAt).toLocaleString('ar-EG') %></span>
+                          </div>
+                          <% if (entry.note) { %>
+                            <p><%= entry.note %></p>
+                          <% } %>
+                          <small>
+                            <%= entry.actorType === 'admin' ? 'تحديث من الإدارة' : (entry.actorType === 'applicant' ? 'تم إنشاؤه مع التقديم' : 'تحديث تلقائي') %>
+                            <% if (entry.updatedByName) { %>- <%= entry.updatedByName %><% } %>
+                          </small>
+                        </div>
+                      <% }) %>
+                    </div>
+                  </details>
+                </article>
+              <% }) %>
+            </div>
+          </div>
+        <% } %>
+
         <% if (!jobs || jobs.length === 0) { %>
           <div class="empty-state">
             <p>لا توجد وظائف مفتوحة الآن. تابعنا هنا أول بأول.</p>
@@ -167,7 +235,11 @@
                     <h3><%= job.title %></h3>
                     <p>نُشرت بواسطة <%= job.createdByName || 'Codentra' %> - <%= new Date(job.createdAt).toLocaleDateString('ar-EG') %></p>
                   </div>
-                  <span class="community-meta-badge">مفتوحة</span>
+                  <% if (job.applicationStatus) { %>
+                    <span class="status-badge <%= job.applicationStatus.statusMeta.badgeClass %>"><%= job.applicationStatus.statusMeta.label %></span>
+                  <% } else { %>
+                    <span class="community-meta-badge">مفتوحة</span>
+                  <% } %>
                 </div>
 
                 <div class="community-job-pills">
@@ -180,7 +252,15 @@
 
                 <% if (user && user.role === 'user') { %>
                   <% if (job.hasApplied) { %>
-                    <div class="success-message community-inline-message">تم إرسال طلبك على هذه الوظيفة بالفعل.</div>
+                    <div class="success-message community-inline-message">
+                      تم إرسال طلبك على هذه الوظيفة.
+                      <% if (job.applicationStatus && job.applicationStatus.statusMeta) { %>
+                        حالته الآن: <strong><%= job.applicationStatus.statusMeta.label %></strong>
+                      <% } %>
+                    </div>
+                    <% if (job.applicationStatus && job.applicationStatus.trackingNote) { %>
+                      <p class="community-tracking-description"><%= job.applicationStatus.trackingNote %></p>
+                    <% } %>
                   <% } else { %>
                     <form action="/community/jobs/<%= job.id %>/apply" method="POST" enctype="multipart/form-data" class="community-apply-form">
                       <div class="form-row">

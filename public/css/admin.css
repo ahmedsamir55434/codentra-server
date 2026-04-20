@@ -381,10 +381,96 @@
   color: #28a745;
 }
 
+.status-badge.review,
+.status-badge.interview {
+  background: linear-gradient(135deg, rgba(13, 110, 253, 0.15), rgba(13, 110, 253, 0.08));
+  border: 1px solid rgba(13, 110, 253, 0.3);
+  color: #6ea8fe;
+}
+
+.status-badge.shortlisted,
+.status-badge.hired {
+  background: linear-gradient(135deg, rgba(25, 135, 84, 0.18), rgba(25, 135, 84, 0.08));
+  border: 1px solid rgba(25, 135, 84, 0.3);
+  color: #57cc99;
+}
+
 .status-badge.rejected {
   background: linear-gradient(135deg, rgba(220, 53, 69, 0.15), rgba(220, 53, 69, 0.08));
   border: 1px solid rgba(220, 53, 69, 0.3);
   color: #dc3545;
+}
+
+.community-status-form {
+  display: grid;
+  gap: 10px;
+}
+
+.community-status-form textarea,
+.community-status-form select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--text-primary);
+}
+
+.community-status-select {
+  min-height: 42px;
+}
+
+.community-status-form textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.community-status-form-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.community-status-history-admin {
+  width: 100%;
+}
+
+.community-status-history-admin summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.community-status-history-list.admin {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.community-history-item {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.community-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.community-history-head span:last-child,
+.community-history-item small {
+  color: var(--text-secondary);
+}
+
+.community-history-item p {
+  margin: 0 0 6px;
+  white-space: pre-wrap;
 }
 
 /* Success/Danger Buttons */

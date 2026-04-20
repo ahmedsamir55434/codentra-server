@@ -1391,6 +1391,82 @@ const COMMUNITY_CV_MIME_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 ]);
 const COMMUNITY_CV_EXTENSIONS = new Set(['.pdf', '.doc', '.docx']);
+const COMMUNITY_APPLICATION_TRACKING_NOTE_LIMIT = 600;
+const COMMUNITY_APPLICATION_STATUSES = [
+  {
+    key: 'pending',
+    label: 'تم الاستلام',
+    shortLabel: 'استلام',
+    badgeClass: 'pending',
+    description: 'تم استلام طلبك وهو في انتظار المراجعة الأولية.',
+    order: 0,
+    isFinal: false,
+    isPositive: false
+  },
+  {
+    key: 'reviewing',
+    label: 'قيد المراجعة',
+    shortLabel: 'مراجعة',
+    badgeClass: 'review',
+    description: 'الفريق يراجع بياناتك وسيرتك الذاتية الآن.',
+    order: 1,
+    isFinal: false,
+    isPositive: false
+  },
+  {
+    key: 'shortlisted',
+    label: 'تم ترشيحك',
+    shortLabel: 'ترشيح',
+    badgeClass: 'shortlisted',
+    description: 'أنت ضمن القائمة القصيرة المرشحة للخطوة التالية.',
+    order: 2,
+    isFinal: false,
+    isPositive: true
+  },
+  {
+    key: 'interview',
+    label: 'مرحلة المقابلة',
+    shortLabel: 'مقابلة',
+    badgeClass: 'interview',
+    description: 'تم نقلك لمرحلة المقابلة أو التقييم العملي.',
+    order: 3,
+    isFinal: false,
+    isPositive: true
+  },
+  {
+    key: 'accepted',
+    label: 'تم القبول',
+    shortLabel: 'قبول',
+    badgeClass: 'approved',
+    description: 'تم قبولك مبدئيًا، ونستكمل الآن خطوات الانضمام.',
+    order: 4,
+    isFinal: false,
+    isPositive: true
+  },
+  {
+    key: 'hired',
+    label: 'تم التوظيف',
+    shortLabel: 'توظيف',
+    badgeClass: 'hired',
+    description: 'مبروك، تم تأكيد التوظيف وإغلاق رحلتك بنجاح.',
+    order: 5,
+    isFinal: true,
+    isPositive: true
+  },
+  {
+    key: 'rejected',
+    label: 'تم الرفض',
+    shortLabel: 'رفض',
+    badgeClass: 'rejected',
+    description: 'للأسف لم يكتمل القبول في هذه المرحلة.',
+    order: 6,
+    isFinal: true,
+    isPositive: false
+  }
+];
+const COMMUNITY_APPLICATION_STATUS_MAP = new Map(
+  COMMUNITY_APPLICATION_STATUSES.map((status) => [status.key, status])
+);
 
 const buildSafeUploadFileName = ({ file, fallbackBaseName }) => {
   const safeOriginal = (file && file.originalname ? file.originalname : fallbackBaseName || 'file')
@@ -1416,6 +1492,92 @@ const normalizeCommunityPost = (post) => ({
   comments: Array.isArray(post && post.comments) ? post.comments : []
 });
 
+const getCommunityApplicationStatusMeta = (statusKey) => {
+  return COMMUNITY_APPLICATION_STATUS_MAP.get(statusKey) || COMMUNITY_APPLICATION_STATUS_MAP.get('pending');
+};
+
+const normalizeCommunityApplicationStatus = (statusKey) => getCommunityApplicationStatusMeta(statusKey).key;
+
+const buildCommunityApplicationHistoryEntry = ({
+  status,
+  note,
+  updatedAt,
+  updatedById,
+  updatedByName,
+  actorType
+}) => {
+  const normalizedStatus = normalizeCommunityApplicationStatus(status);
+  return {
+    status: normalizedStatus,
+    note: (note || '').toString().trim(),
+    updatedAt: updatedAt || new Date().toISOString(),
+    updatedById: updatedById || null,
+    updatedByName: updatedByName || null,
+    actorType: actorType || 'system'
+  };
+};
+
+const normalizeCommunityJobApplication = (application) => {
+  const normalized = { ...(application || {}) };
+  const currentStatus = normalizeCommunityApplicationStatus(normalized.status);
+  const createdAt = normalized.createdAt || new Date().toISOString();
+  const rawHistory = Array.isArray(normalized.statusHistory) ? normalized.statusHistory : [];
+  const history = rawHistory
+    .filter((entry) => entry && typeof entry === 'object')
+    .map((entry) => buildCommunityApplicationHistoryEntry({
+      status: entry.status,
+      note: entry.note,
+      updatedAt: entry.updatedAt,
+      updatedById: entry.updatedById,
+      updatedByName: entry.updatedByName,
+      actorType: entry.actorType
+    }))
+    .sort((a, b) => new Date(a.updatedAt || 0).getTime() - new Date(b.updatedAt || 0).getTime());
+
+  if (!history.length) {
+    history.push(buildCommunityApplicationHistoryEntry({
+      status: currentStatus,
+      note: currentStatus === 'pending' ? 'تم استلام طلب التقديم.' : '',
+      updatedAt: normalized.statusUpdatedAt || createdAt,
+      updatedById: normalized.userId || null,
+      updatedByName: normalized.applicantName || null,
+      actorType: 'applicant'
+    }));
+  }
+
+  normalized.status = currentStatus;
+  normalized.createdAt = createdAt;
+  normalized.statusHistory = history;
+  normalized.statusUpdatedAt = normalized.statusUpdatedAt || history[history.length - 1].updatedAt || createdAt;
+  normalized.trackingNote = (normalized.trackingNote || normalized.lastStatusNote || '').toString().trim();
+  normalized.hiredAt = normalized.hiredAt || (currentStatus === 'hired' ? normalized.statusUpdatedAt : null);
+  normalized.rejectedAt = normalized.rejectedAt || (currentStatus === 'rejected' ? normalized.statusUpdatedAt : null);
+
+  return normalized;
+};
+
+const buildCommunityApplicationProgress = (statusKey, statusHistory = []) => {
+  const currentMeta = getCommunityApplicationStatusMeta(statusKey);
+  const completedStatuses = new Set(
+    (Array.isArray(statusHistory) ? statusHistory : [])
+      .map((entry) => normalizeCommunityApplicationStatus(entry && entry.status))
+      .filter((status) => status && status !== 'rejected')
+  );
+
+  return COMMUNITY_APPLICATION_STATUSES
+    .filter((status) => status.key !== 'rejected')
+    .map((status) => ({
+      ...status,
+      isCurrent: currentMeta.key !== 'rejected' && status.key === currentMeta.key,
+      isDone: currentMeta.key === 'rejected'
+        ? completedStatuses.has(status.key)
+        : status.order < currentMeta.order,
+      isUpcoming: currentMeta.key === 'rejected'
+        ? !completedStatuses.has(status.key)
+        : status.order > currentMeta.order
+    }));
+};
+
 const getCommunityPostsState = () => {
   const posts = db.communityPosts();
   return Array.isArray(posts) ? posts.map(normalizeCommunityPost) : [];
@@ -1436,11 +1598,13 @@ const saveCommunityJobsState = (jobs) => {
 
 const getCommunityJobApplicationsState = () => {
   const applications = db.communityJobApplications();
-  return Array.isArray(applications) ? applications : [];
+  return Array.isArray(applications) ? applications.map(normalizeCommunityJobApplication) : [];
 };
 
 const saveCommunityJobApplicationsState = (applications) => {
-  db.saveCommunityJobApplications(Array.isArray(applications) ? applications : []);
+  db.saveCommunityJobApplications(
+    Array.isArray(applications) ? applications.map(normalizeCommunityJobApplication) : []
+  );
 };
 
 const isCommunityMemberSession = (sessionUser) => Boolean(sessionUser && sessionUser.role === 'user');
@@ -1564,6 +1728,12 @@ function applyRuntimeDataFixups(state) {
   const normalizedPosts = state.communityPosts.map(normalizeCommunityPost);
   if (JSON.stringify(normalizedPosts) !== JSON.stringify(state.communityPosts)) {
     state.communityPosts = normalizedPosts;
+    changed = true;
+  }
+
+  const normalizedApplications = state.communityJobApplications.map(normalizeCommunityJobApplication);
+  if (JSON.stringify(normalizedApplications) !== JSON.stringify(state.communityJobApplications)) {
+    state.communityJobApplications = normalizedApplications;
     changed = true;
   }
 
@@ -2463,16 +2633,26 @@ app.get('/community', (req, res) => {
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   const applications = getCommunityJobApplicationsState();
   const applicationsByJobId = buildCommunityJobApplicationsMap(applications);
-  const appliedJobIds = new Set(
-    applications
-      .filter(application => currentUser && application && application.userId === currentUser.id)
-      .map(application => application.jobId)
-  );
+  const currentUserApplications = applications
+    .filter(application => currentUser && application && application.userId === currentUser.id)
+    .slice()
+    .sort((a, b) => new Date(b.statusUpdatedAt || b.createdAt || 0).getTime() - new Date(a.statusUpdatedAt || a.createdAt || 0).getTime());
+  const currentUserApplicationsByJobId = new Map(currentUserApplications.map((application) => [application.jobId, application]));
 
   const jobsForView = jobs.map(job => ({
     ...job,
     applicationCount: (applicationsByJobId.get(job.id) || []).length,
-    hasApplied: appliedJobIds.has(job.id),
+    applicationStatus: currentUserApplicationsByJobId.has(job.id)
+      ? {
+          ...currentUserApplicationsByJobId.get(job.id),
+          statusMeta: getCommunityApplicationStatusMeta(currentUserApplicationsByJobId.get(job.id).status),
+          progressSteps: buildCommunityApplicationProgress(
+            currentUserApplicationsByJobId.get(job.id).status,
+            currentUserApplicationsByJobId.get(job.id).statusHistory
+          )
+        }
+      : null,
+    hasApplied: currentUserApplicationsByJobId.has(job.id),
     yearsLabel: formatYearsOfExperience(job.experienceYears)
   }));
 
@@ -2480,6 +2660,11 @@ app.get('/community', (req, res) => {
     user: currentUser,
     posts,
     jobs: jobsForView,
+    myApplications: currentUserApplications.map((application) => ({
+      ...application,
+      statusMeta: getCommunityApplicationStatusMeta(application.status),
+      progressSteps: buildCommunityApplicationProgress(application.status, application.statusHistory)
+    })),
     error: req.query.error || null,
     success: req.query.success || null
   });
@@ -2745,6 +2930,18 @@ app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadH
       cvOriginalName: file.originalname,
       cvMimeType: file.mimetype,
       status: 'pending',
+      trackingNote: 'تم استلام طلبك وبانتظار مراجعة فريق Codentra.',
+      statusUpdatedAt: new Date().toISOString(),
+      statusHistory: [
+        buildCommunityApplicationHistoryEntry({
+          status: 'pending',
+          note: 'تم استلام طلب التقديم.',
+          updatedAt: new Date().toISOString(),
+          updatedById: req.session.user.id,
+          updatedByName: req.session.user.name,
+          actorType: 'applicant'
+        })
+      ],
       createdAt: new Date().toISOString()
     });
     saveCommunityJobApplicationsState(applications);
@@ -4266,19 +4463,34 @@ app.get('/admin/community/jobs', requireSuperAdmin, (req, res) => {
   const jobsWithApplications = jobs.map(job => ({
     ...job,
     yearsLabel: formatYearsOfExperience(job.experienceYears),
-    applications: (applicationsByJobId.get(job.id) || []).slice()
+    applications: (applicationsByJobId.get(job.id) || []).slice().map((application) => ({
+      ...application,
+      statusMeta: getCommunityApplicationStatusMeta(application.status),
+      progressSteps: buildCommunityApplicationProgress(application.status, application.statusHistory),
+      latestHistory: application.statusHistory[application.statusHistory.length - 1] || null
+    }))
   }));
+
+  const statusCounts = applications.reduce((counts, application) => {
+    const status = normalizeCommunityApplicationStatus(application.status);
+    counts[status] = (counts[status] || 0) + 1;
+    return counts;
+  }, {});
 
   const stats = {
     totalJobs: jobs.length,
     activeJobs: jobs.filter(job => job && job.isActive !== false).length,
-    totalApplications: applications.length
+    totalApplications: applications.length,
+    inProgressApplications: applications.filter((application) => !getCommunityApplicationStatusMeta(application.status).isFinal).length,
+    hiredApplications: (statusCounts.hired || 0) + (statusCounts.accepted || 0),
+    rejectedApplications: statusCounts.rejected || 0
   };
 
   res.render('admin/community-jobs', {
     user: req.session.user,
     jobs: jobsWithApplications,
     stats,
+    applicationStatuses: COMMUNITY_APPLICATION_STATUSES,
     error: req.query.error || null,
     success: req.query.success || null
   });
@@ -4334,6 +4546,62 @@ app.post('/admin/community/jobs/:id/toggle', requireSuperAdmin, (req, res) => {
   res.redirect('/admin/community/jobs?success=' + encodeURIComponent(
     jobs[jobIndex].isActive ? 'تم فتح الوظيفة للتقديم' : 'تم إغلاق الوظيفة'
   ));
+});
+
+app.post('/admin/community/applications/:id/status', requireSuperAdmin, (req, res) => {
+  const nextStatus = normalizeCommunityApplicationStatus(req.body.status);
+  const note = (req.body.note || '').toString().trim();
+  const applications = getCommunityJobApplicationsState();
+  const applicationIndex = applications.findIndex((item) => item && item.id === req.params.id);
+
+  if (applicationIndex === -1) {
+    return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('طلب التقديم غير موجود'));
+  }
+
+  if (!COMMUNITY_APPLICATION_STATUS_MAP.has(nextStatus)) {
+    return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('حالة التقديم غير صحيحة'));
+  }
+
+  if (note.length > COMMUNITY_APPLICATION_TRACKING_NOTE_LIMIT) {
+    return res.redirect('/admin/community/jobs?error=' + encodeURIComponent(`ملاحظة المتابعة يجب ألا تتجاوز ${COMMUNITY_APPLICATION_TRACKING_NOTE_LIMIT} حرف`));
+  }
+
+  const application = normalizeCommunityJobApplication(applications[applicationIndex]);
+  const now = new Date().toISOString();
+  const hasStatusChanged = application.status !== nextStatus;
+  const hasNoteChanged = note !== (application.trackingNote || '');
+
+  if (!hasStatusChanged && !hasNoteChanged) {
+    return res.redirect('/admin/community/jobs?success=' + encodeURIComponent('لا توجد تغييرات جديدة على حالة الطلب'));
+  }
+
+  application.status = nextStatus;
+  application.statusUpdatedAt = now;
+  application.trackingNote = note;
+  application.statusHistory.push(buildCommunityApplicationHistoryEntry({
+    status: nextStatus,
+    note,
+    updatedAt: now,
+    updatedById: req.session.user.id,
+    updatedByName: req.session.user.name,
+    actorType: 'admin'
+  }));
+
+  if (nextStatus === 'hired') {
+    application.hiredAt = now;
+    application.rejectedAt = null;
+  } else if (nextStatus === 'rejected') {
+    application.rejectedAt = now;
+    application.hiredAt = null;
+  } else {
+    application.hiredAt = null;
+    application.rejectedAt = null;
+  }
+
+  applications[applicationIndex] = application;
+  saveCommunityJobApplicationsState(applications);
+
+  return res.redirect('/admin/community/jobs?success=' + encodeURIComponent('تم تحديث حالة طلب التقديم بنجاح'));
 });
 
 app.get('/admin/community/applications/:id/cv', requireSuperAdmin, async (req, res) => {

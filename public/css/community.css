@@ -223,10 +223,175 @@
   margin-bottom: 0;
 }
 
+.status-badge {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.status-badge.pending {
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.28);
+  color: #ffc107;
+}
+
+.status-badge.review,
+.status-badge.interview {
+  background: rgba(13, 110, 253, 0.14);
+  border: 1px solid rgba(13, 110, 253, 0.28);
+  color: #6ea8fe;
+}
+
+.status-badge.shortlisted,
+.status-badge.approved,
+.status-badge.hired {
+  background: rgba(25, 135, 84, 0.16);
+  border: 1px solid rgba(25, 135, 84, 0.3);
+  color: #5dd39e;
+}
+
+.status-badge.rejected {
+  background: rgba(220, 53, 69, 0.14);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  color: #ff8a98;
+}
+
+.community-tracking-panel {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.community-tracking-panel .section-header p {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+}
+
+.community-tracking-grid {
+  display: grid;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.community-tracking-card {
+  padding: 20px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.community-tracking-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.community-tracking-head h4 {
+  margin: 0 0 6px 0;
+}
+
+.community-tracking-head p,
+.community-history-item small {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.community-tracking-description {
+  margin: 14px 0;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.community-progress-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.community-progress-step {
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.community-progress-step.done,
+.community-progress-step.current {
+  border-style: solid;
+  color: var(--text-primary);
+}
+
+.community-progress-step.done {
+  border-color: rgba(25, 135, 84, 0.28);
+  background: rgba(25, 135, 84, 0.16);
+}
+
+.community-progress-step.current {
+  border-color: rgba(13, 110, 253, 0.35);
+  background: rgba(13, 110, 253, 0.16);
+}
+
+.community-progress-step.rejected {
+  border-color: rgba(220, 53, 69, 0.35);
+  background: rgba(220, 53, 69, 0.16);
+}
+
+.community-status-history {
+  border-top: 1px solid var(--glass-border);
+  padding-top: 14px;
+}
+
+.community-status-history summary {
+  cursor: pointer;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.community-status-history-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.community-history-item {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.community-history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.community-history-head span:last-child {
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.community-history-item p {
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 900px) {
   .community-hero,
   .community-post-header,
-  .community-job-head {
+  .community-job-head,
+  .community-tracking-head,
+  .community-history-head {
     flex-direction: column;
   }
 
@@ -252,7 +417,8 @@
   .community-job-pills,
   .community-post-actions,
   .community-hero-actions,
-  .community-job-cta {
+  .community-job-cta,
+  .community-progress-steps {
     width: 100%;
   }
 
