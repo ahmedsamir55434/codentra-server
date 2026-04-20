@@ -1730,6 +1730,122 @@ const extractGeminiTextResponse = (payload) => {
   return textPart ? textPart.text.trim() : null;
 };
 
+const parseGeminiJsonResponse = (responseText) => {
+  const rawText = String(responseText || '').trim();
+  if (!rawText) throw new Error('gemini_empty_text');
+
+  const cleaned = rawText
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  const jsonText = jsonMatch ? jsonMatch[0] : cleaned;
+  return JSON.parse(jsonText);
+};
+
+const getCommunityAiScreeningSchema = () => ({
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    decision: {
+      type: 'string',
+      enum: ['accepted', 'rejected']
+    },
+    score: {
+      type: 'integer',
+      minimum: 0,
+      maximum: 100
+    },
+    summary: {
+      type: 'string'
+    },
+    reasons: {
+      type: 'array',
+      items: {
+        type: 'string'
+      },
+      minItems: 1,
+      maxItems: 4
+    }
+  },
+  required: ['decision', 'score', 'summary', 'reasons']
+});
+
+const buildCommunityAiPromptText = ({ job, applicant, fileName, sourceLabel, plainJsonOnly = false }) => [
+  'أنت مسؤول توظيف أولي في Codentra.',
+  'قيّم السيرة الذاتية المرفوعة مقارنة بالوظيفة المعروضة.',
+  'أعطِ قرارًا ثنائيًا فقط: accepted أو rejected.',
+  'اختر rejected فقط إذا كانت السيرة الذاتية بعيدة بوضوح عن الوظيفة أو تفتقد الحد الأدنى من الصلة المطلوبة.',
+  'اختر accepted إذا كانت هناك صلة معقولة أو قابلية للانتقال للمرحلة التالية.',
+  'اكتب النتيجة بالعربية المختصرة والواضحة.',
+  plainJsonOnly ? 'أعد JSON فقط بدون markdown أو شرح إضافي.' : 'أعد JSON فقط وفق المخطط المطلوب.',
+  '',
+  `اسم الوظيفة: ${job.title}`,
+  `الوصف الوظيفي: ${job.description}`,
+  `الأجر: ${job.salary}`,
+  `سنوات الخبرة المطلوبة: ${formatYearsOfExperience(job.experienceYears)}`,
+  '',
+  `بيانات المتقدم: الاسم ${applicant.name}، العمر ${applicant.age}`,
+  `نبذة المتقدم: ${applicant.about}`,
+  `اسم الملف: ${fileName || 'cv'}`,
+  `صيغة السيرة الذاتية المستخدمة في التقييم: ${sourceLabel}`,
+  plainJsonOnly ? 'استخدم هذا الشكل حرفيًا: {"decision":"accepted","score":75,"summary":"...","reasons":["..."]}' : ''
+].filter(Boolean).join('\n');
+
+const requestCommunityGeminiScreening = async ({ cvContent, job, applicant, fileName, useSchema }) => {
+  const generationConfig = {
+    temperature: 0.1
+  };
+
+  if (useSchema) {
+    generationConfig.responseMimeType = 'application/json';
+    generationConfig.responseJsonSchema = getCommunityAiScreeningSchema();
+  }
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': GEMINI_API_KEY
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            ...cvContent.parts,
+            {
+              text: buildCommunityAiPromptText({
+                job,
+                applicant,
+                fileName,
+                sourceLabel: cvContent.sourceLabel,
+                plainJsonOnly: !useSchema
+              })
+            }
+          ]
+        }
+      ],
+      generationConfig
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`gemini_http_${response.status}:${errorText}`);
+  }
+
+  const payload = await response.json();
+  const responseText = extractGeminiTextResponse(payload);
+  if (!responseText) {
+    throw new Error(`gemini_empty_response:${JSON.stringify(payload?.promptFeedback || {})}`);
+  }
+
+  return parseGeminiJsonResponse(responseText);
+};
+
 const buildCommunityCvContentParts = async ({ cvBuffer, mimeType, fileName }) => {
   const normalizedMimeType = String(mimeType || '').toLowerCase();
   const normalizedFileName = String(fileName || '').toLowerCase();
@@ -1785,90 +1901,32 @@ const screenCommunityCvWithGemini = async ({ job, applicant, cvBuffer, mimeType,
   }
 
   const cvContent = await buildCommunityCvContentParts({ cvBuffer, mimeType, fileName });
+  let parsed;
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': GEMINI_API_KEY
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            ...cvContent.parts,
-            {
-              text: [
-                'أنت مسؤول توظيف أولي في Codentra.',
-                'قيّم السيرة الذاتية المرفوعة مقارنة بالوظيفة المعروضة.',
-                'أعطِ قرارًا ثنائيًا فقط: accepted أو rejected.',
-                'اختر rejected فقط إذا كانت السيرة الذاتية بعيدة بوضوح عن الوظيفة أو تفتقد الحد الأدنى من الصلة المطلوبة.',
-                'اختر accepted إذا كانت هناك صلة معقولة أو قابلية للانتقال للمرحلة التالية.',
-                'اكتب النتيجة بالعربية المختصرة والواضحة.',
-                '',
-                `اسم الوظيفة: ${job.title}`,
-                `الوصف الوظيفي: ${job.description}`,
-                `الأجر: ${job.salary}`,
-                `سنوات الخبرة المطلوبة: ${formatYearsOfExperience(job.experienceYears)}`,
-                '',
-                `بيانات المتقدم: الاسم ${applicant.name}، العمر ${applicant.age}`,
-                `نبذة المتقدم: ${applicant.about}`,
-                `اسم الملف: ${fileName || 'cv'}`,
-                `صيغة السيرة الذاتية المستخدمة في التقييم: ${cvContent.sourceLabel}`,
-                '',
-                'أعد JSON فقط وفق المخطط المطلوب.'
-              ].join('\n')
-            }
-          ]
-        }
-      ],
-      generationConfig: {
-        temperature: 0.1,
-        responseMimeType: 'application/json',
-        responseJsonSchema: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            decision: {
-              type: 'string',
-              enum: ['accepted', 'rejected']
-            },
-            score: {
-              type: 'integer',
-              minimum: 0,
-              maximum: 100
-            },
-            summary: {
-              type: 'string'
-            },
-            reasons: {
-              type: 'array',
-              items: {
-                type: 'string'
-              },
-              minItems: 1,
-              maxItems: 4
-            }
-          },
-          required: ['decision', 'score', 'summary', 'reasons']
-        }
-      }
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`gemini_http_${response.status}:${errorText}`);
+  try {
+    parsed = await requestCommunityGeminiScreening({
+      cvContent,
+      job,
+      applicant,
+      fileName,
+      useSchema: true
+    });
+  } catch (primaryError) {
+    try {
+      parsed = await requestCommunityGeminiScreening({
+        cvContent,
+        job,
+        applicant,
+        fileName,
+        useSchema: false
+      });
+    } catch (fallbackError) {
+      throw new Error(
+        `gemini_screening_failed:primary=${String(primaryError && primaryError.message ? primaryError.message : primaryError)};fallback=${String(fallbackError && fallbackError.message ? fallbackError.message : fallbackError)}`
+      );
+    }
   }
 
-  const payload = await response.json();
-  const responseText = extractGeminiTextResponse(payload);
-  if (!responseText) {
-    throw new Error(`gemini_empty_response:${JSON.stringify(payload?.promptFeedback || {})}`);
-  }
-
-  const parsed = JSON.parse(responseText);
   return normalizeCommunityAiScreening({
     decision: parsed.decision,
     score: parsed.score,
@@ -3226,15 +3284,38 @@ app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadH
         const aiErrorMessage = String(aiError && aiError.message ? aiError.message : aiError);
         const unsupportedFormat = aiErrorMessage.includes('unsupported_cv_ai_format');
         const emptyDocxText = aiErrorMessage.includes('empty_docx_text');
+        const invalidApiKey = aiErrorMessage.includes('gemini_http_401') || aiErrorMessage.includes('gemini_http_403');
+        const invalidModel = aiErrorMessage.includes('gemini_http_404');
+        const invalidRequest = aiErrorMessage.includes('gemini_http_400');
+        const quotaExceeded = aiErrorMessage.includes('gemini_http_429');
         const fallbackSummary = unsupportedFormat
           ? 'التقييم الذكي يدعم حاليًا ملفات PDF و DOCX فقط. ارفع السيرة الذاتية بإحدى هاتين الصيغتين للحصول على قرار فوري.'
           : emptyDocxText
             ? 'تعذر قراءة محتوى ملف الـ DOCX لتقييمه تلقائيًا، وسيتم تحويل الطلب للمراجعة اليدوية.'
-            : 'تعذر تنفيذ التقييم الذكي الآن، وتم تحويل طلبك للمراجعة اليدوية.';
+            : invalidApiKey
+              ? 'مفتاح Gemini غير صالح أو غير مصرح به، لذلك تم تحويل الطلب للمراجعة اليدوية.'
+              : invalidModel
+                ? 'اسم موديل Gemini غير صحيح أو غير متاح حاليًا، لذلك تم تحويل الطلب للمراجعة اليدوية.'
+                : quotaExceeded
+                  ? 'تم تجاوز حد استخدام Gemini مؤقتًا، لذلك تم تحويل الطلب للمراجعة اليدوية.'
+                  : invalidRequest
+                    ? 'Gemini رفض طلب التقييم بسبب إعداد غير متوافق، لذلك تم تحويل الطلب للمراجعة اليدوية.'
+                    : 'تعذر تنفيذ التقييم الذكي الآن، وتم تحويل طلبك للمراجعة اليدوية.';
+        const aiReasons = unsupportedFormat || emptyDocxText
+          ? []
+          : invalidApiKey
+            ? ['راجع قيمة `GEMINI_API_KEY` في Environment Variables.']
+            : invalidModel
+              ? ['راجع قيمة `GEMINI_MODEL` أو احذفها لاستخدام القيمة الافتراضية.']
+              : quotaExceeded
+                ? ['انتظر قليلًا أو راجع حدود الاستخدام في حساب Gemini.']
+                : invalidRequest
+                  ? ['Gemini أعاد خطأ 400؛ غالبًا المشكلة من إعداد الطلب أو تنسيق الملف المرسل.']
+                  : [];
         application.aiScreening = normalizeCommunityAiScreening({
           decision: 'error',
           summary: fallbackSummary,
-          reasons: [],
+          reasons: aiReasons,
           evaluatedAt: new Date().toISOString(),
           model: GEMINI_MODEL,
           error: aiErrorMessage
