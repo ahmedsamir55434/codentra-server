@@ -55,9 +55,11 @@
           <a href="/admin/subscription-reports">تقارير الاشتراك</a>
         <% } %>
         <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/community/jobs">وظائف الكوميونتي</a>
           <a href="/admin/meeting-recordings">تسجيلات الاجتماعات</a>
           <a href="/admin/admins">إدارة الأدمنز</a>
         <% } %>
+        <a href="/community">فتح الكوميونتي</a>
         <a href="/admin/users">المستخدمين</a>
         <a href="/">العودة للموقع</a>
       </nav>
@@ -84,6 +86,37 @@
           <div class="stat-label">مبيعات الشهر</div>
         </div>
       </div>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <h2>الكوميونتي</h2>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="/community" class="btn btn-sm btn-secondary" target="_blank">فتح الكوميونتي</a>
+            <% if (user && user.isSuperAdmin) { %>
+              <a href="/admin/community/jobs" class="btn btn-sm btn-primary">إدارة الوظائف</a>
+            <% } %>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">Community</div>
+            <div class="stat-label">صفحة موحدة للبوستات والوظائف</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">Admins</div>
+            <div class="stat-label">كل الأدمنز يقدروا ينشروا بوستات</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">Users</div>
+            <div class="stat-label">الحسابات العادية تقدر تعمل لايك، تعليق، وشير</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">Jobs</div>
+            <div class="stat-label">قسم توظيف مع CV من نفس قاعدة البيانات الحالية</div>
+          </div>
+        </div>
+      </section>
 
       <section class="admin-section">
         <div class="section-header">

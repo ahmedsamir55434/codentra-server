@@ -5,132 +5,227 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Community - Codentra</title>
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/community.css">
 </head>
 <body>
-  <%- include('partials/header', { user: user }) %>
+  <%- include('partials/header') %>
 
-  <main class="container" style="padding: 30px 0;">
-    <h1 style="margin-bottom: 10px;">Community</h1>
-
-    <% if (error) { %>
-      <div style="background:#ffe5e5;color:#a30000;padding:10px;border-radius:8px;margin:10px 0;"><%= error %></div>
-    <% } %>
-    <% if (success) { %>
-      <div style="background:#e7ffe5;color:#116400;padding:10px;border-radius:8px;margin:10px 0;"><%= success %></div>
-    <% } %>
-
-    <section style="margin: 20px 0;">
-      <h2 style="margin-bottom: 10px;">وظائف</h2>
-      <% if (!jobs || jobs.length === 0) { %>
-        <div class="empty-state"><p>لا توجد وظائف حالياً</p></div>
-      <% } else { %>
-        <div class="projects-grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
-          <% jobs.slice(0, 6).forEach(job => { %>
-            <div class="project-card">
-              <div class="project-content">
-                <h3 class="project-title"><%= job.title %></h3>
-                <p class="project-description"><%= job.description %></p>
-                <p style="margin: 8px 0;"><strong>الأجر:</strong> <%= job.salary %></p>
-                <p style="margin: 8px 0;"><strong>الخبرة:</strong> <%= job.experienceYears %> سنة</p>
-                <a class="btn btn-primary" href="/community/jobs/<%= job.id %>">التفاصيل والتقديم</a>
-              </div>
-            </div>
-          <% }) %>
+  <main class="community-page">
+    <div class="container">
+      <section class="community-hero">
+        <div>
+          <span class="community-eyebrow">Codentra Community</span>
+          <h1>مجتمع Codentra</h1>
+          <p>مكان واحد لبوستات الإدارة، التفاعل من الأعضاء، والوظائف المفتوحة داخل الشركة.</p>
         </div>
-        <div style="margin-top: 10px;">
-          <a href="/community/jobs">عرض كل الوظائف</a>
+        <div class="community-hero-actions">
+          <a href="#community-feed" class="btn btn-primary">البوستات</a>
+          <a href="#jobs" class="btn btn-secondary">الوظائف</a>
+          <% if (user && user.role === 'admin' && user.isSuperAdmin) { %>
+            <a href="/admin/community/jobs" class="btn btn-secondary">إدارة الوظائف</a>
+          <% } %>
         </div>
+      </section>
+
+      <% if (error) { %>
+        <div class="error-message"><%= error %></div>
       <% } %>
-    </section>
-
-    <section style="margin: 20px 0;">
-      <h2 style="margin-bottom: 10px;">المنشورات</h2>
+      <% if (success) { %>
+        <div class="success-message"><%= success %></div>
+      <% } %>
 
       <% if (user && user.role === 'admin') { %>
-        <form action="/community/posts" method="POST" enctype="multipart/form-data" style="background: var(--card-bg, #fff); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.08);">
-          <div class="form-group">
-            <label>النص</label>
-            <textarea name="text" rows="3" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.2);"></textarea>
+        <section class="community-card community-composer">
+          <div class="section-header">
+            <h2>انشر بوست جديد</h2>
+            <span class="community-meta-badge"><%= user.isSuperAdmin ? 'سوبر أدمن' : 'أدمن' %></span>
           </div>
-          <div class="form-group">
-            <label>صورة أو فيديو</label>
-            <input type="file" name="media" accept="image/*,video/*" />
-          </div>
-          <button type="submit" class="btn btn-primary">نشر</button>
-        </form>
-      <% } %>
-
-      <% if (!posts || posts.length === 0) { %>
-        <div class="empty-state"><p>لا توجد منشورات بعد</p></div>
+          <form action="/community/posts" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+              <label for="communityPostContent">النص</label>
+              <textarea id="communityPostContent" name="content" rows="5" placeholder="اكتب تحديث، خبر، إعلان أو أي رسالة للمجتمع..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="communityPostMedia">صورة أو فيديو</label>
+              <input id="communityPostMedia" type="file" name="media" accept="image/*,video/*">
+              <div class="file-info">يمكنك النشر بصورة أو فيديو مع النص أو بدونه.</div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">نشر البوست</button>
+            </div>
+          </form>
+        </section>
       <% } else { %>
-        <% posts.forEach(p => { %>
-          <article style="background: var(--card-bg, #fff); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.08);">
-            <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;">
-              <div>
-                <strong><%= p.authorName %></strong>
-                <div style="opacity:0.7;font-size:12px;"><%= new Date(p.createdAt).toLocaleString('ar-EG') %></div>
-              </div>
-              <div style="opacity:0.8;font-size:12px;">
-                <span>👍 <%= p.likesCount %></span>
-                <span style="margin-right:10px;">💬 <%= p.commentsCount %></span>
-                <span style="margin-right:10px;">🔁 <%= p.sharesCount %></span>
-              </div>
-            </div>
-
-            <% if (p.text) { %>
-              <p style="margin: 10px 0; white-space: pre-wrap;"><%= p.text %></p>
-            <% } %>
-
-            <% if (p.mediaUrl) { %>
-              <% if (p.mediaType === 'video') { %>
-                <video src="<%= p.mediaUrl %>" controls style="width:100%;border-radius:12px;max-height:420px;"></video>
-              <% } else { %>
-                <img src="<%= p.mediaUrl %>" alt="post media" style="width:100%;border-radius:12px;max-height:420px;object-fit:cover;" />
-              <% } %>
-            <% } %>
-
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
-              <% if (user) { %>
-                <form action="/community/posts/<%= p.id %>/like" method="POST">
-                  <button type="submit" class="btn btn-secondary"><%= p.likedByMe ? 'إلغاء لايك' : 'لايك' %></button>
-                </form>
-                <form action="/community/posts/<%= p.id %>/share" method="POST">
-                  <button type="submit" class="btn btn-secondary">شير</button>
-                </form>
-              <% } else { %>
-                <a href="/login" class="btn btn-secondary">سجّل دخول للتفاعل</a>
-              <% } %>
-            </div>
-
-            <div style="margin-top: 12px;">
-              <h4 style="margin: 0 0 8px 0;">التعليقات</h4>
-              <% if (Array.isArray(p.comments) && p.comments.length) { %>
-                <div style="display:flex;flex-direction:column;gap:8px;">
-                  <% p.comments.slice().reverse().slice(0, 5).forEach(c => { %>
-                    <div style="background: rgba(0,0,0,0.03); padding: 10px; border-radius: 10px;">
-                      <div style="font-size:12px;opacity:0.8;">#<%= c.userId %> - <%= new Date(c.createdAt).toLocaleString('ar-EG') %></div>
-                      <div style="white-space: pre-wrap;"><%= c.text %></div>
-                    </div>
-                  <% }) %>
-                </div>
-              <% } else { %>
-                <div style="opacity:0.7;">لا توجد تعليقات</div>
-              <% } %>
-
-              <% if (user) { %>
-                <form action="/community/posts/<%= p.id %>/comment" method="POST" style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
-                  <input type="text" name="text" placeholder="اكتب تعليق..." style="flex:1;min-width:220px;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.2);" />
-                  <button type="submit" class="btn btn-primary">إرسال</button>
-                </form>
-              <% } %>
-            </div>
-          </article>
-        <% }) %>
+        <section class="community-card community-notice">
+          <p>النشر داخل الكوميونتي متاح لفريق الإدارة فقط، لكنك تقدر تشوف البوستات وتتفاعل بالحساب العادي.</p>
+        </section>
       <% } %>
-    </section>
+
+      <section id="community-feed" class="community-section">
+        <div class="section-header">
+          <h2>أحدث البوستات</h2>
+          <span class="community-meta-badge"><%= posts.length %> بوست</span>
+        </div>
+
+        <% if (!posts || posts.length === 0) { %>
+          <div class="empty-state">
+            <p>لسه مفيش بوستات منشورة في الكوميونتي.</p>
+          </div>
+        <% } else { %>
+          <div class="community-feed">
+            <% posts.forEach(post => { %>
+              <article class="community-card community-post" id="post-<%= post.id %>">
+                <div class="community-post-header">
+                  <div>
+                    <h3><%= post.authorName %></h3>
+                    <p><%= post.authorIsSuperAdmin ? 'سوبر أدمن' : 'أدمن' %> - <%= new Date(post.createdAt).toLocaleString('ar-EG') %></p>
+                  </div>
+                  <div class="community-post-stats">
+                    <span>❤️ <%= post.likeCount %></span>
+                    <span>💬 <%= post.commentCount %></span>
+                    <span>🔁 <%= post.shareCount %></span>
+                  </div>
+                </div>
+
+                <% if (post.content) { %>
+                  <p class="community-post-content"><%= post.content %></p>
+                <% } %>
+
+                <% if (post.mediaPath && post.mediaType === 'image') { %>
+                  <img src="/<%= post.mediaPath %>" alt="بوست الكوميونتي" class="community-post-media">
+                <% } %>
+
+                <% if (post.mediaPath && post.mediaType === 'video') { %>
+                  <video controls class="community-post-media">
+                    <source src="/<%= post.mediaPath %>">
+                    متصفحك لا يدعم تشغيل الفيديو.
+                  </video>
+                <% } %>
+
+                <div class="community-post-actions">
+                  <% if (user && user.role === 'user') { %>
+                    <form action="/community/posts/<%= post.id %>/like" method="POST" class="inline-form">
+                      <button type="submit" class="btn btn-secondary btn-sm"><%= post.isLikedByCurrentUser ? 'إلغاء اللايك' : 'لايك' %></button>
+                    </form>
+                    <form action="/community/posts/<%= post.id %>/share" method="POST" class="inline-form" data-share-form data-share-url="/community#post-<%= post.id %>">
+                      <button type="submit" class="btn btn-secondary btn-sm">شير</button>
+                    </form>
+                  <% } else if (!user) { %>
+                    <a href="/login" class="btn btn-secondary btn-sm">سجل دخول للتفاعل</a>
+                  <% } else { %>
+                    <span class="community-action-note">التفاعل متاح للحسابات العادية فقط</span>
+                  <% } %>
+                </div>
+
+                <div class="community-comments">
+                  <h4>التعليقات</h4>
+                  <% if (post.comments && post.comments.length) { %>
+                    <div class="community-comments-list">
+                      <% post.comments.forEach(comment => { %>
+                        <div class="community-comment">
+                          <div class="community-comment-header">
+                            <strong><%= comment.userName %></strong>
+                            <span><%= new Date(comment.createdAt).toLocaleString('ar-EG') %></span>
+                          </div>
+                          <p><%= comment.content %></p>
+                        </div>
+                      <% }) %>
+                    </div>
+                  <% } else { %>
+                    <p class="community-empty-comments">مفيش تعليقات لحد دلوقتي.</p>
+                  <% } %>
+
+                  <% if (user && user.role === 'user') { %>
+                    <form action="/community/posts/<%= post.id %>/comments" method="POST" class="community-comment-form">
+                      <textarea name="content" rows="3" placeholder="اكتب تعليقك هنا..."></textarea>
+                      <button type="submit" class="btn btn-primary btn-sm">إرسال التعليق</button>
+                    </form>
+                  <% } %>
+                </div>
+              </article>
+            <% }) %>
+          </div>
+        <% } %>
+      </section>
+
+      <section id="jobs" class="community-section">
+        <div class="section-header">
+          <h2>التوظيف داخل Codentra</h2>
+          <span class="community-meta-badge"><%= jobs.length %> وظيفة مفتوحة</span>
+        </div>
+
+        <% if (!jobs || jobs.length === 0) { %>
+          <div class="empty-state">
+            <p>لا توجد وظائف مفتوحة الآن. تابعنا هنا أول بأول.</p>
+          </div>
+        <% } else { %>
+          <div class="community-jobs-grid">
+            <% jobs.forEach(job => { %>
+              <article class="community-card community-job-card">
+                <div class="community-job-head">
+                  <div>
+                    <h3><%= job.title %></h3>
+                    <p>نُشرت بواسطة <%= job.createdByName || 'Codentra' %> - <%= new Date(job.createdAt).toLocaleDateString('ar-EG') %></p>
+                  </div>
+                  <span class="community-meta-badge">مفتوحة</span>
+                </div>
+
+                <div class="community-job-pills">
+                  <span>الأجر: <%= job.salary %></span>
+                  <span>الخبرة: <%= job.yearsLabel %></span>
+                  <span>المتقدمون: <%= job.applicationCount %></span>
+                </div>
+
+                <p class="community-job-description"><%= job.description %></p>
+
+                <% if (user && user.role === 'user') { %>
+                  <% if (job.hasApplied) { %>
+                    <div class="success-message community-inline-message">تم إرسال طلبك على هذه الوظيفة بالفعل.</div>
+                  <% } else { %>
+                    <form action="/community/jobs/<%= job.id %>/apply" method="POST" enctype="multipart/form-data" class="community-apply-form">
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label>الاسم</label>
+                          <input type="text" name="name" value="<%= user.name %>" required>
+                        </div>
+                        <div class="form-group">
+                          <label>العمر</label>
+                          <input type="number" name="age" min="1" required>
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label>عرفنا بنفسك</label>
+                        <textarea name="about" rows="4" placeholder="اكتب نبذة مختصرة عن خبرتك وشخصيتك ولماذا مناسب للوظيفة" required></textarea>
+                      </div>
+                      <div class="form-group">
+                        <label>السيرة الذاتية</label>
+                        <input type="file" name="cv" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required>
+                      </div>
+                      <button type="submit" class="btn btn-primary">إرسال التقديم</button>
+                    </form>
+                  <% } %>
+                <% } else if (!user) { %>
+                  <div class="community-job-cta">
+                    <p>سجل دخول بحسابك للتقديم على الوظيفة.</p>
+                    <a href="/login" class="btn btn-secondary">تسجيل الدخول</a>
+                  </div>
+                <% } else { %>
+                  <div class="community-job-cta">
+                    <p>التقديم متاح للحسابات العادية، بينما الإدارة تدير النشر والمتابعة.</p>
+                    <% if (user.isSuperAdmin) { %>
+                      <a href="/admin/community/jobs" class="btn btn-secondary">إدارة الوظائف</a>
+                    <% } %>
+                  </div>
+                <% } %>
+              </article>
+            <% }) %>
+          </div>
+        <% } %>
+      </section>
+    </div>
   </main>
 
   <%- include('partials/footer') %>
-  <script src="/js/theme.js"></script>
+  <script src="/js/community.js"></script>
 </body>
 </html>

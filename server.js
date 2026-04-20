@@ -386,22 +386,88 @@ const DATA_DIR = path.join(__dirname, 'data');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const MEETING_RECORDINGS_DIR = path.join(UPLOADS_DIR, 'meeting-recordings');
 const ADMIN_TEAM_UPLOADS_DIR = path.join(UPLOADS_DIR, 'admin-team');
+const PRIVATE_UPLOADS_DIR = path.join(__dirname, 'private_uploads');
 const COMMUNITY_MEDIA_DIR = path.join(UPLOADS_DIR, 'community-media');
-const COMMUNITY_CV_DIR = path.join(UPLOADS_DIR, 'community-cv');
+const COMMUNITY_CVS_DIR = path.join(PRIVATE_UPLOADS_DIR, 'community-cvs');
 
-// Ensure directories exist (skip on Vercel)
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  [DATA_DIR, UPLOADS_DIR, MEETING_RECORDINGS_DIR, ADMIN_TEAM_UPLOADS_DIR, COMMUNITY_MEDIA_DIR, COMMUNITY_CV_DIR].forEach(dir => {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  });
-}
+// Ensure directories exist
+[DATA_DIR, UPLOADS_DIR, MEETING_RECORDINGS_DIR, ADMIN_TEAM_UPLOADS_DIR, PRIVATE_UPLOADS_DIR, COMMUNITY_MEDIA_DIR, COMMUNITY_CVS_DIR].forEach(dir => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
 
 // JSON storage helpers
 const db = {
-  users: () => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'users.json'), 'utf8') || '[]');
-    } catch { return []; }
+  users: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'users.json'), 'utf8') || '[]'),
+  projects: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'projects.json'), 'utf8') || '[]'),
+  purchases: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'purchases.json'), 'utf8') || '[]'),
+  modifications: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'modifications.json'), 'utf8') || '[]'),
+  coupons: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'coupons.json'), 'utf8') || '[]'),
+  referrals: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'referrals.json'), 'utf8') || '[]'),
+  walletCodes: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'wallet-codes.json'), 'utf8') || '[]'),
+  walletPaymentAttempts: () => {
+    const filePath = path.join(DATA_DIR, 'wallet-payment-attempts.json');
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
+      return [];
+    }
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  },
+  appointments: () => {
+    const filePath = path.join(DATA_DIR, 'appointments.json');
+    if (!fs.existsSync(filePath)) {
+      const initial = { timeSlots: [], bookings: [] };
+      fs.writeFileSync(filePath, JSON.stringify(initial, null, 2));
+      return initial;
+    }
+    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '{"timeSlots":[],"bookings":[]}');
+  },
+  saveUsers: (data) => fs.writeFileSync(path.join(DATA_DIR, 'users.json'), JSON.stringify(data, null, 2)),
+  saveProjects: (data) => fs.writeFileSync(path.join(DATA_DIR, 'projects.json'), JSON.stringify(data, null, 2)),
+  savePurchases: (data) => fs.writeFileSync(path.join(DATA_DIR, 'purchases.json'), JSON.stringify(data, null, 2)),
+  saveModifications: (data) => fs.writeFileSync(path.join(DATA_DIR, 'modifications.json'), JSON.stringify(data, null, 2)),
+  saveCoupons: (data) => fs.writeFileSync(path.join(DATA_DIR, 'coupons.json'), JSON.stringify(data, null, 2)),
+  saveReferrals: (data) => fs.writeFileSync(path.join(DATA_DIR, 'referrals.json'), JSON.stringify(data, null, 2)),
+  saveWalletCodes: (data) => fs.writeFileSync(path.join(DATA_DIR, 'wallet-codes.json'), JSON.stringify(data, null, 2)),
+  saveWalletPaymentAttempts: (data) => fs.writeFileSync(path.join(DATA_DIR, 'wallet-payment-attempts.json'), JSON.stringify(data, null, 2)),
+  reviews: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'reviews.json'), 'utf8') || '[]'),
+  saveReviews: (data) => fs.writeFileSync(path.join(DATA_DIR, 'reviews.json'), JSON.stringify(data, null, 2)),
+  messages: () => JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'messages.json'), 'utf8') || '[]'),
+  saveMessages: (data) => fs.writeFileSync(path.join(DATA_DIR, 'messages.json'), JSON.stringify(data, null, 2)),
+  communityPosts: () => {
+    const filePath = path.join(DATA_DIR, 'community-posts.json');
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
+      return [];
+    }
+    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
+  },
+  saveCommunityPosts: (data) => fs.writeFileSync(path.join(DATA_DIR, 'community-posts.json'), JSON.stringify(data, null, 2)),
+  communityJobs: () => {
+    const filePath = path.join(DATA_DIR, 'community-jobs.json');
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
+      return [];
+    }
+    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
+  },
+  saveCommunityJobs: (data) => fs.writeFileSync(path.join(DATA_DIR, 'community-jobs.json'), JSON.stringify(data, null, 2)),
+  communityJobApplications: () => {
+    const filePath = path.join(DATA_DIR, 'community-job-applications.json');
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
+      return [];
+    }
+    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
+  },
+  saveCommunityJobApplications: (data) => fs.writeFileSync(path.join(DATA_DIR, 'community-job-applications.json'), JSON.stringify(data, null, 2)),
+  adminTeamMessages: () => {
+    const filePath = path.join(DATA_DIR, 'admin-team-messages.json');
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
+      return [];
+    }
+    return JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
   },
   saveAdminTeamMessages: (data) => fs.writeFileSync(path.join(DATA_DIR, 'admin-team-messages.json'), JSON.stringify(data, null, 2)),
   carts: () => {
@@ -505,94 +571,6 @@ const db = {
   savePresentationSubscriptions: (data) => fs.writeFileSync(path.join(DATA_DIR, 'presentation-subscriptions.json'), JSON.stringify(data, null, 2)),
   savePresentationDecks: (data) => fs.writeFileSync(path.join(DATA_DIR, 'presentation-decks.json'), JSON.stringify(data, null, 2)),
   savePresentationPaymentAttempts: (data) => fs.writeFileSync(path.join(DATA_DIR, 'presentation-payment-attempts.json'), JSON.stringify(data, null, 2)),
-  projects: () => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'projects.json'), 'utf8') || '[]');
-    } catch { return []; }
-  },
-  purchases: () => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'purchases.json'), 'utf8') || '[]');
-    } catch { return []; }
-  },
-  modifications: () => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'modifications.json'), 'utf8') || '[]');
-    } catch { return []; }
-  },
-  coupons: () => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'coupons.json'), 'utf8') || '[]');
-    } catch { return []; }
-  },
-  referrals: () => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'referrals.json'), 'utf8') || '[]');
-    } catch { return []; }
-  },
-  walletCodes: () => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'wallet-codes.json'), 'utf8') || '[]');
-    } catch { return []; }
-  },
-  adminTeam: () => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'admin-team.json'), 'utf8') || '[]');
-    } catch { return []; }
-  },
-  meetings: () => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'meetings.json'), 'utf8') || '[]');
-    } catch { return []; }
-  },
-  communityPosts: () => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'community-posts.json'), 'utf8') || '[]');
-    } catch { return []; }
-  },
-  communityJobs: () => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'community-jobs.json'), 'utf8') || '[]');
-    } catch { return []; }
-  },
-  communityJobApplications: () => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'community-job-applications.json'), 'utf8') || '[]');
-    } catch { return []; }
-  },
-  saveProjects: (data) => {
-    try { fs.writeFileSync(path.join(DATA_DIR, 'projects.json'), JSON.stringify(data, null, 2)); } catch {}
-  },
-  savePurchases: (data) => {
-    try { fs.writeFileSync(path.join(DATA_DIR, 'purchases.json'), JSON.stringify(data, null, 2)); } catch {}
-  },
-  saveModifications: (data) => {
-    try { fs.writeFileSync(path.join(DATA_DIR, 'modifications.json'), JSON.stringify(data, null, 2)); } catch {}
-  },
-  saveCoupons: (data) => {
-    try { fs.writeFileSync(path.join(DATA_DIR, 'coupons.json'), JSON.stringify(data, null, 2)); } catch {}
-  },
-  saveReferrals: (data) => {
-    try { fs.writeFileSync(path.join(DATA_DIR, 'referrals.json'), JSON.stringify(data, null, 2)); } catch {}
-  },
-  saveWalletCodes: (data) => {
-    try { fs.writeFileSync(path.join(DATA_DIR, 'wallet-codes.json'), JSON.stringify(data, null, 2)); } catch {}
-  },
-  saveAdminTeam: (data) => {
-    try { fs.writeFileSync(path.join(DATA_DIR, 'admin-team.json'), JSON.stringify(data, null, 2)); } catch {}
-  },
-  saveMeetings: (data) => {
-    try { fs.writeFileSync(path.join(DATA_DIR, 'meetings.json'), JSON.stringify(data, null, 2)); } catch {}
-  },
-  saveCommunityPosts: (data) => {
-    try { fs.writeFileSync(path.join(DATA_DIR, 'community-posts.json'), JSON.stringify(data, null, 2)); } catch {}
-  },
-  saveCommunityJobs: (data) => {
-    try { fs.writeFileSync(path.join(DATA_DIR, 'community-jobs.json'), JSON.stringify(data, null, 2)); } catch {}
-  },
-  saveCommunityJobApplications: (data) => {
-    try { fs.writeFileSync(path.join(DATA_DIR, 'community-job-applications.json'), JSON.stringify(data, null, 2)); } catch {}
-  },
   loyaltySettings: () => {
     const filePath = path.join(DATA_DIR, 'loyalty-settings.json');
     const defaults = {
@@ -644,38 +622,8 @@ const db = {
 
     return parsed;
   },
-  saveLoyaltySettings: (data) => fs.writeFileSync(path.join(DATA_DIR, 'loyalty-settings.json'), JSON.stringify(data, null, 2)),
-  communityPosts: () => {
-    const filePath = path.join(DATA_DIR, 'community-posts.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  },
-  saveCommunityPosts: (data) => fs.writeFileSync(path.join(DATA_DIR, 'community-posts.json'), JSON.stringify(Array.isArray(data) ? data : [], null, 2)),
-  communityJobs: () => {
-    const filePath = path.join(DATA_DIR, 'community-jobs.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  },
-  saveCommunityJobs: (data) => fs.writeFileSync(path.join(DATA_DIR, 'community-jobs.json'), JSON.stringify(Array.isArray(data) ? data : [], null, 2)),
-  communityJobApplications: () => {
-    const filePath = path.join(DATA_DIR, 'community-job-applications.json');
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
-      return [];
-    }
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8') || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  },
-  saveCommunityJobApplications: (data) => fs.writeFileSync(path.join(DATA_DIR, 'community-job-applications.json'), JSON.stringify(Array.isArray(data) ? data : [], null, 2))
- };
+  saveLoyaltySettings: (data) => fs.writeFileSync(path.join(DATA_DIR, 'loyalty-settings.json'), JSON.stringify(data, null, 2))
+};
 
 const normalizeCouponCode = (code) => {
   if (!code || typeof code !== 'string') return '';
@@ -1110,6 +1058,126 @@ const buildSessionUser = (user) => {
       currentPeriodEnd: activeSubscription.currentPeriodEnd
     } : null
   };
+};
+
+const COMMUNITY_POST_CONTENT_LIMIT = 4000;
+const COMMUNITY_COMMENT_CONTENT_LIMIT = 1000;
+const COMMUNITY_JOB_TEXT_LIMIT = 4000;
+const COMMUNITY_ABOUT_LIMIT = 2500;
+const COMMUNITY_MEDIA_SIZE_LIMIT_MB = 150;
+const COMMUNITY_CV_SIZE_LIMIT_MB = 10;
+const COMMUNITY_CV_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+]);
+const COMMUNITY_CV_EXTENSIONS = new Set(['.pdf', '.doc', '.docx']);
+
+const buildSafeUploadFileName = ({ file, fallbackBaseName }) => {
+  const safeOriginal = (file && file.originalname ? file.originalname : fallbackBaseName || 'file')
+    .replace(/[^a-zA-Z0-9._-]+/g, '_');
+  const ext = path.extname(safeOriginal);
+  const base = path.basename(safeOriginal, ext) || fallbackBaseName || 'file';
+  return `${uuidv4()}-${base}${ext}`;
+};
+
+const safeDeleteFile = (filePath) => {
+  if (!filePath) return;
+  try {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch (error) {
+    // Ignore cleanup failures for optional uploads.
+  }
+};
+
+const normalizeCommunityPost = (post) => ({
+  ...(post || {}),
+  likes: Array.isArray(post && post.likes) ? post.likes : [],
+  shares: Array.isArray(post && post.shares) ? post.shares : [],
+  comments: Array.isArray(post && post.comments) ? post.comments : []
+});
+
+const getCommunityPostsState = () => {
+  const posts = db.communityPosts();
+  return Array.isArray(posts) ? posts.map(normalizeCommunityPost) : [];
+};
+
+const saveCommunityPostsState = (posts) => {
+  db.saveCommunityPosts(Array.isArray(posts) ? posts.map(normalizeCommunityPost) : []);
+};
+
+const getCommunityJobsState = () => {
+  const jobs = db.communityJobs();
+  return Array.isArray(jobs) ? jobs : [];
+};
+
+const saveCommunityJobsState = (jobs) => {
+  db.saveCommunityJobs(Array.isArray(jobs) ? jobs : []);
+};
+
+const getCommunityJobApplicationsState = () => {
+  const applications = db.communityJobApplications();
+  return Array.isArray(applications) ? applications : [];
+};
+
+const saveCommunityJobApplicationsState = (applications) => {
+  db.saveCommunityJobApplications(Array.isArray(applications) ? applications : []);
+};
+
+const isCommunityMemberSession = (sessionUser) => Boolean(sessionUser && sessionUser.role === 'user');
+
+const requireCommunityMember = (req, res, next) => {
+  if (!req.session.user) return res.redirect('/login');
+  if (!isCommunityMemberSession(req.session.user)) {
+    return res.redirect('/community?error=' + encodeURIComponent('التفاعل والتقديم متاحان للحسابات العادية فقط'));
+  }
+  next();
+};
+
+const isValidCommunityMediaFile = (file) => {
+  if (!file) return false;
+  return typeof file.mimetype === 'string' && (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/'));
+};
+
+const getCommunityMediaType = (file) => {
+  if (!file || typeof file.mimetype !== 'string') return null;
+  if (file.mimetype.startsWith('video/')) return 'video';
+  if (file.mimetype.startsWith('image/')) return 'image';
+  return null;
+};
+
+const isValidCommunityCvFile = (file) => {
+  if (!file) return false;
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  return COMMUNITY_CV_MIME_TYPES.has(file.mimetype) || COMMUNITY_CV_EXTENSIONS.has(ext);
+};
+
+const buildRedirectUrl = ({ pathName, hash, error, success }) => {
+  const params = new URLSearchParams();
+  if (error) params.set('error', error);
+  if (success) params.set('success', success);
+  const query = params.toString();
+  return `${pathName}${query ? `?${query}` : ''}${hash || ''}`;
+};
+
+const getCommunityPostHash = (postId) => `#post-${postId}`;
+
+const buildCommunityJobApplicationsMap = (applications) => {
+  const map = new Map();
+  for (const application of applications) {
+    if (!application || !application.jobId) continue;
+    if (!map.has(application.jobId)) map.set(application.jobId, []);
+    map.get(application.jobId).push(application);
+  }
+  return map;
+};
+
+const formatYearsOfExperience = (value) => {
+  const years = Number(value || 0);
+  if (!Number.isFinite(years)) return '0 سنة';
+  if (years === 0) return 'بدون خبرة';
+  if (Number.isInteger(years)) return `${years} سنة`;
+  return `${years} سنة`;
 };
 
 const getWalletPaymentAttemptsState = () => {
@@ -1576,7 +1644,7 @@ const buildPresentationPptxFile = async (deck) => {
 };
 
 // Initialize empty JSON files if they don't exist
-['users.json', 'projects.json', 'purchases.json', 'modifications.json', 'messages.json', 'admin-team-messages.json', 'carts.json', 'invoices.json', 'reviews.json', 'coupons.json', 'referrals.json', 'wallet-codes.json', 'wallet-payment-attempts.json'].forEach(file => {
+['users.json', 'projects.json', 'purchases.json', 'modifications.json', 'messages.json', 'admin-team-messages.json', 'community-posts.json', 'community-jobs.json', 'community-job-applications.json', 'carts.json', 'invoices.json', 'reviews.json', 'coupons.json', 'referrals.json', 'wallet-codes.json', 'wallet-payment-attempts.json'].forEach(file => {
   const filePath = path.join(DATA_DIR, file);
   if (!fs.existsSync(filePath)) {
     fs.writeFileSync(filePath, '[]');
@@ -1704,38 +1772,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB max
 
-const communityMediaStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, COMMUNITY_MEDIA_DIR),
-  filename: (req, file, cb) => {
-    const safeOriginal = (file.originalname || 'file').replace(/[^a-zA-Z0-9._-]+/g, '_');
-    cb(null, `${uuidv4()}-${safeOriginal}`);
-  }
-});
-
-const communityMediaUpload = multer({
-  storage: communityMediaStorage,
-  limits: { fileSize: 200 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype && (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/'))) {
-      return cb(null, true);
-    }
-    cb(new Error('Only image or video files are allowed'), false);
-  }
-});
-
-const communityCvStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, COMMUNITY_CV_DIR),
-  filename: (req, file, cb) => {
-    const safeOriginal = (file.originalname || 'cv').replace(/[^a-zA-Z0-9._-]+/g, '_');
-    cb(null, `${uuidv4()}-${safeOriginal}`);
-  }
-});
-
-const communityCvUpload = multer({
-  storage: communityCvStorage,
-  limits: { fileSize: 30 * 1024 * 1024 }
-});
-
 const meetingRecordingStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, MEETING_RECORDINGS_DIR),
   filename: (req, file, cb) => cb(null, `${uuidv4()}.webm`)
@@ -1750,6 +1786,60 @@ const adminTeamUploadStorage = multer.diskStorage({
   }
 });
 const adminTeamUpload = multer({ storage: adminTeamUploadStorage, limits: { fileSize: 200 * 1024 * 1024 } }); // 200MB max
+
+const communityMediaStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, COMMUNITY_MEDIA_DIR),
+  filename: (req, file, cb) => cb(null, buildSafeUploadFileName({ file, fallbackBaseName: 'community-media' }))
+});
+const communityMediaUpload = multer({
+  storage: communityMediaStorage,
+  limits: { fileSize: COMMUNITY_MEDIA_SIZE_LIMIT_MB * 1024 * 1024 }
+});
+
+const communityCvStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, COMMUNITY_CVS_DIR),
+  filename: (req, file, cb) => cb(null, buildSafeUploadFileName({ file, fallbackBaseName: 'community-cv' }))
+});
+const communityCvUpload = multer({
+  storage: communityCvStorage,
+  limits: { fileSize: COMMUNITY_CV_SIZE_LIMIT_MB * 1024 * 1024 }
+});
+
+const getCommunityUploadErrorMessage = ({ error, kind }) => {
+  if (!error) return null;
+  if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+    if (kind === 'post') return `حجم الصورة أو الفيديو يجب ألا يتجاوز ${COMMUNITY_MEDIA_SIZE_LIMIT_MB}MB`;
+    if (kind === 'cv') return `حجم السيرة الذاتية يجب ألا يتجاوز ${COMMUNITY_CV_SIZE_LIMIT_MB}MB`;
+  }
+  return kind === 'cv'
+    ? 'تعذر رفع السيرة الذاتية. حاول مرة أخرى.'
+    : 'تعذر رفع ملف البوست. حاول مرة أخرى.';
+};
+
+const communityPostUploadHandler = (req, res, next) => {
+  communityMediaUpload.single('media')(req, res, (error) => {
+    if (error) {
+      return res.redirect(buildRedirectUrl({
+        pathName: '/community',
+        error: getCommunityUploadErrorMessage({ error, kind: 'post' })
+      }));
+    }
+    next();
+  });
+};
+
+const communityCvUploadHandler = (req, res, next) => {
+  communityCvUpload.single('cv')(req, res, (error) => {
+    if (error) {
+      return res.redirect(buildRedirectUrl({
+        pathName: '/community',
+        hash: '#jobs',
+        error: getCommunityUploadErrorMessage({ error, kind: 'cv' })
+      }));
+    }
+    next();
+  });
+};
 
 // Project images storage with watermark
 const PROJECT_IMAGES_DIR = path.join(UPLOADS_DIR, 'project-images');
@@ -1900,224 +1990,306 @@ app.get('/', (req, res) => {
 });
 
 app.get('/community', (req, res) => {
-  const posts = db.communityPosts()
+  const currentUser = req.session.user || null;
+  const posts = getCommunityPostsState()
     .slice()
-    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-  const jobs = db.communityJobs()
-    .filter(j => j && j.active !== false)
-    .slice()
-    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+    .map(post => {
+      const likes = Array.isArray(post.likes) ? post.likes : [];
+      const shares = Array.isArray(post.shares) ? post.shares : [];
+      const comments = Array.isArray(post.comments) ? post.comments : [];
+      return {
+        ...post,
+        likes,
+        shares,
+        comments: comments
+          .slice()
+          .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()),
+        likeCount: likes.length,
+        shareCount: shares.length,
+        commentCount: comments.length,
+        isLikedByCurrentUser: Boolean(currentUser && likes.some(item => item && item.userId === currentUser.id)),
+        isSharedByCurrentUser: Boolean(currentUser && shares.some(item => item && item.userId === currentUser.id))
+      };
+    });
 
-  const users = db.users();
-  const usersById = new Map(users.map(u => [u.id, u]));
-  const postsView = posts.map(p => {
-    const author = usersById.get(p.authorId);
-    return {
-      ...p,
-      authorName: author ? author.name : 'Admin',
-      likesCount: Array.isArray(p.likes) ? p.likes.length : 0,
-      sharesCount: Array.isArray(p.shares) ? p.shares.length : 0,
-      commentsCount: Array.isArray(p.comments) ? p.comments.length : 0,
-      likedByMe: req.session.user && Array.isArray(p.likes) ? p.likes.includes(req.session.user.id) : false
-    };
-  });
+  const jobs = getCommunityJobsState()
+    .filter(job => job && job.isActive !== false)
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  const applications = getCommunityJobApplicationsState();
+  const applicationsByJobId = buildCommunityJobApplicationsMap(applications);
+  const appliedJobIds = new Set(
+    applications
+      .filter(application => currentUser && application && application.userId === currentUser.id)
+      .map(application => application.jobId)
+  );
+
+  const jobsForView = jobs.map(job => ({
+    ...job,
+    applicationCount: (applicationsByJobId.get(job.id) || []).length,
+    hasApplied: appliedJobIds.has(job.id),
+    yearsLabel: formatYearsOfExperience(job.experienceYears)
+  }));
 
   res.render('community', {
-    user: req.session.user,
-    posts: postsView,
-    jobs,
+    user: currentUser,
+    posts,
+    jobs: jobsForView,
     error: req.query.error || null,
     success: req.query.success || null
   });
 });
 
-app.post('/community/posts', requireAdmin, communityMediaUpload.single('media'), (req, res) => {
-  try {
-    const text = String(req.body.text || '').trim();
-    const file = req.file;
-    const mediaUrl = file ? `/uploads/community-media/${file.filename}` : null;
-    const mediaType = file ? (file.mimetype && file.mimetype.startsWith('video/') ? 'video' : 'image') : null;
+app.post('/community/posts', requireAdmin, communityPostUploadHandler, (req, res) => {
+  const content = (req.body.content || '').toString().trim();
+  const file = req.file || null;
 
-    if (!text && !mediaUrl) {
-      return res.redirect('/community?error=' + encodeURIComponent('اكتب نص أو ارفع ملف'));
-    }
-
-    const posts = db.communityPosts();
-    const now = new Date().toISOString();
-    const post = {
-      id: uuidv4(),
-      authorId: req.session.user.id,
-      text,
-      mediaUrl,
-      mediaType,
-      likes: [],
-      shares: [],
-      comments: [],
-      createdAt: now
-    };
-    posts.push(post);
-    db.saveCommunityPosts(posts);
-    return res.redirect('/community?success=' + encodeURIComponent('تم نشر البوست'));
-  } catch (e) {
-    return res.redirect('/community?error=' + encodeURIComponent('حصل خطأ أثناء النشر'));
+  if (content.length > COMMUNITY_POST_CONTENT_LIMIT) {
+    if (file) safeDeleteFile(file.path);
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      error: `نص البوست طويل جدًا. الحد الأقصى ${COMMUNITY_POST_CONTENT_LIMIT} حرف`
+    }));
   }
-});
 
-app.post('/community/posts/:id/like', requireAuth, (req, res) => {
-  const id = req.params.id;
-  const posts = db.communityPosts();
-  const post = posts.find(p => p && p.id === id);
-  if (!post) return res.redirect('/community?error=' + encodeURIComponent('البوست غير موجود'));
-  if (!Array.isArray(post.likes)) post.likes = [];
-  const uid = req.session.user.id;
-  if (post.likes.includes(uid)) {
-    post.likes = post.likes.filter(x => x !== uid);
-  } else {
-    post.likes.push(uid);
+  if (file && !isValidCommunityMediaFile(file)) {
+    safeDeleteFile(file.path);
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      error: 'ارفع صورة أو فيديو فقط في بوست الكوميونتي'
+    }));
   }
-  db.saveCommunityPosts(posts);
-  res.redirect('/community');
-});
 
-app.post('/community/posts/:id/share', requireAuth, (req, res) => {
-  const id = req.params.id;
-  const posts = db.communityPosts();
-  const post = posts.find(p => p && p.id === id);
-  if (!post) return res.redirect('/community?error=' + encodeURIComponent('البوست غير موجود'));
-  if (!Array.isArray(post.shares)) post.shares = [];
-  const uid = req.session.user.id;
-  if (!post.shares.includes(uid)) post.shares.push(uid);
-  db.saveCommunityPosts(posts);
-  res.redirect('/community?success=' + encodeURIComponent('تم عمل شير'));
-});
+  if (!content && !file) {
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      error: 'اكتب نصًا أو ارفع صورة أو فيديو قبل النشر'
+    }));
+  }
 
-app.post('/community/posts/:id/comment', requireAuth, (req, res) => {
-  const id = req.params.id;
-  const text = String(req.body.text || '').trim();
-  if (!text) return res.redirect('/community?error=' + encodeURIComponent('اكتب تعليق'));
-  const posts = db.communityPosts();
-  const post = posts.find(p => p && p.id === id);
-  if (!post) return res.redirect('/community?error=' + encodeURIComponent('البوست غير موجود'));
-  if (!Array.isArray(post.comments)) post.comments = [];
-  post.comments.push({
+  const posts = getCommunityPostsState();
+  posts.unshift({
     id: uuidv4(),
-    userId: req.session.user.id,
-    text,
+    authorId: req.session.user.id,
+    authorName: req.session.user.name,
+    authorEmail: req.session.user.email,
+    authorRole: 'admin',
+    authorIsSuperAdmin: Boolean(req.session.user.isSuperAdmin),
+    content,
+    mediaType: file ? getCommunityMediaType(file) : null,
+    mediaPath: file ? `uploads/community-media/${file.filename}` : null,
+    mediaOriginalName: file ? file.originalname : null,
+    likes: [],
+    shares: [],
+    comments: [],
     createdAt: new Date().toISOString()
   });
-  db.saveCommunityPosts(posts);
-  res.redirect('/community');
+  saveCommunityPostsState(posts);
+
+  res.redirect(buildRedirectUrl({
+    pathName: '/community',
+    success: 'تم نشر البوست في الكوميونتي بنجاح'
+  }));
 });
 
-app.get('/community/jobs', (req, res) => {
-  const jobs = db.communityJobs()
-    .filter(j => j && j.active !== false)
-    .slice()
-    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-  res.render('community-jobs', { user: req.session.user, jobs, error: req.query.error || null, success: req.query.success || null });
-});
-
-app.get('/community/jobs/:id', (req, res) => {
-  const job = db.communityJobs().find(j => j && j.id === req.params.id && j.active !== false);
-  if (!job) return res.status(404).send('Job not found');
-  res.render('community-job-details', { user: req.session.user, job, error: req.query.error || null, success: req.query.success || null });
-});
-
-app.post('/community/jobs/:id/apply', requireAuth, communityCvUpload.single('cv'), (req, res) => {
-  try {
-    const jobId = req.params.id;
-    const job = db.communityJobs().find(j => j && j.id === jobId && j.active !== false);
-    if (!job) return res.redirect('/community/jobs?error=' + encodeURIComponent('الوظيفة غير موجودة'));
-
-    const name = String(req.body.name || '').trim();
-    const ageRaw = String(req.body.age || '').trim();
-    const about = String(req.body.about || '').trim();
-    const age = Number(ageRaw);
-    if (!name || !Number.isFinite(age) || age <= 0 || !about) {
-      return res.redirect(`/community/jobs/${jobId}?error=` + encodeURIComponent('اكمل البيانات المطلوبة'));
-    }
-    if (!req.file) {
-      return res.redirect(`/community/jobs/${jobId}?error=` + encodeURIComponent('ارفع CV'));
-    }
-
-    const applications = db.communityJobApplications();
-    const cvUrl = `/uploads/community-cv/${req.file.filename}`;
-    const now = new Date().toISOString();
-    const application = {
-      id: uuidv4(),
-      jobId,
-      userId: req.session.user.id,
-      name,
-      age,
-      about,
-      cvUrl,
-      createdAt: now
-    };
-    applications.push(application);
-    db.saveCommunityJobApplications(applications);
-    return res.redirect(`/community/jobs/${jobId}?success=` + encodeURIComponent('تم إرسال طلب التوظيف'));
-  } catch (e) {
-    return res.redirect(`/community/jobs/${req.params.id}?error=` + encodeURIComponent('حصل خطأ أثناء الإرسال'));
+app.post('/community/posts/:id/like', requireCommunityMember, (req, res) => {
+  const posts = getCommunityPostsState();
+  const postIndex = posts.findIndex(post => post && post.id === req.params.id);
+  if (postIndex === -1) {
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      hash: getCommunityPostHash(req.params.id),
+      error: 'البوست غير موجود'
+    }));
   }
-});
 
-app.get('/admin/community/jobs', requireSuperAdmin, (req, res) => {
-  const jobs = db.communityJobs()
-    .slice()
-    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-  res.render('admin/community-jobs', { user: req.session.user, jobs, error: req.query.error || null, success: req.query.success || null });
-});
-
-app.post('/admin/community/jobs', requireSuperAdmin, (req, res) => {
-  try {
-    const title = String(req.body.title || '').trim();
-    const description = String(req.body.description || '').trim();
-    const salary = String(req.body.salary || '').trim();
-    const experienceYearsRaw = String(req.body.experienceYears || '').trim();
-    const experienceYears = Number(experienceYearsRaw);
-    if (!title || !description || !salary || !Number.isFinite(experienceYears) || experienceYears < 0) {
-      return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('اكمل بيانات الوظيفة'));
-    }
-
-    const jobs = db.communityJobs();
-    jobs.push({
-      id: uuidv4(),
-      title,
-      description,
-      salary,
-      experienceYears,
-      createdBy: req.session.user.id,
-      active: true,
+  const likes = Array.isArray(posts[postIndex].likes) ? posts[postIndex].likes : [];
+  const existingIndex = likes.findIndex(item => item && item.userId === req.session.user.id);
+  if (existingIndex === -1) {
+    likes.push({
+      userId: req.session.user.id,
+      userName: req.session.user.name,
       createdAt: new Date().toISOString()
     });
-    db.saveCommunityJobs(jobs);
-    return res.redirect('/admin/community/jobs?success=' + encodeURIComponent('تم إضافة الوظيفة'));
-  } catch (e) {
-    return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('حصل خطأ'));
+  } else {
+    likes.splice(existingIndex, 1);
   }
+  posts[postIndex].likes = likes;
+  saveCommunityPostsState(posts);
+
+  res.redirect(buildRedirectUrl({
+    pathName: '/community',
+    hash: getCommunityPostHash(req.params.id),
+    success: existingIndex === -1 ? 'تم تسجيل الإعجاب' : 'تم إلغاء الإعجاب'
+  }));
 });
 
-app.get('/admin/community/jobs/:id/applications', requireSuperAdmin, (req, res) => {
-  const job = db.communityJobs().find(j => j && j.id === req.params.id);
-  if (!job) return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('الوظيفة غير موجودة'));
+app.post('/community/posts/:id/comments', requireCommunityMember, (req, res) => {
+  const content = (req.body.content || '').toString().trim();
+  if (!content) {
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      hash: getCommunityPostHash(req.params.id),
+      error: 'اكتب تعليقًا أولًا'
+    }));
+  }
 
-  const apps = db.communityJobApplications()
-    .filter(a => a && a.jobId === job.id)
-    .slice()
-    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  if (content.length > COMMUNITY_COMMENT_CONTENT_LIMIT) {
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      hash: getCommunityPostHash(req.params.id),
+      error: `التعليق طويل جدًا. الحد الأقصى ${COMMUNITY_COMMENT_CONTENT_LIMIT} حرف`
+    }));
+  }
 
-  const users = db.users();
-  const usersById = new Map(users.map(u => [u.id, u]));
-  const appsView = apps.map(a => {
-    const u = usersById.get(a.userId);
-    return {
-      ...a,
-      accountEmail: u ? u.email : null,
-      accountName: u ? u.name : null
-    };
+  const posts = getCommunityPostsState();
+  const postIndex = posts.findIndex(post => post && post.id === req.params.id);
+  if (postIndex === -1) {
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      hash: getCommunityPostHash(req.params.id),
+      error: 'البوست غير موجود'
+    }));
+  }
+
+  posts[postIndex].comments.push({
+    id: uuidv4(),
+    userId: req.session.user.id,
+    userName: req.session.user.name,
+    content,
+    createdAt: new Date().toISOString()
   });
+  saveCommunityPostsState(posts);
 
-  res.render('admin/community-job-applications', { user: req.session.user, job, applications: appsView });
+  res.redirect(buildRedirectUrl({
+    pathName: '/community',
+    hash: getCommunityPostHash(req.params.id),
+    success: 'تم إضافة التعليق'
+  }));
+});
+
+app.post('/community/posts/:id/share', requireCommunityMember, (req, res) => {
+  const posts = getCommunityPostsState();
+  const postIndex = posts.findIndex(post => post && post.id === req.params.id);
+  if (postIndex === -1) {
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      hash: getCommunityPostHash(req.params.id),
+      error: 'البوست غير موجود'
+    }));
+  }
+
+  const shares = Array.isArray(posts[postIndex].shares) ? posts[postIndex].shares : [];
+  const existingShare = shares.find(item => item && item.userId === req.session.user.id);
+  if (!existingShare) {
+    shares.push({
+      userId: req.session.user.id,
+      userName: req.session.user.name,
+      createdAt: new Date().toISOString()
+    });
+    posts[postIndex].shares = shares;
+    saveCommunityPostsState(posts);
+  }
+
+  res.redirect(buildRedirectUrl({
+    pathName: '/community',
+    hash: getCommunityPostHash(req.params.id),
+    success: 'تم تسجيل المشاركة. يمكنك الآن إرسال الرابط لصاحبك'
+  }));
+});
+
+app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadHandler, (req, res) => {
+  const file = req.file || null;
+  const jobs = getCommunityJobsState();
+  const job = jobs.find(item => item && item.id === req.params.id);
+
+  if (!job || job.isActive === false) {
+    if (file) safeDeleteFile(file.path);
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      hash: '#jobs',
+      error: 'الوظيفة غير متاحة حاليًا'
+    }));
+  }
+
+  if (!file) {
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      hash: '#jobs',
+      error: 'ارفع السيرة الذاتية أولًا'
+    }));
+  }
+
+  if (!isValidCommunityCvFile(file)) {
+    safeDeleteFile(file.path);
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      hash: '#jobs',
+      error: 'صيغة السيرة الذاتية يجب أن تكون PDF أو DOC أو DOCX'
+    }));
+  }
+
+  const name = (req.body.name || '').toString().trim();
+  const about = (req.body.about || '').toString().trim();
+  const age = Number(req.body.age || 0);
+
+  if (!name || !Number.isFinite(age) || age <= 0 || !about) {
+    safeDeleteFile(file.path);
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      hash: '#jobs',
+      error: 'أكمل الاسم والعمر ونبذة عنك قبل التقديم'
+    }));
+  }
+
+  if (about.length > COMMUNITY_ABOUT_LIMIT) {
+    safeDeleteFile(file.path);
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      hash: '#jobs',
+      error: `النبذة طويلة جدًا. الحد الأقصى ${COMMUNITY_ABOUT_LIMIT} حرف`
+    }));
+  }
+
+  const applications = getCommunityJobApplicationsState();
+  const alreadyApplied = applications.find(application =>
+    application &&
+    application.jobId === job.id &&
+    application.userId === req.session.user.id
+  );
+
+  if (alreadyApplied) {
+    safeDeleteFile(file.path);
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      hash: '#jobs',
+      error: 'لقد قدمت على هذه الوظيفة بالفعل'
+    }));
+  }
+
+  applications.unshift({
+    id: uuidv4(),
+    jobId: job.id,
+    jobTitle: job.title,
+    userId: req.session.user.id,
+    userEmail: req.session.user.email,
+    applicantName: name,
+    applicantAge: age,
+    about,
+    cvFilePath: path.relative(__dirname, file.path).split(path.sep).join('/'),
+    cvOriginalName: file.originalname,
+    cvMimeType: file.mimetype,
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  });
+  saveCommunityJobApplicationsState(applications);
+
+  res.redirect(buildRedirectUrl({
+    pathName: '/community',
+    hash: '#jobs',
+    success: 'تم إرسال طلب التقديم بنجاح'
+  }));
 });
 
 // Auth routes
@@ -3601,6 +3773,103 @@ app.get('/admin', requireAdmin, (req, res) => {
     .slice(0, 10);
 
   res.render('admin/dashboard', { users, projects, purchases, topProjects, reports, user: req.session.user });
+});
+
+app.get('/admin/community/jobs', requireSuperAdmin, (req, res) => {
+  const jobs = getCommunityJobsState()
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  const applications = getCommunityJobApplicationsState()
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  const applicationsByJobId = buildCommunityJobApplicationsMap(applications);
+
+  const jobsWithApplications = jobs.map(job => ({
+    ...job,
+    yearsLabel: formatYearsOfExperience(job.experienceYears),
+    applications: (applicationsByJobId.get(job.id) || []).slice()
+  }));
+
+  const stats = {
+    totalJobs: jobs.length,
+    activeJobs: jobs.filter(job => job && job.isActive !== false).length,
+    totalApplications: applications.length
+  };
+
+  res.render('admin/community-jobs', {
+    user: req.session.user,
+    jobs: jobsWithApplications,
+    stats,
+    error: req.query.error || null,
+    success: req.query.success || null
+  });
+});
+
+app.post('/admin/community/jobs', requireSuperAdmin, (req, res) => {
+  const title = (req.body.title || '').toString().trim();
+  const salary = (req.body.salary || '').toString().trim();
+  const description = (req.body.description || '').toString().trim();
+  const experienceYears = Number(req.body.experienceYears || 0);
+
+  if (!title || !salary || !description) {
+    return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('اسم الوظيفة والوصف والأجر حقول مطلوبة'));
+  }
+
+  if (!Number.isFinite(experienceYears) || experienceYears < 0) {
+    return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('عدد سنوات الخبرة غير صحيح'));
+  }
+
+  if (title.length > 200 || salary.length > 120 || description.length > COMMUNITY_JOB_TEXT_LIMIT) {
+    return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('تحقق من طول البيانات المدخلة للوظيفة'));
+  }
+
+  const jobs = getCommunityJobsState();
+  jobs.unshift({
+    id: uuidv4(),
+    title,
+    salary,
+    description,
+    experienceYears,
+    createdById: req.session.user.id,
+    createdByName: req.session.user.name,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+  saveCommunityJobsState(jobs);
+
+  res.redirect('/admin/community/jobs?success=' + encodeURIComponent('تم إضافة الوظيفة بنجاح'));
+});
+
+app.post('/admin/community/jobs/:id/toggle', requireSuperAdmin, (req, res) => {
+  const jobs = getCommunityJobsState();
+  const jobIndex = jobs.findIndex(job => job && job.id === req.params.id);
+  if (jobIndex === -1) {
+    return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('الوظيفة غير موجودة'));
+  }
+
+  jobs[jobIndex].isActive = jobs[jobIndex].isActive === false;
+  jobs[jobIndex].updatedAt = new Date().toISOString();
+  saveCommunityJobsState(jobs);
+
+  res.redirect('/admin/community/jobs?success=' + encodeURIComponent(
+    jobs[jobIndex].isActive ? 'تم فتح الوظيفة للتقديم' : 'تم إغلاق الوظيفة'
+  ));
+});
+
+app.get('/admin/community/applications/:id/cv', requireSuperAdmin, (req, res) => {
+  const applications = getCommunityJobApplicationsState();
+  const application = applications.find(item => item && item.id === req.params.id);
+  if (!application || !application.cvFilePath) {
+    return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('السيرة الذاتية غير موجودة'));
+  }
+
+  const absolutePath = path.join(__dirname, application.cvFilePath);
+  if (!fs.existsSync(absolutePath)) {
+    return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('ملف السيرة الذاتية غير موجود على الخادم'));
+  }
+
+  return res.download(absolutePath, application.cvOriginalName || path.basename(absolutePath));
 });
 
 // Admin Team - Group chat for admins
@@ -5400,64 +5669,60 @@ app.post('/admin/messages/:userId', requireAdmin, (req, res) => {
   res.redirect(`/admin/messages/${req.params.userId}`);
 });
 
-if (process.env.VERCEL) {
-  module.exports = app;
-} else {
-  const httpServer = http.createServer(app);
-  const io = new Server(httpServer, {
-    cors: {
-      origin: ["http://localhost:3000", "http://192.168.8.110:3000", "*"],
-      methods: ["GET", "POST"],
-      credentials: true
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: ["http://localhost:3000", "http://192.168.8.110:3000", "*"],
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+io.on('connection', (socket) => {
+  socket.on('join-room', (roomId) => {
+    if (!roomId) return;
+    socket.join(roomId);
+    socket.to(roomId).emit('peer-joined');
+  });
+
+  socket.on('webrtc-offer', ({ roomId, offer }) => {
+    if (!roomId || !offer) return;
+    socket.to(roomId).emit('webrtc-offer', { offer });
+  });
+
+  socket.on('webrtc-answer', ({ roomId, answer }) => {
+    if (!roomId || !answer) return;
+    socket.to(roomId).emit('webrtc-answer', { answer });
+  });
+
+  socket.on('webrtc-ice-candidate', ({ roomId, candidate }) => {
+    if (!roomId || !candidate) return;
+    socket.to(roomId).emit('webrtc-ice-candidate', { candidate });
+  });
+
+  socket.on('leave-room', (roomId) => {
+    if (!roomId) return;
+    socket.leave(roomId);
+    socket.to(roomId).emit('peer-left');
+  });
+
+  socket.on('join-admin-team', () => {
+    socket.join('admin-team');
+  });
+
+  socket.on('admin-team-message', (payload) => {
+    try {
+      if (!payload || typeof payload !== 'object') return;
+      socket.to('admin-team').emit('admin-team-message', payload);
+    } catch (e) {
+      // ignore
     }
   });
+});
 
-  io.on('connection', (socket) => {
-    socket.on('join-room', (roomId) => {
-      if (!roomId) return;
-      socket.join(roomId);
-      socket.to(roomId).emit('peer-joined');
-    });
-
-    socket.on('webrtc-offer', ({ roomId, offer }) => {
-      if (!roomId || !offer) return;
-      socket.to(roomId).emit('webrtc-offer', { offer });
-    });
-
-    socket.on('webrtc-answer', ({ roomId, answer }) => {
-      if (!roomId || !answer) return;
-      socket.to(roomId).emit('webrtc-answer', { answer });
-    });
-
-    socket.on('webrtc-ice-candidate', ({ roomId, candidate }) => {
-      if (!roomId || !candidate) return;
-      socket.to(roomId).emit('webrtc-ice-candidate', { candidate });
-    });
-
-    socket.on('leave-room', (roomId) => {
-      if (!roomId) return;
-      socket.leave(roomId);
-      socket.to(roomId).emit('peer-left');
-    });
-
-    socket.on('join-admin-team', () => {
-      socket.join('admin-team');
-    });
-
-    socket.on('admin-team-message', (payload) => {
-      try {
-        if (!payload || typeof payload !== 'object') return;
-        socket.to('admin-team').emit('admin-team-message', payload);
-      } catch (e) {
-        // ignore
-      }
-    });
-  });
-
-  // Start server
-  httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`Codentra running on http://localhost:${PORT}`);
-    console.log(`Network access: http://192.168.8.110:${PORT}`);
-    console.log(`Admin: admin@codentra.com / admin123`);
-  });
-}
+// Start server
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`Codentra running on http://localhost:${PORT}`);
+  console.log(`Network access: http://192.168.8.110:${PORT}`);
+  console.log(`Admin: admin@codentra.com / admin123`);
+});

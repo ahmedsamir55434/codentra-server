@@ -3,83 +3,204 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Community Jobs - Admin</title>
+  <title>وظائف الكوميونتي - Codentra</title>
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
-  <%- include('../partials/header', { user: user }) %>
+  <%- include('../partials/header') %>
 
-  <main class="container" style="padding: 30px 0;">
-    <h1 style="margin-bottom: 10px;">إدارة وظائف الكومينتي</h1>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/team">جروب الفريق</a>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.projects))) { %>
+          <a href="/admin/projects/new">إضافة مشروع</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.purchases))) { %>
+          <a href="/admin/purchases">المشتريات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.modifications))) { %>
+          <a href="/admin/modifications">طلبات التعديل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.messages))) { %>
+          <a href="/admin/messages">الرسائل</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.reviews))) { %>
+          <a href="/admin/reviews">التقييمات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.coupons))) { %>
+          <a href="/admin/coupons">الكوبونات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.referrals))) { %>
+          <a href="/admin/referrals">الإحالات</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletCodes))) { %>
+          <a href="/admin/wallet-codes">أكواد الشحن</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.walletBalances))) { %>
+          <a href="/admin/wallet-balances">أرصدة العملاء</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.appointments))) { %>
+          <a href="/admin/appointments">المواعيد</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionCoupons))) { %>
+          <a href="/admin/subscription-coupons">كوبونات الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionPlans))) { %>
+          <a href="/admin/subscription-plans">خطط الاشتراك</a>
+        <% } %>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.subscriptionReports))) { %>
+          <a href="/admin/subscription-reports">تقارير الاشتراك</a>
+        <% } %>
+        <% if (user && user.isSuperAdmin) { %>
+          <a href="/admin/community/jobs" class="active">وظائف الكوميونتي</a>
+          <a href="/admin/meeting-recordings">تسجيلات الاجتماعات</a>
+          <a href="/admin/admins">إدارة الأدمنز</a>
+        <% } %>
+        <a href="/community">فتح الكوميونتي</a>
+        <a href="/admin/users">المستخدمين</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
 
-    <% if (error) { %>
-      <div style="background:#ffe5e5;color:#a30000;padding:10px;border-radius:8px;margin:10px 0;"><%= error %></div>
-    <% } %>
-    <% if (success) { %>
-      <div style="background:#e7ffe5;color:#116400;padding:10px;border-radius:8px;margin:10px 0;"><%= success %></div>
-    <% } %>
+    <main class="admin-content admin-page-community-jobs">
+      <h1>إدارة وظائف الكوميونتي</h1>
 
-    <section style="background: var(--card-bg, #fff); padding: 15px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08); margin-bottom: 20px;">
-      <h2 style="margin-bottom: 10px;">إضافة وظيفة</h2>
-      <form action="/admin/community/jobs" method="POST">
-        <div class="form-group">
-          <label>العنوان</label>
-          <input type="text" name="title" required style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.2);" />
-        </div>
-        <div class="form-group">
-          <label>الوصف</label>
-          <textarea name="description" rows="4" required style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.2);"></textarea>
-        </div>
-        <div class="form-group">
-          <label>الأجر</label>
-          <input type="text" name="salary" required style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.2);" />
-        </div>
-        <div class="form-group">
-          <label>سنين الخبرة</label>
-          <input type="number" name="experienceYears" required min="0" style="width:100%;padding:10px;border-radius:10px;border:1px solid rgba(0,0,0,0.2);" />
-        </div>
-        <button type="submit" class="btn btn-primary">إضافة</button>
-      </form>
-    </section>
-
-    <section>
-      <h2 style="margin-bottom: 10px;">الوظائف</h2>
-      <% if (!jobs || jobs.length === 0) { %>
-        <div class="empty-state"><p>لا توجد وظائف</p></div>
-      <% } else { %>
-        <div style="overflow:auto;">
-          <table style="width:100%;border-collapse:collapse;">
-            <thead>
-              <tr>
-                <th style="text-align:right;padding:10px;border-bottom:1px solid rgba(0,0,0,0.1);">العنوان</th>
-                <th style="text-align:right;padding:10px;border-bottom:1px solid rgba(0,0,0,0.1);">الأجر</th>
-                <th style="text-align:right;padding:10px;border-bottom:1px solid rgba(0,0,0,0.1);">الخبرة</th>
-                <th style="text-align:right;padding:10px;border-bottom:1px solid rgba(0,0,0,0.1);">طلبات</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% jobs.forEach(j => { %>
-                <tr>
-                  <td style="padding:10px;border-bottom:1px solid rgba(0,0,0,0.06);"><%= j.title %></td>
-                  <td style="padding:10px;border-bottom:1px solid rgba(0,0,0,0.06);"><%= j.salary %></td>
-                  <td style="padding:10px;border-bottom:1px solid rgba(0,0,0,0.06);"><%= j.experienceYears %></td>
-                  <td style="padding:10px;border-bottom:1px solid rgba(0,0,0,0.06);">
-                    <a class="btn btn-secondary" href="/admin/community/jobs/<%= j.id %>/applications">عرض الطلبات</a>
-                  </td>
-                </tr>
-              <% }) %>
-            </tbody>
-          </table>
-        </div>
+      <% if (error) { %>
+        <div class="error-message"><%= error %></div>
       <% } %>
-    </section>
+      <% if (success) { %>
+        <div class="success-message"><%= success %></div>
+      <% } %>
 
-    <div style="margin-top: 20px;">
-      <a href="/admin">رجوع للوحة التحكم</a>
-    </div>
-  </main>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value"><%= stats.totalJobs %></div>
+          <div class="stat-label">إجمالي الوظائف</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= stats.activeJobs %></div>
+          <div class="stat-label">الوظائف المفتوحة</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= stats.totalApplications %></div>
+          <div class="stat-label">طلبات التقديم</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><a href="/community#jobs" style="color: inherit; text-decoration: none;">عرض</a></div>
+          <div class="stat-label">قسم التوظيف</div>
+        </div>
+      </div>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <h2>إضافة وظيفة جديدة</h2>
+        </div>
+
+        <div class="form-container">
+          <form action="/admin/community/jobs" method="POST" class="admin-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="jobTitle">اسم الوظيفة</label>
+                <input type="text" id="jobTitle" name="title" required>
+              </div>
+              <div class="form-group">
+                <label for="jobSalary">الأجر</label>
+                <input type="text" id="jobSalary" name="salary" placeholder="مثال: 12000 جنيه / شهر" required>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="jobExperience">عدد سنين الخبرة</label>
+                <input type="number" id="jobExperience" name="experienceYears" min="0" step="0.5" required>
+              </div>
+              <div class="form-group">
+                <label>الناشر</label>
+                <input type="text" value="<%= user.name %>" disabled>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="jobDescription">وصف الشغلانة</label>
+              <textarea id="jobDescription" name="description" rows="6" placeholder="اشرح المهام المطلوبة، طبيعة العمل، والمتطلبات الأساسية" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">نشر الوظيفة</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <h2>الوظائف الحالية وطلبات التقديم</h2>
+        </div>
+
+        <% if (!jobs || jobs.length === 0) { %>
+          <div class="empty-state">
+            <p>لم تتم إضافة أي وظائف بعد.</p>
+          </div>
+        <% } else { %>
+          <% jobs.forEach(job => { %>
+            <div class="admin-table-container" id="job-<%= job.id %>" style="margin-bottom: 24px;">
+              <div style="padding: 20px 20px 0 20px;">
+                <div class="section-header" style="margin-bottom: 10px;">
+                  <div>
+                    <h2 style="margin: 0 0 6px 0;"><%= job.title %></h2>
+                    <p style="margin: 0; color: var(--text-secondary);">
+                      الأجر: <%= job.salary %> - الخبرة: <%= job.yearsLabel %> - النشر: <%= new Date(job.createdAt).toLocaleString('ar-EG') %>
+                    </p>
+                  </div>
+                  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <form action="/admin/community/jobs/<%= job.id %>/toggle" method="POST" class="inline-form">
+                      <button type="submit" class="btn btn-sm <%= job.isActive === false ? 'btn-success' : 'btn-secondary' %>">
+                        <%= job.isActive === false ? 'فتح الوظيفة' : 'إغلاق الوظيفة' %>
+                      </button>
+                    </form>
+                    <a href="/community#jobs" class="btn btn-sm btn-primary" target="_blank">عرض في الموقع</a>
+                  </div>
+                </div>
+                <p style="margin: 0 0 18px 0;"><%= job.description %></p>
+              </div>
+
+              <% if (!job.applications || job.applications.length === 0) { %>
+                <div class="empty-state" style="margin: 0 20px 20px 20px;">
+                  <p>لا توجد طلبات تقديم على هذه الوظيفة حتى الآن.</p>
+                </div>
+              <% } else { %>
+                <table class="admin-table">
+                  <thead>
+                    <tr>
+                      <th>الاسم</th>
+                      <th>العمر</th>
+                      <th>عن المتقدم</th>
+                      <th>الحساب</th>
+                      <th>التاريخ</th>
+                      <th>السيرة الذاتية</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <% job.applications.forEach(application => { %>
+                      <tr>
+                        <td><strong><%= application.applicantName %></strong></td>
+                        <td><%= application.applicantAge %></td>
+                        <td style="min-width: 280px;"><%= application.about %></td>
+                        <td><%= application.userEmail %></td>
+                        <td><%= new Date(application.createdAt).toLocaleString('ar-EG') %></td>
+                        <td>
+                          <a href="/admin/community/applications/<%= application.id %>/cv" class="btn btn-sm btn-primary">تحميل CV</a>
+                        </td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              <% } %>
+            </div>
+          <% }) %>
+        <% } %>
+      </section>
+    </main>
+  </div>
 
   <%- include('../partials/footer') %>
-  <script src="/js/theme.js"></script>
 </body>
 </html>

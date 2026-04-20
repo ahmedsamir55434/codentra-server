@@ -1,0 +1,267 @@
+.community-page {
+  padding: 32px 0 56px;
+}
+
+.community-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px;
+  margin-bottom: 24px;
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
+}
+
+.community-hero h1 {
+  margin: 6px 0 10px;
+  font-size: 2.2rem;
+}
+
+.community-hero p {
+  max-width: 760px;
+  color: var(--text-secondary);
+}
+
+.community-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.community-hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.community-section {
+  margin-top: 30px;
+}
+
+.community-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.community-composer,
+.community-notice {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.community-notice p {
+  color: var(--text-secondary);
+}
+
+.community-feed,
+.community-jobs-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.community-post {
+  padding: 24px;
+}
+
+.community-post-header,
+.community-job-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.community-post-header h3,
+.community-job-head h3 {
+  margin: 0 0 4px 0;
+}
+
+.community-post-header p,
+.community-job-head p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.community-post-stats,
+.community-job-pills {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.community-post-stats span,
+.community-job-pills span,
+.community-meta-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.community-post-content,
+.community-job-description {
+  margin: 18px 0;
+  white-space: pre-wrap;
+}
+
+.community-post-media {
+  width: 100%;
+  max-height: 520px;
+  border-radius: 18px;
+  object-fit: cover;
+  border: 1px solid var(--glass-border);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.community-post-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.community-action-note,
+.community-empty-comments {
+  color: var(--text-secondary);
+}
+
+.community-comments {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.community-comments h4 {
+  margin-bottom: 14px;
+}
+
+.community-comments-list {
+  display: grid;
+  gap: 12px;
+}
+
+.community-comment {
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.community-comment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.community-comment-header span {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.community-comment p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.community-comment-form {
+  margin-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.community-comment-form textarea,
+.community-apply-form textarea {
+  min-height: 110px;
+}
+
+.community-job-card {
+  padding: 24px;
+}
+
+.community-job-pills {
+  margin: 18px 0;
+}
+
+.community-apply-form,
+.community-job-cta {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.community-job-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.community-job-cta p {
+  color: var(--text-secondary);
+}
+
+.community-inline-message {
+  margin-bottom: 0;
+}
+
+@media (max-width: 900px) {
+  .community-hero,
+  .community-post-header,
+  .community-job-head {
+    flex-direction: column;
+  }
+
+  .community-hero h1 {
+    font-size: 1.9rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .community-page {
+    padding-top: 20px;
+  }
+
+  .community-hero,
+  .community-post,
+  .community-job-card,
+  .community-composer,
+  .community-notice {
+    padding: 18px;
+  }
+
+  .community-post-stats,
+  .community-job-pills,
+  .community-post-actions,
+  .community-hero-actions,
+  .community-job-cta {
+    width: 100%;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .community-comment-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
