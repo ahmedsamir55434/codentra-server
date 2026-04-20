@@ -495,6 +495,7 @@ const normalizeLoyaltySettingsState = (value) => {
 };
 
 const STORAGE_TABLE_NAME = 'data_store';
+const STORAGE_ASSET_TABLE_NAME = 'binary_assets';
 const STORAGE_DATASET_NAME = process.env.NEON_DATASET_NAME || 'codentra-server';
 const storageRequestContext = new AsyncLocalStorage();
 let storageReadyPromise = null;
@@ -672,6 +673,17 @@ const ensurePostgresStore = async () => {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ${STORAGE_ASSET_TABLE_NAME} (
+      key TEXT PRIMARY KEY,
+      content BYTEA NOT NULL,
+      content_type TEXT,
+      file_name TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
 };
 
 const writeRuntimeStateToNeon = async (state) => {
@@ -790,6 +802,45 @@ const refreshRuntimeStateFromNeon = async () => {
   }
 
   return runtimeDbState;
+};
+
+const saveBinaryAsset = async ({ key, buffer, mimeType, fileName }) => {
+  if (!usePostgresStorage() || !key || !Buffer.isBuffer(buffer)) return false;
+
+  await ensurePostgresStore();
+  await getDbPool().query(
+    `
+      INSERT INTO ${STORAGE_ASSET_TABLE_NAME} (key, content, content_type, file_name, updated_at)
+      VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT (key)
+      DO UPDATE SET
+        content = EXCLUDED.content,
+        content_type = EXCLUDED.content_type,
+        file_name = EXCLUDED.file_name,
+        updated_at = NOW()
+    `,
+    [key, buffer, mimeType || null, fileName || null]
+  );
+
+  return true;
+};
+
+const getBinaryAsset = async (key) => {
+  if (!usePostgresStorage() || !key) return null;
+
+  await ensurePostgresStore();
+  const result = await getDbPool().query(
+    `SELECT content, content_type, file_name FROM ${STORAGE_ASSET_TABLE_NAME} WHERE key = $1 LIMIT 1`,
+    [key]
+  );
+
+  if (!result.rowCount) return null;
+
+  return {
+    buffer: result.rows[0].content,
+    mimeType: result.rows[0].content_type || null,
+    fileName: result.rows[0].file_name || null
+  };
 };
 
 const db = {};
@@ -2592,97 +2643,126 @@ app.post('/community/posts/:id/share', requireCommunityMember, (req, res) => {
   }));
 });
 
-app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadHandler, (req, res) => {
+app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadHandler, async (req, res) => {
   const file = req.file || null;
-  const jobs = getCommunityJobsState();
-  const job = jobs.find(item => item && item.id === req.params.id);
 
-  if (!job || job.isActive === false) {
+  try {
+    const jobs = getCommunityJobsState();
+    const job = jobs.find(item => item && item.id === req.params.id);
+
+    if (!job || job.isActive === false) {
+      if (file) safeDeleteFile(file.path);
+      return res.redirect(buildRedirectUrl({
+        pathName: '/community',
+        hash: '#jobs',
+        error: 'الوظيفة غير متاحة حاليًا'
+      }));
+    }
+
+    if (!file) {
+      return res.redirect(buildRedirectUrl({
+        pathName: '/community',
+        hash: '#jobs',
+        error: 'ارفع السيرة الذاتية أولًا'
+      }));
+    }
+
+    if (!isValidCommunityCvFile(file)) {
+      safeDeleteFile(file.path);
+      return res.redirect(buildRedirectUrl({
+        pathName: '/community',
+        hash: '#jobs',
+        error: 'صيغة السيرة الذاتية يجب أن تكون PDF أو DOC أو DOCX'
+      }));
+    }
+
+    const name = (req.body.name || '').toString().trim();
+    const about = (req.body.about || '').toString().trim();
+    const age = Number(req.body.age || 0);
+
+    if (!name || !Number.isFinite(age) || age <= 0 || !about) {
+      safeDeleteFile(file.path);
+      return res.redirect(buildRedirectUrl({
+        pathName: '/community',
+        hash: '#jobs',
+        error: 'أكمل الاسم والعمر ونبذة عنك قبل التقديم'
+      }));
+    }
+
+    if (about.length > COMMUNITY_ABOUT_LIMIT) {
+      safeDeleteFile(file.path);
+      return res.redirect(buildRedirectUrl({
+        pathName: '/community',
+        hash: '#jobs',
+        error: `النبذة طويلة جدًا. الحد الأقصى ${COMMUNITY_ABOUT_LIMIT} حرف`
+      }));
+    }
+
+    const applications = getCommunityJobApplicationsState();
+    const alreadyApplied = applications.find(application =>
+      application &&
+      application.jobId === job.id &&
+      application.userId === req.session.user.id
+    );
+
+    if (alreadyApplied) {
+      safeDeleteFile(file.path);
+      return res.redirect(buildRedirectUrl({
+        pathName: '/community',
+        hash: '#jobs',
+        error: 'لقد قدمت على هذه الوظيفة بالفعل'
+      }));
+    }
+
+    const applicationId = uuidv4();
+    const relativeCvPath = path.relative(__dirname, file.path).split(path.sep).join('/');
+    let cvFilePath = relativeCvPath;
+    let cvStorageKey = null;
+
+    if (usePostgresStorage()) {
+      cvStorageKey = `community-cv:${applicationId}`;
+      await saveBinaryAsset({
+        key: cvStorageKey,
+        buffer: fs.readFileSync(file.path),
+        mimeType: file.mimetype,
+        fileName: file.originalname
+      });
+      safeDeleteFile(file.path);
+      cvFilePath = null;
+    }
+
+    applications.unshift({
+      id: applicationId,
+      jobId: job.id,
+      jobTitle: job.title,
+      userId: req.session.user.id,
+      userEmail: req.session.user.email,
+      applicantName: name,
+      applicantAge: age,
+      about,
+      cvFilePath,
+      cvStorageKey,
+      cvOriginalName: file.originalname,
+      cvMimeType: file.mimetype,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    });
+    saveCommunityJobApplicationsState(applications);
+
+    return res.redirect(buildRedirectUrl({
+      pathName: '/community',
+      hash: '#jobs',
+      success: 'تم إرسال طلب التقديم بنجاح'
+    }));
+  } catch (error) {
     if (file) safeDeleteFile(file.path);
+    console.error('Community job application error:', error);
     return res.redirect(buildRedirectUrl({
       pathName: '/community',
       hash: '#jobs',
-      error: 'الوظيفة غير متاحة حاليًا'
+      error: 'تعذر إرسال طلب التقديم الآن. حاول مرة أخرى'
     }));
   }
-
-  if (!file) {
-    return res.redirect(buildRedirectUrl({
-      pathName: '/community',
-      hash: '#jobs',
-      error: 'ارفع السيرة الذاتية أولًا'
-    }));
-  }
-
-  if (!isValidCommunityCvFile(file)) {
-    safeDeleteFile(file.path);
-    return res.redirect(buildRedirectUrl({
-      pathName: '/community',
-      hash: '#jobs',
-      error: 'صيغة السيرة الذاتية يجب أن تكون PDF أو DOC أو DOCX'
-    }));
-  }
-
-  const name = (req.body.name || '').toString().trim();
-  const about = (req.body.about || '').toString().trim();
-  const age = Number(req.body.age || 0);
-
-  if (!name || !Number.isFinite(age) || age <= 0 || !about) {
-    safeDeleteFile(file.path);
-    return res.redirect(buildRedirectUrl({
-      pathName: '/community',
-      hash: '#jobs',
-      error: 'أكمل الاسم والعمر ونبذة عنك قبل التقديم'
-    }));
-  }
-
-  if (about.length > COMMUNITY_ABOUT_LIMIT) {
-    safeDeleteFile(file.path);
-    return res.redirect(buildRedirectUrl({
-      pathName: '/community',
-      hash: '#jobs',
-      error: `النبذة طويلة جدًا. الحد الأقصى ${COMMUNITY_ABOUT_LIMIT} حرف`
-    }));
-  }
-
-  const applications = getCommunityJobApplicationsState();
-  const alreadyApplied = applications.find(application =>
-    application &&
-    application.jobId === job.id &&
-    application.userId === req.session.user.id
-  );
-
-  if (alreadyApplied) {
-    safeDeleteFile(file.path);
-    return res.redirect(buildRedirectUrl({
-      pathName: '/community',
-      hash: '#jobs',
-      error: 'لقد قدمت على هذه الوظيفة بالفعل'
-    }));
-  }
-
-  applications.unshift({
-    id: uuidv4(),
-    jobId: job.id,
-    jobTitle: job.title,
-    userId: req.session.user.id,
-    userEmail: req.session.user.email,
-    applicantName: name,
-    applicantAge: age,
-    about,
-    cvFilePath: path.relative(__dirname, file.path).split(path.sep).join('/'),
-    cvOriginalName: file.originalname,
-    cvMimeType: file.mimetype,
-    status: 'pending',
-    createdAt: new Date().toISOString()
-  });
-  saveCommunityJobApplicationsState(applications);
-
-  res.redirect(buildRedirectUrl({
-    pathName: '/community',
-    hash: '#jobs',
-    success: 'تم إرسال طلب التقديم بنجاح'
-  }));
 });
 
 // Auth routes
@@ -4256,19 +4336,58 @@ app.post('/admin/community/jobs/:id/toggle', requireSuperAdmin, (req, res) => {
   ));
 });
 
-app.get('/admin/community/applications/:id/cv', requireSuperAdmin, (req, res) => {
+app.get('/admin/community/applications/:id/cv', requireSuperAdmin, async (req, res) => {
   const applications = getCommunityJobApplicationsState();
-  const application = applications.find(item => item && item.id === req.params.id);
-  if (!application || !application.cvFilePath) {
+  let application = applications.find(item => item && item.id === req.params.id);
+  if (!application || (!application.cvFilePath && !application.cvStorageKey)) {
     return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('السيرة الذاتية غير موجودة'));
   }
 
-  const absolutePath = toAbsolutePath(application.cvFilePath);
-  if (!fs.existsSync(absolutePath)) {
-    return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('ملف السيرة الذاتية غير موجود على الخادم'));
+  const absolutePath = application.cvFilePath ? toAbsolutePath(application.cvFilePath) : null;
+  if (absolutePath && fs.existsSync(absolutePath)) {
+    if (usePostgresStorage() && !application.cvStorageKey) {
+      try {
+        const cvStorageKey = `community-cv:${application.id}`;
+        await saveBinaryAsset({
+          key: cvStorageKey,
+          buffer: fs.readFileSync(absolutePath),
+          mimeType: application.cvMimeType,
+          fileName: application.cvOriginalName
+        });
+
+        const applicationIndex = applications.findIndex(item => item && item.id === application.id);
+        if (applicationIndex !== -1) {
+          applications[applicationIndex] = {
+            ...applications[applicationIndex],
+            cvStorageKey
+          };
+          saveCommunityJobApplicationsState(applications);
+          application = applications[applicationIndex];
+        }
+      } catch (error) {
+        console.error('Community CV asset migration error:', error);
+      }
+    }
+
+    return res.download(absolutePath, application.cvOriginalName || path.basename(absolutePath));
   }
 
-  return res.download(absolutePath, application.cvOriginalName || path.basename(absolutePath));
+  if (application.cvStorageKey) {
+    try {
+      const asset = await getBinaryAsset(application.cvStorageKey);
+      if (asset && asset.buffer) {
+        if (application.cvMimeType || asset.mimeType) {
+          res.type(application.cvMimeType || asset.mimeType);
+        }
+        res.attachment(application.cvOriginalName || asset.fileName || `cv-${application.id}`);
+        return res.send(asset.buffer);
+      }
+    } catch (error) {
+      console.error('Community CV asset read error:', error);
+    }
+  }
+
+  return res.redirect('/admin/community/jobs?error=' + encodeURIComponent('ملف السيرة الذاتية غير موجود على الخادم'));
 });
 
 // Admin Team - Group chat for admins
