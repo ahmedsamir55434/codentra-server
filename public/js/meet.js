@@ -2,6 +2,7 @@
   var configEl = document.getElementById('meetConfig');
   var roomId = configEl ? configEl.getAttribute('data-room-id') : null;
   var userRole = configEl ? configEl.getAttribute('data-user-role') : '';
+  var currentUserId = configEl ? configEl.getAttribute('data-user-id') : '';
   var statusEl = document.getElementById('meetStatus');
   var localVideo = document.getElementById('localVideo');
   var remoteVideo = document.getElementById('remoteVideo');
@@ -19,17 +20,18 @@
     return;
   }
 
-  var socket = window.io ? window.io() : null;
-  if (!socket) {
-    setStatus('تعذر الاتصال بالسيرفر');
-    return;
-  }
-
   var pc = null;
   var localStream = null;
   var screenStream = null;
   var isMicEnabled = true;
   var isCamEnabled = true;
+  var pollTimer = null;
+  var pollDelayMs = 1000;
+  var isDisposed = false;
+  var hasSentJoin = false;
+  var isCreatingOffer = false;
+  var lastSignalSeq = 0;
+  var pendingCandidates = [];
 
   var recorder = null;
   var recordedChunks = [];
@@ -43,6 +45,54 @@
     ]
   };
 
+  function compareIds(a, b) {
+    return String(a || '').localeCompare(String(b || ''));
+  }
+
+  function shouldInitiateOffer(signalEvent) {
+    if (!signalEvent || !signalEvent.senderId || signalEvent.senderId === currentUserId) return false;
+    if (userRole === 'admin' && signalEvent.senderRole !== 'admin') return true;
+    if (userRole !== 'admin' && signalEvent.senderRole === 'admin') return false;
+    return compareIds(currentUserId, signalEvent.senderId) < 0;
+  }
+
+  function scheduleSignalPoll(delay) {
+    if (isDisposed) return;
+    if (pollTimer) clearTimeout(pollTimer);
+    pollTimer = setTimeout(fetchSignals, typeof delay === 'number' ? delay : pollDelayMs);
+  }
+
+  async function sendSignal(type, payload) {
+    if (isDisposed) return;
+    var resp = await fetch('/meet/' + encodeURIComponent(roomId) + '/signals', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        type: type,
+        payload: payload || {}
+      })
+    });
+
+    if (!resp.ok) {
+      throw new Error('signal_post_failed_' + resp.status);
+    }
+
+    return resp.json().catch(function () { return { ok: true }; });
+  }
+
+  async function flushPendingCandidates() {
+    if (!pc || !pc.remoteDescription) return;
+    while (pendingCandidates.length) {
+      var candidate = pendingCandidates.shift();
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {}
+    }
+  }
+
   function ensurePeerConnection() {
     if (pc) return pc;
 
@@ -50,7 +100,7 @@
 
     pc.onicecandidate = function (event) {
       if (event.candidate) {
-        socket.emit('webrtc-ice-candidate', { roomId: roomId, candidate: event.candidate });
+        sendSignal('ice-candidate', { candidate: event.candidate }).catch(function () {});
       }
     };
 
@@ -58,18 +108,19 @@
       if (!remoteVideo) return;
       var stream = event.streams && event.streams[0] ? event.streams[0] : null;
       if (stream) remoteVideo.srcObject = stream;
-
-      // Remote media is ready: start recording on admin side.
       startAutoRecordingIfPossible();
     };
 
     pc.onconnectionstatechange = function () {
       setStatus('حالة الاتصال: ' + pc.connectionState);
+      if (pc.connectionState === 'failed') {
+        setStatus('فشل الاتصال المباشر. غالباً تحتاج TURN server للاجتماعات الأونلاين.');
+      }
     };
 
     if (localStream) {
-      localStream.getTracks().forEach(function (t) {
-        pc.addTrack(t, localStream);
+      localStream.getTracks().forEach(function (track) {
+        pc.addTrack(track, localStream);
       });
     }
 
@@ -84,23 +135,23 @@
   function toggleMic() {
     if (!localStream) return;
     isMicEnabled = !isMicEnabled;
-    localStream.getAudioTracks().forEach(function (t) { t.enabled = isMicEnabled; });
+    localStream.getAudioTracks().forEach(function (track) { track.enabled = isMicEnabled; });
     updateButtons();
   }
 
   function toggleCam() {
     if (!localStream) return;
     isCamEnabled = !isCamEnabled;
-    localStream.getVideoTracks().forEach(function (t) { t.enabled = isCamEnabled; });
+    localStream.getVideoTracks().forEach(function (track) { track.enabled = isCamEnabled; });
     updateButtons();
   }
 
   function getVideoSender() {
     if (!pc) return null;
     var senders = pc.getSenders ? pc.getSenders() : [];
-    for (var i = 0; i < senders.length; i++) {
-      var s = senders[i];
-      if (s && s.track && s.track.kind === 'video') return s;
+    for (var i = 0; i < senders.length; i += 1) {
+      var sender = senders[i];
+      if (sender && sender.track && sender.track.kind === 'video') return sender;
     }
     return null;
   }
@@ -108,11 +159,10 @@
   function stopScreenShare() {
     if (!screenStream) return;
     try {
-      screenStream.getTracks().forEach(function (t) { t.stop(); });
+      screenStream.getTracks().forEach(function (track) { track.stop(); });
     } catch (e) {}
     screenStream = null;
 
-    // Restore camera video track
     var sender = getVideoSender();
     var camTrack = localStream && localStream.getVideoTracks && localStream.getVideoTracks()[0];
     if (sender && camTrack && sender.replaceTrack) {
@@ -138,10 +188,8 @@
       var screenTrack = screenStream.getVideoTracks()[0];
       if (!screenTrack) return;
 
-      var sender = getVideoSender();
       ensurePeerConnection();
-      sender = getVideoSender();
-
+      var sender = getVideoSender();
       if (sender && sender.replaceTrack) {
         sender.replaceTrack(screenTrack);
       }
@@ -176,53 +224,141 @@
   }
 
   async function createOfferAndSend() {
+    if (isCreatingOffer) return;
     var peer = ensurePeerConnection();
-    setStatus('جاري إنشاء اتصال...');
+    if (peer.signalingState !== 'stable') return;
 
-    var offer = await peer.createOffer();
-    await peer.setLocalDescription(offer);
-    socket.emit('webrtc-offer', { roomId: roomId, offer: offer });
+    isCreatingOffer = true;
+    setStatus('جاري إنشاء الاتصال...');
+
+    try {
+      var offer = await peer.createOffer();
+      await peer.setLocalDescription(offer);
+      await sendSignal('offer', { offer: offer });
+    } finally {
+      isCreatingOffer = false;
+    }
   }
 
   async function handleOffer(offer) {
     var peer = ensurePeerConnection();
+    if (peer.signalingState !== 'stable') return;
     await peer.setRemoteDescription(new RTCSessionDescription(offer));
+    await flushPendingCandidates();
     var answer = await peer.createAnswer();
     await peer.setLocalDescription(answer);
-    socket.emit('webrtc-answer', { roomId: roomId, answer: answer });
+    await sendSignal('answer', { answer: answer });
   }
 
   async function handleAnswer(answer) {
     if (!pc) return;
     await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    await flushPendingCandidates();
   }
 
   async function handleCandidate(candidate) {
-    if (!pc) return;
+    if (!candidate) return;
+    if (!pc || !pc.remoteDescription) {
+      pendingCandidates.push(candidate);
+      return;
+    }
+
     try {
       await pc.addIceCandidate(new RTCIceCandidate(candidate));
     } catch (e) {}
   }
 
+  async function fetchSignals() {
+    if (isDisposed) return;
+
+    try {
+      var resp = await fetch('/meet/' + encodeURIComponent(roomId) + '/signals?after=' + encodeURIComponent(lastSignalSeq), {
+        headers: { 'Accept': 'application/json' },
+        cache: 'no-store'
+      });
+
+      if (!resp.ok) {
+        setStatus('تعذر مزامنة الاجتماع مع السيرفر');
+        scheduleSignalPoll(2000);
+        return;
+      }
+
+      var data = await resp.json();
+      var events = Array.isArray(data && data.events) ? data.events : [];
+      for (var i = 0; i < events.length; i += 1) {
+        var event = events[i];
+        lastSignalSeq = Math.max(lastSignalSeq, Number(event && event.seq) || 0);
+        await handleSignalEvent(event);
+      }
+    } catch (e) {
+      setStatus('تعذر الوصول إلى إشارات الاجتماع. جاري إعادة المحاولة...');
+    }
+
+    scheduleSignalPoll();
+  }
+
+  async function handleSignalEvent(event) {
+    if (!event || !event.type) return;
+
+    if (event.type === 'join') {
+      setStatus('دخل الطرف الآخر إلى الغرفة');
+      if (shouldInitiateOffer(event)) {
+        try {
+          await createOfferAndSend();
+        } catch (e) {
+          setStatus('حدث خطأ أثناء إنشاء الاتصال');
+        }
+      }
+      startAutoRecordingIfPossible();
+      return;
+    }
+
+    if (event.type === 'leave') {
+      setStatus('الطرف الآخر خرج من الاجتماع');
+      if (remoteVideo) remoteVideo.srcObject = null;
+      stopAndUploadRecording();
+      return;
+    }
+
+    if (event.type === 'offer' && event.payload && event.payload.offer) {
+      try {
+        await handleOffer(event.payload.offer);
+      } catch (e) {
+        setStatus('فشل استقبال الاتصال');
+      }
+      return;
+    }
+
+    if (event.type === 'answer' && event.payload && event.payload.answer) {
+      try {
+        await handleAnswer(event.payload.answer);
+      } catch (e) {
+        setStatus('فشل تثبيت الاتصال');
+      }
+      return;
+    }
+
+    if (event.type === 'ice-candidate' && event.payload && event.payload.candidate) {
+      await handleCandidate(event.payload.candidate);
+    }
+  }
+
   function buildRecordingStream() {
     var tracks = [];
-
     var remoteStream = remoteVideo && remoteVideo.srcObject ? remoteVideo.srcObject : null;
     var local = localStream;
 
-    // Prefer remote video if available (captures the other side), fallback to local camera.
     if (remoteStream && remoteStream.getVideoTracks && remoteStream.getVideoTracks().length) {
       tracks.push(remoteStream.getVideoTracks()[0]);
     } else if (local && local.getVideoTracks && local.getVideoTracks().length) {
       tracks.push(local.getVideoTracks()[0]);
     }
 
-    // Add audio tracks from both sides if available.
     if (local && local.getAudioTracks) {
-      local.getAudioTracks().forEach(function (t) { tracks.push(t); });
+      local.getAudioTracks().forEach(function (track) { tracks.push(track); });
     }
     if (remoteStream && remoteStream.getAudioTracks) {
-      remoteStream.getAudioTracks().forEach(function (t) { tracks.push(t); });
+      remoteStream.getAudioTracks().forEach(function (track) { tracks.push(track); });
     }
 
     return new MediaStream(tracks);
@@ -235,9 +371,11 @@
       'video/webm;codecs=vp8',
       'video/webm'
     ];
-    for (var i = 0; i < candidates.length; i++) {
-      var mt = candidates[i];
-      if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mt)) return mt;
+    for (var i = 0; i < candidates.length; i += 1) {
+      var mimeType = candidates[i];
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mimeType)) {
+        return mimeType;
+      }
     }
     return '';
   }
@@ -249,7 +387,7 @@
       setStatus('المتصفح لا يدعم تسجيل الاجتماع');
       return;
     }
-    // Ensure both local and remote streams are ready
+
     var remoteStream = remoteVideo && remoteVideo.srcObject ? remoteVideo.srcObject : null;
     if (!localStream || !remoteStream) {
       setStatus('في انتظار الطرف الآخر...');
@@ -271,10 +409,6 @@
         setStatus('جاري التسجيل تلقائياً...');
       };
 
-      recorder.onstop = function () {
-        // upload happens in stopAndUploadRecording
-      };
-
       recorder.start(1000);
     } catch (e) {
       setStatus('فشل بدء التسجيل');
@@ -290,7 +424,6 @@
       try { recorder.stop(); } catch (e) {}
     }
 
-    // Give MediaRecorder a moment to flush final chunk.
     await new Promise(function (resolve) { setTimeout(resolve, 250); });
 
     if (!recordedChunks.length) {
@@ -326,57 +459,36 @@
     }
   }
 
+  async function announceJoin() {
+    if (hasSentJoin) return;
+    hasSentJoin = true;
+    try {
+      await sendSignal('join', { role: userRole });
+    } catch (e) {
+      setStatus('تعذر إشعار الطرف الآخر بدخولك إلى الاجتماع');
+    }
+  }
+
+  async function leaveMeeting() {
+    if (isDisposed) return;
+    if (pollTimer) clearTimeout(pollTimer);
+    try { await sendSignal('leave', {}); } catch (e) {}
+    isDisposed = true;
+    try { if (pc) pc.close(); } catch (e2) {}
+    try { if (localStream) localStream.getTracks().forEach(function (track) { track.stop(); }); } catch (e3) {}
+    try { if (screenStream) screenStream.getTracks().forEach(function (track) { track.stop(); }); } catch (e4) {}
+  }
+
   async function init() {
     await startLocalMedia();
     ensurePeerConnection();
-
-    socket.emit('join-room', roomId);
-
-    socket.on('peer-joined', function () {
-      // If a new peer joined after us, we create an offer.
-      createOfferAndSend().catch(function () {
-        setStatus('حدث خطأ أثناء إنشاء الاتصال');
-      });
-
-      // Start recording automatically on admin side when peer joins.
-      startAutoRecordingIfPossible();
-    });
-
-    socket.on('peer-left', function () {
-      setStatus('الطرف الآخر خرج من الاجتماع');
-      if (remoteVideo) remoteVideo.srcObject = null;
-
-      // Stop and upload recording when peer leaves.
-      stopAndUploadRecording();
-    });
-
-    socket.on('webrtc-offer', function (payload) {
-      if (!payload || !payload.offer) return;
-      handleOffer(payload.offer).catch(function () {
-        setStatus('فشل استقبال الاتصال');
-      });
-    });
-
-    socket.on('webrtc-answer', function (payload) {
-      if (!payload || !payload.answer) return;
-      handleAnswer(payload.answer).catch(function () {
-        setStatus('فشل تثبيت الاتصال');
-      });
-    });
-
-    socket.on('webrtc-ice-candidate', function (payload) {
-      if (!payload || !payload.candidate) return;
-      handleCandidate(payload.candidate);
-    });
+    scheduleSignalPoll(0);
+    await announceJoin();
 
     window.addEventListener('beforeunload', function () {
-      try { socket.emit('leave-room', roomId); } catch (e) {}
-      try { if (pc) pc.close(); } catch (e2) {}
-      try { if (localStream) localStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e3) {}
-      try { if (screenStream) screenStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e4) {}
-
-      // Attempt to stop and upload. This might not always finish before unload.
-      try { stopAndUploadRecording(); } catch (e5) {}
+      try { navigator.sendBeacon('/meet/' + encodeURIComponent(roomId) + '/signals', new Blob([JSON.stringify({ type: 'leave', payload: {} })], { type: 'application/json' })); } catch (e) {}
+      try { leaveMeeting(); } catch (e2) {}
+      try { stopAndUploadRecording(); } catch (e3) {}
     });
 
     if (btnMic) btnMic.addEventListener('click', toggleMic);
@@ -386,14 +498,14 @@
     });
     if (btnEndMeeting) btnEndMeeting.addEventListener('click', async function () {
       await stopAndUploadRecording();
-      // Give a moment for upload to start, then redirect
+      await leaveMeeting();
       setTimeout(function () {
-        window.location.href = '/my-appointments';
+        window.location.href = userRole === 'admin' ? '/admin/appointments' : '/my-appointments';
       }, 500);
     });
   }
 
   init().catch(function () {
-    // handled above
+    // status already handled where possible
   });
 })();

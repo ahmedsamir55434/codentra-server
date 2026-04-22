@@ -10,7 +10,11 @@
 <body>
   <%- include('partials/header') %>
 
-  <div id="meetConfig" data-room-id="<%= roomId %>" data-user-role="<%= user && user.role ? user.role : '' %>"></div>
+  <div
+    id="meetConfig"
+    data-room-id="<%= roomId %>"
+    data-user-role="<%= user && user.role ? user.role : '' %>"
+    data-user-id="<%= currentUserId || '' %>"></div>
 
   <main class="meet-page">
     <div class="container">
@@ -43,7 +47,6 @@
     </div>
   </main>
 
-  <script src="/socket.io/socket.io.js"></script>
   <script src="/js/meet.js"></script>
 
   <%- include('partials/footer') %>

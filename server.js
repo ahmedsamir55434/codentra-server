@@ -12,6 +12,7 @@ const crypto = require('crypto');
 const os = require('os');
 const { AsyncLocalStorage } = require('async_hooks');
 const mammoth = require('mammoth');
+const pdfParse = require('pdf-parse');
 const { v4: uuidv4 } = require('uuid');
 const { Server } = require('socket.io');
 const PDFDocument = require('pdfkit');
@@ -1780,10 +1781,9 @@ const getCommunityKeywordCandidates = (job) => {
 };
 
 const buildCommunityLocalAiScreening = ({ job, applicant, cvText, sourceLabel, failureReason }) => {
-  const normalizedCvText = String(cvText || '').trim();
   const jobKeywords = getCommunityKeywordCandidates(job);
   const applicantTokens = new Set(
-    tokenizeCommunityScreeningText(`${applicant && applicant.about ? applicant.about : ''}\n${normalizedCvText}`)
+    tokenizeCommunityScreeningText(`${applicant && applicant.about ? applicant.about : ''}\n${cvText || ''}`)
   );
   const matchedKeywords = jobKeywords.filter((token) => applicantTokens.has(token));
   const scoreBase = Math.max(4, Math.min(jobKeywords.length, 12));
@@ -1792,9 +1792,6 @@ const buildCommunityLocalAiScreening = ({ job, applicant, cvText, sourceLabel, f
   const missingKeywords = jobKeywords.filter((token) => !applicantTokens.has(token)).slice(0, 3);
 
   const reasons = [];
-  if (!normalizedCvText) {
-    reasons.push('تعذر استخراج نص واضح من السيرة الذاتية بالكامل، لذا تم الاعتماد أكثر على نبذة المتقدم والملف المرفوع.');
-  }
   if (matchedKeywords.length) {
     reasons.push(`تم العثور على تقاطع واضح مع متطلبات الوظيفة في: ${matchedKeywords.slice(0, 4).join('، ')}`);
   }
@@ -1821,50 +1818,6 @@ const buildCommunityLocalAiScreening = ({ job, applicant, cvText, sourceLabel, f
     model: failureReason ? `fallback:${sourceLabel}` : `heuristic:${sourceLabel}`,
     error: failureReason || null
   });
-};
-
-const decodePdfEscapedText = (value) => {
-  return String(value || '')
-    .replace(/\\([\\()])/g, '$1')
-    .replace(/\\n/g, ' ')
-    .replace(/\\r/g, ' ')
-    .replace(/\\t/g, ' ')
-    .replace(/\\b/g, ' ')
-    .replace(/\\f/g, ' ')
-    .replace(/\\([0-7]{3})/g, (_, octal) => {
-      try {
-        return String.fromCharCode(parseInt(octal, 8));
-      } catch (_) {
-        return ' ';
-      }
-    });
-};
-
-const extractPdfFallbackText = (cvBuffer) => {
-  const latinText = Buffer.isBuffer(cvBuffer) ? cvBuffer.toString('latin1') : '';
-  if (!latinText) return '';
-
-  const collected = [];
-  const parenthesizedMatches = latinText.match(/\((?:\\.|[^\\()]){2,}\)/g) || [];
-  parenthesizedMatches.forEach((match) => {
-    const decoded = decodePdfEscapedText(match.slice(1, -1)).replace(/\s+/g, ' ').trim();
-    if (/[A-Za-z\u0600-\u06FF]/.test(decoded)) {
-      collected.push(decoded);
-    }
-  });
-
-  const tokenMatches = latinText.match(/[A-Za-z\u0600-\u06FF][A-Za-z0-9\u0600-\u06FF+#./:_ -]{2,}/g) || [];
-  tokenMatches.forEach((match) => {
-    const cleaned = match.replace(/\s+/g, ' ').trim();
-    if (cleaned.length >= 3) collected.push(cleaned);
-  });
-
-  return collected
-    .join(' ')
-    .replace(/[^\S\r\n]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 18000);
 };
 
 const getCommunityAiScreeningSchema = () => ({
@@ -1913,13 +1866,13 @@ const buildCommunityAiPromptText = ({ job, applicant, fileName, sourceLabel, cvT
   `نبذة المتقدم: ${applicant.about}`,
   `اسم الملف: ${fileName || 'cv'}`,
   `صيغة السيرة الذاتية المستخدمة في التقييم: ${sourceLabel}`,
-  cvText ? '' : 'قد لا يتوفر نص مستخرج من الملف، لذلك اعتمد على الملف المرفوع نفسه إن وُجد ضمن المرفقات.',
-  cvText ? 'نص السيرة الذاتية:' : '',
-  cvText ? String(cvText || '').slice(0, 18000) : '',
+  '',
+  'نص السيرة الذاتية:',
+  String(cvText || '').slice(0, 18000),
   plainJsonOnly ? 'استخدم هذا الشكل حرفيًا: {"decision":"accepted","score":75,"summary":"...","reasons":["..."]}' : ''
 ].filter(Boolean).join('\n');
 
-const requestCommunityGeminiScreening = async ({ cvText, sourceLabel, job, applicant, fileName, useSchema, attachmentParts = [] }) => {
+const requestCommunityGeminiScreening = async ({ cvText, sourceLabel, job, applicant, fileName, useSchema }) => {
   const generationConfig = {
     temperature: 0.1
   };
@@ -1940,7 +1893,6 @@ const requestCommunityGeminiScreening = async ({ cvText, sourceLabel, job, appli
         {
           role: 'user',
           parts: [
-            ...attachmentParts,
             {
               text: buildCommunityAiPromptText({
                 job,
@@ -1972,22 +1924,20 @@ const requestCommunityGeminiScreening = async ({ cvText, sourceLabel, job, appli
   return parseGeminiJsonResponse(responseText);
 };
 
-const extractCommunityCvContent = async ({ cvBuffer, mimeType, fileName }) => {
+const extractCommunityCvText = async ({ cvBuffer, mimeType, fileName }) => {
   const normalizedMimeType = String(mimeType || '').toLowerCase();
   const normalizedFileName = String(fileName || '').toLowerCase();
 
   if (normalizedMimeType === 'application/pdf' || normalizedFileName.endsWith('.pdf')) {
+    const extraction = await pdfParse(cvBuffer);
+    const extractedText = String(extraction?.text || '').replace(/\s+/g, ' ').trim();
+    if (!extractedText) {
+      throw new Error('empty_pdf_text');
+    }
+
     return {
-      cvText: extractPdfFallbackText(cvBuffer),
-      sourceLabel: 'PDF',
-      attachmentParts: [
-        {
-          inline_data: {
-            mime_type: 'application/pdf',
-            data: cvBuffer.toString('base64')
-          }
-        }
-      ]
+      cvText: extractedText,
+      sourceLabel: 'PDF'
     };
   }
 
@@ -2003,8 +1953,7 @@ const extractCommunityCvContent = async ({ cvBuffer, mimeType, fileName }) => {
 
     return {
       cvText: extractedText,
-      sourceLabel: 'DOCX',
-      attachmentParts: []
+      sourceLabel: 'DOCX'
     };
   }
 
@@ -2012,11 +1961,19 @@ const extractCommunityCvContent = async ({ cvBuffer, mimeType, fileName }) => {
 };
 
 const screenCommunityCvWithGemini = async ({ job, applicant, cvBuffer, mimeType, fileName }) => {
+  if (!GEMINI_API_KEY) {
+    return normalizeCommunityAiScreening({
+      decision: 'skipped',
+      summary: 'لم يتم تفعيل التقييم الذكي بعد.',
+      reasons: []
+    });
+  }
+
   if (!Buffer.isBuffer(cvBuffer) || !cvBuffer.length) {
     throw new Error('missing_cv_buffer');
   }
 
-  const cvContent = await extractCommunityCvContent({ cvBuffer, mimeType, fileName });
+  const cvContent = await extractCommunityCvText({ cvBuffer, mimeType, fileName });
 
   if (!GEMINI_API_KEY) {
     return buildCommunityLocalAiScreening({
@@ -2037,8 +1994,7 @@ const screenCommunityCvWithGemini = async ({ job, applicant, cvBuffer, mimeType,
       job,
       applicant,
       fileName,
-      useSchema: true,
-      attachmentParts: cvContent.attachmentParts
+      useSchema: true
     });
   } catch (primaryError) {
     try {
@@ -2048,8 +2004,7 @@ const screenCommunityCvWithGemini = async ({ job, applicant, cvBuffer, mimeType,
         job,
         applicant,
         fileName,
-        useSchema: false,
-        attachmentParts: cvContent.attachmentParts
+        useSchema: false
       });
     } catch (fallbackError) {
       return buildCommunityLocalAiScreening({
@@ -5255,6 +5210,24 @@ const buildMeetingRoomId = ({ adminId, userId, slotId }) => {
   return `codentra-${safe(adminId)}-${safe(userId)}-${safe(slotId)}`;
 };
 
+const getMeetingIceServers = () => {
+  const fallback = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ];
+  const raw = String(process.env.WEBRTC_ICE_SERVERS || '').trim();
+  if (!raw) return fallback;
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.length) return fallback;
+    const sanitized = parsed.filter((entry) => entry && typeof entry === 'object' && entry.urls);
+    return sanitized.length ? sanitized : fallback;
+  } catch (error) {
+    return fallback;
+  }
+};
+
 const migrateAppointmentsBookingsMeetingLinks = () => {
   const data = db.appointments();
   const timeSlots = Array.isArray(data.timeSlots) ? data.timeSlots : [];
@@ -5459,33 +5432,78 @@ app.post('/admin/appointments/slots/:id/delete', requireAdminPermission(ADMIN_PE
 
 app.get('/meet/:roomId', requireAuth, (req, res) => {
   const roomId = req.params.roomId;
-  if (typeof roomId === 'string' && roomId.startsWith('team-')) {
-    if (!req.session.user || req.session.user.role !== 'admin') {
-      return res.status(403).send('Not allowed');
-    }
-    return res.render('meet', { user: req.session.user, roomId });
+  const access = getMeetingAccessContext({ roomId, sessionUser: req.session.user });
+  if (!access.booking && !access.isTeamRoom) return res.status(404).send('Meeting not found');
+  if (!access.allowed) return res.status(403).send('Not allowed');
+
+  res.render('meet', {
+    user: req.session.user,
+    roomId,
+    currentUserId: req.session.user && req.session.user.id ? req.session.user.id : ''
+  });
+});
+
+app.get('/meet/:roomId/signals', requireAuth, (req, res) => {
+  const roomId = req.params.roomId;
+  const access = getMeetingAccessContext({ roomId, sessionUser: req.session.user });
+  if (!access.booking && !access.isTeamRoom) return res.status(404).json({ ok: false, error: 'Meeting not found' });
+  if (!access.allowed) return res.status(403).json({ ok: false, error: 'Not allowed' });
+
+  const afterSeq = Math.max(0, Math.floor(Number(req.query.after || 0)) || 0);
+  const originalState = getMeetingSignalsState();
+  const state = pruneMeetingSignalEvents(originalState, roomId);
+  if (state.events.length !== originalState.events.length) {
+    saveMeetingSignalsState(state);
   }
-  const data = migrateAppointmentsBookingsMeetingLinks();
-  const bookings = Array.isArray(data.bookings) ? data.bookings : [];
-  const booking = bookings.find(b => b && b.roomId === roomId) || null;
-  if (!booking) return res.status(404).send('Meeting not found');
 
-  const uid = req.session.user && req.session.user.id;
-  const isAllowed = uid && (booking.userId === uid || booking.adminId === uid);
-  if (!isAllowed) return res.status(403).send('Not allowed');
+  const events = state.events
+    .filter((event) => event.roomId === roomId && event.seq > afterSeq && event.senderId !== req.session.user.id)
+    .slice(0, 100);
 
-  res.render('meet', { user: req.session.user, roomId });
+  return res.json({
+    ok: true,
+    events,
+    nextSeq: state.nextSeq
+  });
+});
+
+app.post('/meet/:roomId/signals', requireAuth, (req, res) => {
+  const roomId = req.params.roomId;
+  const access = getMeetingAccessContext({ roomId, sessionUser: req.session.user });
+  if (!access.booking && !access.isTeamRoom) return res.status(404).json({ ok: false, error: 'Meeting not found' });
+  if (!access.allowed) return res.status(403).json({ ok: false, error: 'Not allowed' });
+
+  const type = String(req.body.type || '').trim();
+  const allowedTypes = new Set(['join', 'offer', 'answer', 'ice-candidate', 'leave']);
+  if (!allowedTypes.has(type)) {
+    return res.status(400).json({ ok: false, error: 'Invalid signal type' });
+  }
+
+  const state = pruneMeetingSignalEvents(getMeetingSignalsState(), roomId);
+  const event = normalizeMeetingSignalEvent({
+    seq: state.nextSeq,
+    roomId,
+    senderId: req.session.user.id,
+    senderRole: req.session.user.role,
+    type,
+    payload: req.body.payload && typeof req.body.payload === 'object' ? req.body.payload : {},
+    createdAt: new Date().toISOString()
+  });
+
+  state.events.push(event);
+  state.nextSeq += 1;
+  saveMeetingSignalsState(state);
+
+  return res.json({ ok: true, seq: event.seq });
 });
 
 app.post('/meet/:roomId/recording', requireAdmin, meetingRecordingUpload.single('recording'), (req, res) => {
   const roomId = req.params.roomId;
-  const data = migrateAppointmentsBookingsMeetingLinks();
-  const bookings = Array.isArray(data.bookings) ? data.bookings : [];
-  const booking = bookings.find(b => b && b.roomId === roomId) || null;
-  if (!booking) return res.status(404).json({ ok: false, error: 'Meeting not found' });
-
-  const adminId = req.session.user && req.session.user.id;
-  if (!adminId || booking.adminId !== adminId) return res.status(403).json({ ok: false, error: 'Not allowed' });
+  const access = getMeetingAccessContext({ roomId, sessionUser: req.session.user });
+  if (!access.booking) return res.status(404).json({ ok: false, error: 'Meeting not found' });
+  if (!access.allowed || !access.booking.adminId || access.booking.adminId !== req.session.user.id) {
+    return res.status(403).json({ ok: false, error: 'Not allowed' });
+  }
   if (!req.file) return res.status(400).json({ ok: false, error: 'No recording uploaded' });
 
   const absoluteFilePath = req.file && req.file.path ? req.file.path : null;
@@ -5504,13 +5522,13 @@ app.post('/meet/:roomId/recording', requireAdmin, meetingRecordingUpload.single(
   recordings.push({
     id: uuidv4(),
     roomId,
-    bookingId: booking.id || null,
-    adminId: booking.adminId,
-    adminName: booking.adminName || null,
-    userId: booking.userId,
-    userName: booking.userName || null,
-    startAt: booking.startAt || null,
-    durationMinutes: booking.durationMinutes || null,
+    bookingId: access.booking.id || null,
+    adminId: access.booking.adminId,
+    adminName: access.booking.adminName || null,
+    userId: access.booking.userId,
+    userName: access.booking.userName || null,
+    startAt: access.booking.startAt || null,
+    durationMinutes: access.booking.durationMinutes || null,
     filePath: storedPath,
     originalFileName: req.file.originalname || 'meeting.webm',
     mimeType: req.file.mimetype || null,
