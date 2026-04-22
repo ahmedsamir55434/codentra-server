@@ -1,43 +1,141 @@
+<%
+  const guestPrimaryLinks = [
+    { href: '/', label: 'المشاريع' },
+    { href: '/community', label: 'Community' }
+  ];
+
+  const userPrimaryLinks = [
+    { href: '/', label: 'المشاريع' },
+    { href: '/community', label: 'Community' },
+    { href: '/my-purchases', label: 'مشترياتي' },
+    { href: '/appointments', label: 'الجلسات' },
+    { href: '/messages', label: 'التواصل' }
+  ];
+
+  const userSecondaryLinks = [
+    { href: '/cart', label: 'السلة' },
+    { href: '/subscriptions', label: 'الاشتراكات' },
+    { href: '/loyalty', label: 'نقاطي' },
+    { href: '/my-appointments', label: 'مواعيدي' }
+  ];
+
+  const adminPrimaryLinks = [
+    { href: '/', label: 'المشاريع' },
+    { href: '/community', label: 'Community' },
+    { href: '/admin', label: 'لوحة التحكم' }
+  ];
+
+  const adminSecondaryLinks = [];
+  if (user && user.role === 'admin') {
+    if (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.appointments)) {
+      adminPrimaryLinks.push({ href: '/admin/appointments', label: 'المواعيد' });
+    }
+    adminSecondaryLinks.push({ href: '/admin/team', label: 'الفريق' });
+  }
+
+  const primaryLinks = user
+    ? (user.role === 'admin' ? adminPrimaryLinks : userPrimaryLinks)
+    : guestPrimaryLinks;
+  const secondaryLinks = user
+    ? (user.role === 'admin' ? adminSecondaryLinks : userSecondaryLinks)
+    : [];
+%>
 <header class="main-header">
-  <div class="container">
-    <div class="logo">
+  <div class="container nav-shell">
+    <div class="logo nav-brand">
       <a href="/">
         <img src="/logo.jpg" alt="Codentra" class="logo-img">
         <span>Codentra</span>
       </a>
     </div>
-    <nav class="main-nav">
-      <a href="/">المشاريع</a>
-      <a href="/community">Community</a>
-      <button type="button" class="btn btn-secondary theme-toggle" id="themeToggle" aria-label="تبديل الوضع الليلي/النهاري">
-        الوضع
-      </button>
-      <% if (user) { %>
-        <% if (user.role === 'admin') { %>
-          <a href="/admin">لوحة التحكم</a>
-          <% if (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.appointments)) { %>
-            <a href="/admin/appointments">المواعيد</a>
-          <% } %>
-          <span class="user-name">مرحباً <%= user.name %></span>
+
+    <nav class="main-nav smart-nav" aria-label="التنقل الرئيسي">
+      <div class="nav-primary" role="list">
+        <% primaryLinks.forEach(link => { %>
+          <a href="<%= link.href %>" class="nav-pill"><%= link.label %></a>
+        <% }) %>
+      </div>
+
+      <div class="nav-actions">
+        <% if (secondaryLinks.length > 0) { %>
+          <details class="nav-more-menu">
+            <summary class="nav-more-trigger" aria-label="روابط إضافية">
+              <span>المزيد</span>
+              <span class="nav-more-icon">+</span>
+            </summary>
+            <div class="nav-more-panel">
+              <% secondaryLinks.forEach(link => { %>
+                <a href="<%= link.href %>" class="nav-more-link"><%= link.label %></a>
+              <% }) %>
+            </div>
+          </details>
+        <% } %>
+
+        <button type="button" class="btn btn-secondary theme-toggle nav-compact-btn" id="themeToggle" aria-label="تبديل الوضع الليلي/النهاري">
+          الوضع
+        </button>
+
+        <% if (user) { %>
+          <div class="nav-user-chip">
+            <span class="nav-user-label">مرحباً</span>
+            <strong><%= user.name %></strong>
+          </div>
+          <a href="/logout" class="btn btn-secondary nav-compact-btn">خروج</a>
+        <% } else { %>
+          <a href="/login" class="btn btn-secondary nav-compact-btn">دخول</a>
+          <a href="/register" class="btn btn-primary nav-compact-btn">حساب جديد</a>
+        <% } %>
+
+        <button
+          type="button"
+          class="nav-menu-toggle"
+          id="navMenuToggle"
+          aria-expanded="false"
+          aria-controls="mobileNavPanel"
+          aria-label="فتح القائمة">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <div class="mobile-nav-panel" id="mobileNavPanel" hidden>
+    <div class="mobile-nav-backdrop" data-close-nav></div>
+    <div class="mobile-nav-sheet">
+      <div class="mobile-nav-head">
+        <div>
+          <span class="mobile-nav-kicker">Navigation</span>
+          <strong>Codentra</strong>
+        </div>
+        <button type="button" class="mobile-nav-close" data-close-nav aria-label="إغلاق القائمة">×</button>
+      </div>
+
+      <div class="mobile-nav-section">
+        <% primaryLinks.forEach(link => { %>
+          <a href="<%= link.href %>" class="mobile-nav-link"><%= link.label %></a>
+        <% }) %>
+        <% secondaryLinks.forEach(link => { %>
+          <a href="<%= link.href %>" class="mobile-nav-link mobile-nav-link-secondary"><%= link.label %></a>
+        <% }) %>
+      </div>
+
+      <div class="mobile-nav-section mobile-nav-actions">
+        <button type="button" class="btn btn-secondary mobile-theme-toggle" id="mobileThemeToggle">
+          تبديل الوضع
+        </button>
+        <% if (user) { %>
+          <div class="nav-user-chip mobile-user-chip">
+            <span class="nav-user-label">الحساب</span>
+            <strong><%= user.name %></strong>
+          </div>
           <a href="/logout" class="btn btn-secondary">خروج</a>
         <% } else { %>
-          <div class="nav-links" id="navLinks">
-            <a href="/">الرئيسية</a>
-            <a href="/cart">السلة 🛒</a>
-            <a href="/my-purchases">مشترياتي</a>
-            <a href="/subscriptions">الاشتراكات</a>
-            <a href="/loyalty">نقاطي</a>
-            <a href="/appointments">حجز جلسة</a>
-            <a href="/my-appointments">مواعيدي</a>
-            <a href="/messages">التواصل 📨</a>
-          </div>
-          <span class="user-name">مرحباً <%= user.name %></span>
-          <a href="/logout" class="btn btn-secondary">خروج</a>
+          <a href="/login" class="btn btn-secondary">تسجيل الدخول</a>
+          <a href="/register" class="btn btn-primary">حساب جديد</a>
         <% } %>
-      <% } else { %>
-        <a href="/login" class="btn btn-secondary">تسجيل الدخول</a>
-        <a href="/register" class="btn btn-primary">حساب جديد</a>
-      <% } %>
-    </nav>
+      </div>
+    </div>
   </div>
 </header>
