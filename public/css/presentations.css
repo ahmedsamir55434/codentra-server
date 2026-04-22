@@ -1,8 +1,8 @@
 .presentations-page {
   background:
-    radial-gradient(800px 500px at 15% 10%, rgba(255, 255, 255, 0.1), transparent 60%),
-    radial-gradient(1000px 600px at 90% 20%, rgba(255, 255, 255, 0.07), transparent 58%),
-    #05060b;
+    radial-gradient(800px 500px at 15% 10%, var(--hero-glow-1), transparent 60%),
+    radial-gradient(1000px 600px at 90% 20%, var(--hero-glow-2), transparent 58%),
+    var(--bg-color);
 }
 
 .presentations-shell {
@@ -48,12 +48,20 @@
 }
 
 .presentations-card {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(12px);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.04) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), var(--shadow-lg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s;
+}
+
+.presentations-card:hover {
+  transform: translateY(-4px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), var(--shadow-glow), var(--shadow-lg);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .presentations-hero-copy h1,
@@ -67,12 +75,16 @@
 
 .presentations-kicker {
   display: inline-flex;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.88);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.06) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text-primary);
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 .presentations-hero-copy p,
@@ -80,7 +92,7 @@
 .presentations-card small,
 .presentations-card span,
 .presentations-card li {
-  color: rgba(255, 255, 255, 0.74);
+  color: var(--text-secondary);
 }
 
 .presentations-actions,
@@ -106,10 +118,12 @@
 .presentations-summary-row,
 .presentations-list-item,
 .presentations-notes {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  padding: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 .presentations-mini-card strong,
@@ -126,14 +140,24 @@
 }
 
 .presentations-stat {
-  padding: 18px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.presentations-stat:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
 }
 
 .presentations-stat-highlight {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .presentations-flash {
@@ -144,15 +168,17 @@
 }
 
 .presentations-flash-error {
-  background: rgba(255, 82, 82, 0.12);
+  background: linear-gradient(135deg, rgba(255, 82, 82, 0.14) 0%, rgba(255, 82, 82, 0.08) 100%);
   color: #ffb3b3;
-  border: 1px solid rgba(255, 82, 82, 0.2);
+  border: 1px solid rgba(255, 82, 82, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .presentations-flash-success {
-  background: rgba(58, 211, 137, 0.12);
+  background: linear-gradient(135deg, rgba(58, 211, 137, 0.14) 0%, rgba(58, 211, 137, 0.08) 100%);
   color: #b9ffd9;
-  border: 1px solid rgba(58, 211, 137, 0.2);
+  border: 1px solid rgba(58, 211, 137, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .presentations-dashboard,
@@ -191,11 +217,14 @@
 
 .presentations-code {
   display: inline-flex;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.08) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text-primary);
   letter-spacing: 0.12em;
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .presentations-plan-card ul,
@@ -215,15 +244,17 @@
 
 .presentations-price strong {
   font-size: 2.2rem;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .presentations-plan-badge {
   display: inline-flex;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   margin-bottom: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .presentations-plan-form,
@@ -248,16 +279,28 @@
 .presentations-form input,
 .presentations-form select,
 .presentations-plan-form input {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  color: #fff;
-  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  padding: 14px 18px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.presentations-form input:focus,
+.presentations-form select:focus,
+.presentations-plan-form input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
 }
 
 .presentations-form input::placeholder,
 .presentations-plan-form input::placeholder {
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-secondary);
 }
 
 .presentations-verify-wrap {
@@ -284,7 +327,7 @@
   display: block;
   font-size: 2rem;
   letter-spacing: 0.18em;
-  color: #fff;
+  color: var(--text-primary);
   margin: 12px 0;
 }
 
