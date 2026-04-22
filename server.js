@@ -12,7 +12,6 @@ const crypto = require('crypto');
 const os = require('os');
 const { AsyncLocalStorage } = require('async_hooks');
 const mammoth = require('mammoth');
-const pdfParse = require('pdf-parse');
 const { v4: uuidv4 } = require('uuid');
 const { Server } = require('socket.io');
 const PDFDocument = require('pdfkit');
