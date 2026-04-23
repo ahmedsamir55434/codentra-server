@@ -1065,13 +1065,13 @@ html[data-theme="light"] .mobile-nav-sheet {
 
 /* ===== MOBILE NAV HEAD FIX ===== */
 .mobile-nav-head {
-  position: relative;
-  height: 72px;
   display: flex;
   flex-direction: row-reverse;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
-  padding: 0;
+  padding: 8px 0;
+  min-height: 72px;
 }
 
 .mobile-nav-kicker {
