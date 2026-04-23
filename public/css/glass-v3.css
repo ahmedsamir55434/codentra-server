@@ -1065,7 +1065,7 @@ html[data-theme="light"] .mobile-nav-sheet {
 
 .mobile-nav-head {
   position: relative;
-  height: 76px;
+  height: 72px;
   padding: 0;
 }
 
@@ -1079,8 +1079,8 @@ html[data-theme="light"] .mobile-nav-sheet {
 
 .mobile-nav-title-group {
   position: absolute;
-  inset-inline-start: 62px;
-  inset-inline-end: 4px;
+  left: 62px;
+  right: 4px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -1102,7 +1102,7 @@ html[data-theme="light"] .mobile-nav-sheet {
 
 .mobile-nav-close {
   position: absolute;
-  inset-inline-start: 6px;
+  left: 6px;
   top: 50%;
   transform: translateY(-50%);
   width: 42px;
