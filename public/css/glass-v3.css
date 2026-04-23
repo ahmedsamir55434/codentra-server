@@ -1065,8 +1065,8 @@ html[data-theme="light"] .mobile-nav-sheet {
 
 .mobile-nav-head {
   position: relative;
-  min-height: 56px;
-  padding: 2px 4px 2px 56px;
+  min-height: 64px;
+  padding: 6px 4px 6px 74px;
   display: flex;
   align-items: center;
 }
@@ -1084,7 +1084,7 @@ html[data-theme="light"] .mobile-nav-sheet {
   flex-direction: column;
   align-items: flex-end;
   justify-content: center;
-  gap: 0;
+  gap: 2px;
   width: 100%;
   min-width: 0;
   text-align: right;
@@ -1099,8 +1099,8 @@ html[data-theme="light"] .mobile-nav-sheet {
 
 .mobile-nav-close {
   position: absolute;
-  left: 4px;
-  top: 12px;
+  left: 10px;
+  top: 10px;
   transform: none;
   width: 42px;
   height: 42px;
