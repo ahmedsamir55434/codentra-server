@@ -1069,7 +1069,8 @@ html[data-theme="light"] .mobile-nav-sheet {
   flex-direction: row-reverse;
   align-items: center;
   gap: 12px;
-  min-height: 72px;
+  height: 72px;
+  box-sizing: border-box;
 }
 
 .mobile-nav-kicker {
@@ -1081,21 +1082,14 @@ html[data-theme="light"] .mobile-nav-sheet {
 }
 
 .mobile-nav-title-group {
-  position: static;
-  transform: none;
-  left: auto;
-  right: auto;
-  top: auto;
   flex: 1;
-  align-self: center;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: center;
   gap: 3px;
   min-width: 0;
-  text-align: right;
-  direction: rtl;
+  height: 100%;
 }
 
 .mobile-nav-title-group strong {
@@ -1106,12 +1100,7 @@ html[data-theme="light"] .mobile-nav-sheet {
 }
 
 .mobile-nav-close {
-  position: static;
-  transform: none;
-  left: auto;
-  top: auto;
   flex-shrink: 0;
-  align-self: center;
   width: 42px;
   height: 42px;
   border-radius: 14px;
