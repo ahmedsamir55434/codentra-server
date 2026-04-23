@@ -1070,6 +1070,7 @@ html[data-theme="light"] .mobile-nav-sheet {
   column-gap: 16px;
   min-height: 56px;
   padding-inline: 4px;
+  direction: ltr;
 }
 
 .mobile-nav-kicker {
@@ -1088,6 +1089,7 @@ html[data-theme="light"] .mobile-nav-sheet {
   gap: 4px;
   min-width: 0;
   text-align: right;
+  direction: rtl;
 }
 
 .mobile-nav-title-group strong {
@@ -1111,7 +1113,8 @@ html[data-theme="light"] .mobile-nav-sheet {
   justify-content: center;
   padding: 0;
   margin: 0;
-  place-self: center start;
+  justify-self: start;
+  align-self: center;
 }
 
 .mobile-nav-section {
