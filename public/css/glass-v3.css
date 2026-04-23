@@ -1064,10 +1064,10 @@ html[data-theme="light"] .mobile-nav-sheet {
 }
 
 .mobile-nav-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: 42px 1fr;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  column-gap: 16px;
   min-height: 56px;
   padding-inline: 4px;
 }
@@ -1086,10 +1086,8 @@ html[data-theme="light"] .mobile-nav-sheet {
   align-items: flex-end;
   justify-content: center;
   gap: 4px;
-  flex: 1;
   min-width: 0;
   text-align: right;
-  align-self: center;
 }
 
 .mobile-nav-title-group strong {
@@ -1113,8 +1111,7 @@ html[data-theme="light"] .mobile-nav-sheet {
   justify-content: center;
   padding: 0;
   margin: 0;
-  flex: 0 0 42px;
-  align-self: center;
+  place-self: center start;
 }
 
 .mobile-nav-section {
