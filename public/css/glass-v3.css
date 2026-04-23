@@ -1068,13 +1068,16 @@ html[data-theme="light"] .mobile-nav-sheet {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 56px;
+  padding-inline: 4px;
 }
 
 .mobile-nav-kicker {
   display: block;
   font-size: 0.72rem;
   color: var(--text-secondary);
-  margin-bottom: 2px;
+  margin: 0;
+  line-height: 1;
 }
 
 .mobile-nav-title-group {
@@ -1082,13 +1085,18 @@ html[data-theme="light"] .mobile-nav-sheet {
   flex-direction: column;
   align-items: flex-end;
   justify-content: center;
+  gap: 4px;
   flex: 1;
   min-width: 0;
   text-align: right;
+  align-self: center;
 }
 
 .mobile-nav-title-group strong {
-  line-height: 1.1;
+  display: block;
+  margin: 0;
+  font-size: 1.15rem;
+  line-height: 1.05;
 }
 
 .mobile-nav-close {
