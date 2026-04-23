@@ -154,3 +154,58 @@
     gap: 8px;
   }
 }
+
+
+.loyalty-card {
+  align-items: stretch;
+  gap: 24px;
+}
+
+.loyalty-summary {
+  flex: 1;
+  min-width: 260px;
+}
+
+.loyalty-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.loyalty-redeem-form {
+  flex: 1;
+  min-width: 320px;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: nowrap;
+}
+
+.loyalty-points-field {
+  flex: 1;
+  min-width: 220px;
+  margin-bottom: 0;
+}
+
+.loyalty-submit-btn {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .loyalty-card {
+    flex-direction: column;
+    text-align: right;
+  }
+
+  .loyalty-redeem-form {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 0;
+  }
+
+  .loyalty-points-field,
+  .loyalty-submit-btn {
+    width: 100%;
+  }
+}

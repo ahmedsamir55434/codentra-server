@@ -1065,7 +1065,7 @@ html[data-theme="light"] .mobile-nav-sheet {
 
 .mobile-nav-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
@@ -1074,7 +1074,21 @@ html[data-theme="light"] .mobile-nav-sheet {
   display: block;
   font-size: 0.72rem;
   color: var(--text-secondary);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+}
+
+.mobile-nav-title-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+
+.mobile-nav-title-group strong {
+  line-height: 1.1;
 }
 
 .mobile-nav-close {
@@ -1090,8 +1104,9 @@ html[data-theme="light"] .mobile-nav-sheet {
   align-items: center;
   justify-content: center;
   padding: 0;
-  margin-top: 2px;
+  margin: 0;
   flex: 0 0 42px;
+  align-self: center;
 }
 
 .mobile-nav-section {
