@@ -75,17 +75,17 @@ html[data-theme="light"] body::after {
   min-height: 78px;
   padding: 10px 22px;
   border-radius: 28px;
-  background: linear-gradient(145deg, rgba(20, 24, 38, 0.78) 0%, rgba(24, 28, 44, 0.68) 52%, rgba(28, 34, 52, 0.58) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 18px rgba(255, 255, 255, 0.03);
-  -webkit-backdrop-filter: blur(28px) saturate(170%);
-  backdrop-filter: blur(28px) saturate(170%);
+  background: linear-gradient(145deg, rgba(24, 28, 44, 0.54) 0%, rgba(28, 34, 52, 0.42) 52%, rgba(32, 40, 60, 0.32) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 22px rgba(255, 255, 255, 0.04);
+  -webkit-backdrop-filter: blur(34px) saturate(180%);
+  backdrop-filter: blur(34px) saturate(180%);
 }
 
 html[data-theme="light"] .main-header .container {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 255, 0.74) 48%, rgba(240, 244, 252, 0.68) 100%);
-  border-color: rgba(15, 23, 42, 0.1);
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.92), inset 0 0 18px rgba(255, 255, 255, 0.2);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.68) 0%, rgba(248, 250, 255, 0.6) 48%, rgba(240, 244, 252, 0.54) 100%);
+  border-color: rgba(15, 23, 42, 0.12);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.96), inset 0 0 18px rgba(255, 255, 255, 0.24);
 }
 
 .logo a span {
@@ -838,13 +838,13 @@ html[data-theme="light"] .footer-links a:hover {
 }
 
 .nav-pill:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.16);
   color: var(--text-primary);
 }
 
 html[data-theme="light"] .nav-pill:hover {
-  background: rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.42);
   border-color: rgba(15, 23, 42, 0.1);
 }
 
@@ -1065,7 +1065,7 @@ html[data-theme="light"] .mobile-nav-sheet {
 
 .mobile-nav-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
@@ -1084,8 +1084,14 @@ html[data-theme="light"] .mobile-nav-sheet {
   border: 1px solid var(--glass-v3-border);
   background: var(--glass-v3-surface-soft);
   color: var(--text-primary);
-  font-size: 1.6rem;
+  font-size: 1.45rem;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-top: 2px;
+  flex: 0 0 42px;
 }
 
 .mobile-nav-section {
