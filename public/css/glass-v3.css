@@ -1066,10 +1066,9 @@ html[data-theme="light"] .mobile-nav-sheet {
 .mobile-nav-head {
   min-height: 64px;
   padding: 6px 4px;
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
+  display: flex;
   align-items: center;
-  column-gap: 14px;
+  gap: 14px;
   direction: ltr;
 }
 
@@ -1083,11 +1082,12 @@ html[data-theme="light"] .mobile-nav-sheet {
 
 .mobile-nav-title-group {
   display: flex;
+  flex: 1;
+  min-width: 0;
   flex-direction: column;
   align-items: flex-end;
   justify-content: center;
   gap: 2px;
-  min-width: 0;
   text-align: right;
   direction: rtl;
 }
@@ -1113,7 +1113,7 @@ html[data-theme="light"] .mobile-nav-sheet {
   justify-content: center;
   padding: 0;
   margin: 0;
-  justify-self: start;
+  flex: 0 0 42px;
 }
 
 .mobile-nav-section {
