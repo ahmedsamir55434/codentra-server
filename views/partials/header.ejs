@@ -39,6 +39,9 @@
   const secondaryLinks = user
     ? (user.role === 'admin' ? adminSecondaryLinks : userSecondaryLinks)
     : [];
+  const mobileLinks = [...primaryLinks, ...secondaryLinks].filter((link, index, items) =>
+    items.findIndex((candidate) => candidate.href === link.href) === index
+  );
 %>
 <header class="main-header">
   <div class="container nav-shell">
@@ -103,38 +106,46 @@
 
   <div class="mobile-nav-panel" id="mobileNavPanel" hidden>
     <div class="mobile-nav-backdrop" data-close-nav></div>
-    <div class="mobile-nav-sheet">
+    <div class="mobile-nav-sheet" role="dialog" aria-modal="true" aria-label="قائمة الهاتف">
       <div class="mobile-nav-head">
         <button type="button" class="mobile-nav-close" data-close-nav aria-label="إغلاق القائمة">×</button>
-        <div class="mobile-nav-title-group">
-          <span class="mobile-nav-kicker">Navigation</span>
-          <strong>Codentra</strong>
+        <a href="/" class="mobile-nav-brand">
+          <img src="/logo.jpg" alt="Codentra" class="mobile-nav-brand-logo">
+          <span class="mobile-nav-brand-copy">
+            <span class="mobile-nav-kicker">Codentra</span>
+            <strong>القائمة</strong>
+          </span>
+        </a>
+      </div>
+
+      <div class="mobile-nav-body">
+        <nav class="mobile-nav-list" aria-label="روابط الهاتف">
+          <% mobileLinks.forEach(link => { %>
+            <a href="<%= link.href %>" class="mobile-nav-link"><span><%= link.label %></span></a>
+          <% }) %>
+        </nav>
+
+        <div class="mobile-nav-footer">
+          <% if (user) { %>
+            <div class="mobile-nav-user">
+              <span class="mobile-nav-user-label">الحساب الحالي</span>
+              <strong><%= user.name %></strong>
+            </div>
+          <% } %>
+
+          <button type="button" class="btn btn-secondary mobile-theme-toggle" id="mobileThemeToggle">
+            تبديل الوضع
+          </button>
+
+          <% if (user) { %>
+            <a href="/logout" class="btn btn-secondary mobile-action-btn">خروج</a>
+          <% } else { %>
+            <div class="mobile-nav-auth">
+              <a href="/login" class="btn btn-secondary mobile-action-btn">تسجيل الدخول</a>
+              <a href="/register" class="btn btn-primary mobile-action-btn">حساب جديد</a>
+            </div>
+          <% } %>
         </div>
-      </div>
-
-      <div class="mobile-nav-section">
-        <% primaryLinks.forEach(link => { %>
-          <a href="<%= link.href %>" class="mobile-nav-link"><%= link.label %></a>
-        <% }) %>
-        <% secondaryLinks.forEach(link => { %>
-          <a href="<%= link.href %>" class="mobile-nav-link mobile-nav-link-secondary"><%= link.label %></a>
-        <% }) %>
-      </div>
-
-      <div class="mobile-nav-section mobile-nav-actions">
-        <button type="button" class="btn btn-secondary mobile-theme-toggle" id="mobileThemeToggle">
-          تبديل الوضع
-        </button>
-        <% if (user) { %>
-          <div class="nav-user-chip mobile-user-chip">
-            <span class="nav-user-label">الحساب</span>
-            <strong><%= user.name %></strong>
-          </div>
-          <a href="/logout" class="btn btn-secondary">خروج</a>
-        <% } else { %>
-          <a href="/login" class="btn btn-secondary">تسجيل الدخول</a>
-          <a href="/register" class="btn btn-primary">حساب جديد</a>
-        <% } %>
       </div>
     </div>
   </div>
