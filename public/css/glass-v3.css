@@ -1041,7 +1041,7 @@ html[data-theme="light"] .mobile-nav-backdrop {
 
 .mobile-nav-sheet {
   position: absolute;
-  top: 12px;
+  top: 60px;
   right: 12px;
   bottom: 12px;
   width: min(360px, calc(100vw - 24px));
