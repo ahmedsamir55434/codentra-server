@@ -15,8 +15,17 @@
     <div class="container">
       <div class="chat-container">
         <div class="chat-header">
-          <h2>💬 التواصل مع الدعم</h2>
-          <p>يمكنك إرسال رسالة للأدمن بخصوص مشترياتك أو استفساراتك</p>
+          <% if (purchaseChat) { %>
+            <a href="/my-purchases" class="back-link">← العودة إلى مشترياتي</a>
+            <h2>💬 محادثة الطلب</h2>
+            <p>
+              <strong><%= purchaseChat.projectTitle %></strong>
+              — رقم الطلب: <span dir="ltr"><%= purchaseChat.orderId %></span>
+            </p>
+          <% } else { %>
+            <h2>💬 التواصل مع الدعم</h2>
+            <p>يمكنك إرسال رسالة للأدمن بخصوص مشترياتك أو استفساراتك</p>
+          <% } %>
         </div>
 
         <div class="chat-messages">
@@ -41,7 +50,10 @@
         </div>
 
         <div class="chat-input">
-          <form action="/messages" method="POST" class="message-form">
+          <form action="<%= purchaseChat ? `/messages/purchase/${purchaseChat.purchaseId}` : '/messages' %>" method="POST" class="message-form">
+            <% if (purchaseChat) { %>
+              <input type="hidden" name="purchaseId" value="<%= purchaseChat.purchaseId %>">
+            <% } %>
             <textarea name="content" placeholder="اكتب رسالتك هنا..." required rows="3"></textarea>
             <button type="submit" class="btn btn-primary">إرسال</button>
           </form>

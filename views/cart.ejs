@@ -33,7 +33,7 @@
               <div class="purchase-info">
                 <h3 style="margin-top:0;"><%= item.projectTitle %></h3>
                 <div class="purchase-meta">
-                  <span class="purchase-price"><%= Number(item.price || 0) %> جنيه</span>
+                  <span class="purchase-price"><%= displayMoney(item.price || 0) %></span>
                 </div>
               </div>
               <div class="purchase-actions">
@@ -50,12 +50,12 @@
           <div class="purchase-info">
             <h3 style="margin-top:0;">ملخص الدفع</h3>
             <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
-              <div>الإجمالي قبل الخصم: <strong><%= summary.totalBefore %></strong> جنيه</div>
-              <div>خصم الكوبون: <strong><%= summary.couponDiscount %></strong> جنيه</div>
-              <div>خصم المشتركين: <strong><%= summary.subscriberDiscount %></strong> جنيه</div>
-              <div>الإجمالي بعد الخصم: <strong><%= summary.totalAfter %></strong> جنيه</div>
-              <div>رصيد المحفظة الحالي: <strong><%= Number(user.walletBalance || 0) %></strong> جنيه</div>
-              <div style="color:#666; font-size:14px;">يمكنك الدفع ببطاقتك أو ببطاقة مستخدم آخر. كود التحقق سيُرسل إلى إيميل صاحب البطاقة.</div>
+              <div>الإجمالي قبل الخصم: <strong><%= displayMoney(summary.totalBefore) %></strong></div>
+              <div>خصم الكوبون: <strong><%= displayMoney(summary.couponDiscount) %></strong></div>
+              <div>خصم المشتركين: <strong><%= displayMoney(summary.subscriberDiscount) %></strong></div>
+              <div>الإجمالي بعد الخصم: <strong><%= displayMoney(summary.totalAfter) %></strong></div>
+              <div>رصيد المحفظة الحالي: <strong><%= displayMoney(user.walletBalance || 0) %></strong></div>
+              <div style="color:#666; font-size:14px;">يمكنك الدفع ببطاقتك أو ببطاقة مستخدم آخر. إذا كانت البطاقة لشخص آخر فسيظهر كود التحقق له داخل إشعارات البطاقة، أما إذا كانت بطاقتك أنت فلن يطلب منك كود.</div>
             </div>
 
             <form action="/cart/checkout" method="POST" style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">

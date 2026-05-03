@@ -116,7 +116,7 @@
                     <td><%= c.type === 'fixed' ? 'ثابت' : 'نسبة' %></td>
                     <td>
                       <% if (c.type === 'fixed') { %>
-                        <%= c.value %> ج
+                        <%= displayMoney(c.value) %>
                       <% } else { %>
                         <%= c.value %> %
                       <% } %>

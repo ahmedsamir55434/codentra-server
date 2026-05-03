@@ -35,9 +35,16 @@
     <main class="admin-content">
       <div class="chat-container">
         <div class="chat-header">
-          <a href="/admin/messages" class="back-link">← العودة للرسائل</a>
+          <a href="<%= purchaseChat ? '/admin/purchases' : '/admin/messages' %>" class="back-link">← العودة</a>
           <h2>💬 <%= chatUser ? chatUser.name : 'مستخدم غير معروف' %></h2>
-          <p><%= chatUser ? chatUser.email : '' %></p>
+          <% if (purchaseChat) { %>
+            <p>
+              بخصوص: <strong><%= purchaseChat.projectTitle %></strong>
+              — رقم الطلب: <span dir="ltr"><%= purchaseChat.orderId %></span>
+            </p>
+          <% } else { %>
+            <p><%= chatUser ? chatUser.email : '' %></p>
+          <% } %>
         </div>
 
         <div class="chat-messages admin-chat">
@@ -61,7 +68,7 @@
         </div>
 
         <div class="chat-input">
-          <form action="/admin/messages/<%= chatUser ? chatUser.id : '' %>" method="POST" class="message-form">
+          <form action="<%= purchaseChat ? `/admin/purchases/${purchaseChat.purchaseId}/messages` : `/admin/messages/${chatUser ? chatUser.id : ''}` %>" method="POST" class="message-form">
             <textarea name="content" placeholder="اكتب ردك هنا..." required rows="3"></textarea>
             <button type="submit" class="btn btn-primary">إرسال</button>
           </form>

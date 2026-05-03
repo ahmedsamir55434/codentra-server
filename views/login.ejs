@@ -18,6 +18,21 @@
         <% if (error) { %>
           <div class="error-message"><%= error %></div>
         <% } %>
+        <% if (googleAuthEnabled) { %>
+          <a href="/auth/google?mode=login" class="google-auth-btn" aria-label="تسجيل الدخول باستخدام جوجل">
+            <span class="google-auth-icon">G</span>
+            <span>تسجيل الدخول باستخدام جوجل</span>
+          </a>
+        <% } %>
+        <% if (githubAuthEnabled) { %>
+          <a href="/auth/github?mode=login" class="github-auth-btn" aria-label="تسجيل الدخول باستخدام GitHub">
+            <span class="github-auth-icon">GH</span>
+            <span>تسجيل الدخول باستخدام GitHub</span>
+          </a>
+        <% } %>
+        <% if (googleAuthEnabled || githubAuthEnabled) { %>
+          <div class="auth-divider"><span>أو</span></div>
+        <% } %>
         <form action="/login" method="POST">
           <div class="form-group">
             <label for="email">البريد الإلكتروني</label>

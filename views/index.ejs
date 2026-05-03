@@ -11,6 +11,36 @@
   <%- include('partials/header') %>
   <% const safeRecentProjects = Array.isArray(recentProjects) ? recentProjects : []; %>
 
+  <section class="release-banner-section" aria-label="Codentra v3 launch">
+    <div class="container">
+      <div class="release-banner">
+        <div class="release-banner-orb release-banner-orb-one" aria-hidden="true"></div>
+        <div class="release-banner-orb release-banner-orb-two" aria-hidden="true"></div>
+        <div class="release-banner-copy">
+          <span class="release-banner-badge">NEW ERA • GLASS UPGRADE</span>
+          <h2>Codentra v3</h2>
+          <p>التحديث الثالث وصل بهوية أفخم، لمعة زجاجية أعمق، وتجربة أكثر فخامة تخطف العين من أول نظرة.</p>
+          <div class="release-banner-highlights">
+            <span>واجهة Glass Premium</span>
+            <span>حركة وعمق بصري أهدى</span>
+            <span>تجربة أنعم في الدارك واللايت</span>
+          </div>
+        </div>
+        <div class="release-banner-mark" aria-hidden="true">
+          <div class="release-mark-topline">CODENTRA RELEASE</div>
+          <div class="release-mark-core">
+            <div class="release-mark-word">CODENTRA</div>
+            <div class="release-mark-divider"></div>
+            <div class="release-mark-version">v3</div>
+          </div>
+          <div class="release-mark-shine"></div>
+          <span class="release-mark-corner release-mark-corner-top"></span>
+          <span class="release-mark-corner release-mark-corner-bottom"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <main class="hero">
     <div class="container">
       <h1>مشاريع برمجية احترافية جاهزة</h1>
@@ -51,7 +81,7 @@
                   <% }) %>
                 </div>
                 <div class="project-footer">
-                  <span class="price"><%= project.price %> جنيه</span>
+                  <span class="price"><%= displayMoney(project.price) %></span>
                   <a href="/project/<%= project.id %>" class="btn btn-secondary">متابعة</a>
                 </div>
               </div>
@@ -93,7 +123,7 @@
                 <% }) %>
               </div>
               <div class="project-footer">
-                <span class="price"><%= project.price %> جنيه</span>
+                <span class="price"><%= displayMoney(project.price) %></span>
                 <a href="/project/<%= project.id %>" class="btn btn-primary">تفاصيل</a>
               </div>
             </div>
@@ -110,5 +140,49 @@
   </section>
 
   <%- include('partials/footer') %>
+  <script>
+    (() => {
+      const banner = document.querySelector('.release-banner');
+      const bannerCopy = banner ? banner.querySelector('.release-banner-copy') : null;
+      const bannerMark = banner ? banner.querySelector('.release-banner-mark') : null;
+      if (!banner) return;
+
+      let ticking = false;
+
+      const updateBannerScrollFx = () => {
+        const scrollY = window.scrollY || window.pageYOffset || 0;
+        const progress = Math.max(0, Math.min(1, scrollY / 360));
+        const bannerLift = progress * -26;
+        const bannerScale = 1 - (progress * 0.045);
+        const copyShift = progress * -20;
+        const markShift = progress * 26;
+        const markTilt = progress * -12;
+        const fade = 1 - (progress * 0.18);
+
+        banner.style.transform = `translate3d(0, ${bannerLift}px, 0) scale(${bannerScale})`;
+        banner.style.opacity = String(fade);
+
+        if (bannerCopy) {
+          bannerCopy.style.transform = `translate3d(${copyShift}px, ${progress * -6}px, 0)`;
+        }
+
+        if (bannerMark) {
+          bannerMark.style.transform = `translate3d(${markShift}px, ${progress * -4}px, 0) rotateY(${markTilt}deg)`;
+        }
+
+        ticking = false;
+      };
+
+      const queueUpdate = () => {
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(updateBannerScrollFx);
+      };
+
+      updateBannerScrollFx();
+      window.addEventListener('scroll', queueUpdate, { passive: true });
+      window.addEventListener('resize', queueUpdate, { passive: true });
+    })();
+  </script>
 </body>
 </html>

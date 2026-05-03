@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= invoice.invoiceNumber || 'Invoice' %></title>
+  <style>
+    :root {
+      color-scheme: light;
+      --page-bg: #eef2ff;
+      --card-bg: rgba(255,255,255,0.92);
+      --card-border: rgba(132, 145, 255, 0.22);
+      --text-main: #172033;
+      --text-muted: #667085;
+      --accent: #6366f1;
+      --accent-soft: rgba(99, 102, 241, 0.12);
+      --line: rgba(23, 32, 51, 0.08);
+      --shadow: 0 24px 60px rgba(31, 41, 55, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Cairo", "Noto Naskh Arabic", "Segoe UI", Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(99, 102, 241, 0.12), transparent 28%),
+        radial-gradient(circle at top right, rgba(14, 165, 233, 0.10), transparent 24%),
+        var(--page-bg);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 32px 18px;
+    }
+
+    .invoice-shell {
+      max-width: 1020px;
+      margin: 0 auto;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+      direction: ltr;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      border: 1px solid var(--card-border);
+      background: rgba(255,255,255,0.78);
+      color: var(--text-main);
+      padding: 11px 16px;
+      border-radius: 14px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.95rem;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, rgba(99,102,241,0.95), rgba(129,140,248,0.88));
+      color: #fff;
+      border-color: transparent;
+    }
+
+    .invoice-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      overflow: hidden;
+    }
+
+    .hero {
+      padding: 28px 30px 20px;
+      border-bottom: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .brand h1 {
+      margin: 0 0 8px;
+      font-size: 2rem;
+    }
+
+    .brand p, .muted {
+      margin: 0;
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+
+    .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+      align-content: flex-start;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 800;
+      font-size: 0.92rem;
+      border: 1px solid rgba(99,102,241,0.18);
+    }
+
+    .content {
+      padding: 24px 30px 30px;
+      display: grid;
+      gap: 22px;
+    }
+
+    .section {
+      background: rgba(255,255,255,0.68);
+      border: 1px solid rgba(15,23,42,0.06);
+      border-radius: 22px;
+      padding: 20px;
+    }
+
+    .section-title {
+      margin: 0 0 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .section-title strong {
+      font-size: 1.08rem;
+    }
+
+    .section-title span {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      direction: ltr;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .detail {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(248, 250, 255, 0.85);
+      border: 1px solid rgba(99,102,241,0.08);
+    }
+
+    .detail-label {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      line-height: 1.6;
+    }
+
+    .detail-value {
+      font-weight: 800;
+      line-height: 1.8;
+      word-break: break-word;
+    }
+
+    .detail-value.ltr,
+    .section-title span,
+    .item-price,
+    .summary-value,
+    .invoice-number {
+      direction: ltr;
+      text-align: left;
+    }
+
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+    }
+
+    .items-table th,
+    .items-table td {
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: right;
+      vertical-align: top;
+    }
+
+    .items-table th {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+
+    .items-table tr:last-child td { border-bottom: none; }
+
+    .item-title {
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .item-sub {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .summary {
+      display: grid;
+      gap: 12px;
+      max-width: 420px;
+      margin-inline-start: auto;
+    }
+
+    .summary-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(248,250,255,0.88);
+      border: 1px solid rgba(15,23,42,0.06);
+    }
+
+    .summary-row.total {
+      background: linear-gradient(135deg, rgba(99,102,241,0.14), rgba(129,140,248,0.12));
+      border-color: rgba(99,102,241,0.2);
+    }
+
+    .summary-label {
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .summary-value {
+      font-weight: 900;
+      font-size: 1rem;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 760px) {
+      body { padding: 18px 12px; }
+      .hero, .details-grid { grid-template-columns: 1fr; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .toolbar-actions { width: 100%; justify-content: stretch; }
+      .toolbar-actions .btn { flex: 1; text-align: center; }
+      .content, .hero { padding-inline: 18px; }
+      .section { padding: 16px; }
+      .items-table { display: block; overflow-x: auto; }
+      .summary { max-width: none; }
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .toolbar { display: none; }
+      .invoice-card {
+        box-shadow: none;
+        border: none;
+        border-radius: 0;
+      }
+      .section {
+        background: #fff;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="invoice-shell">
+    <div class="toolbar">
+      <div class="toolbar-actions">
+        <button class="btn btn-primary" onclick="window.print()">طباعة / Print</button>
+        <a class="btn" href="javascript:window.close()">إغلاق / Close</a>
+      </div>
+      <div class="muted">فاتورة واضحة بالعربي والإنجليزي</div>
+    </div>
+
+    <div class="invoice-card">
+      <div class="hero">
+        <div class="brand">
+          <h1>Codentra</h1>
+          <p>فاتورة شراء ثنائية اللغة تعرض بيانات العميل والحساب الدافع والبطاقة المستخدمة بشكل واضح.</p>
+        </div>
+        <div class="hero-badges">
+          <div class="badge">فاتورة / Invoice</div>
+          <div class="badge invoice-number"><%= invoice.invoiceNumber || '-' %></div>
+        </div>
+      </div>
+
+      <div class="content">
+        <section class="section">
+          <div class="section-title">
+            <strong>بيانات الفاتورة / Invoice Details</strong>
+            <span><%= invoiceDateArabic %> | <%= invoiceDateEnglish %></span>
+          </div>
+          <div class="details-grid">
+            <div class="detail">
+              <div class="detail-label">رقم الفاتورة<br>Invoice No</div>
+              <div class="detail-value ltr"><%= invoice.invoiceNumber || '-' %></div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">رقم الطلب<br>Order ID</div>
+              <div class="detail-value ltr"><%= invoice.orderId || '-' %></div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">اسم العميل<br>Customer</div>
+              <div class="detail-value"><%= invoice.userName || '-' %></div>
+            </div>
+            <% if (options.includeEmail && invoice.userEmail) { %>
+              <div class="detail">
+                <div class="detail-label">البريد الإلكتروني<br>Email</div>
+                <div class="detail-value ltr"><%= invoice.userEmail %></div>
+              </div>
+            <% } %>
+            <div class="detail">
+              <div class="detail-label">طريقة الدفع<br>Payment Method</div>
+              <div class="detail-value"><%= paymentDetails.paymentMethod || 'Wallet Card' %></div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">تم الدفع من حساب<br>Paid From Account</div>
+              <div class="detail-value"><%= paymentDetails.payerName || '-' %></div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">البطاقة المستخدمة<br>Card Used</div>
+              <div class="detail-value ltr"><%= paymentDetails.walletCardMasked || '-' %></div>
+            </div>
+            <div class="detail">
+              <div class="detail-label">بريد الحساب الدافع<br>Payer Email</div>
+              <div class="detail-value ltr"><%= paymentDetails.payerEmailDisplay || '-' %></div>
+            </div>
+            <% if (options.includeCoupon && invoice.couponCode) { %>
+              <div class="detail">
+                <div class="detail-label">كود الخصم<br>Coupon</div>
+                <div class="detail-value ltr"><%= invoice.couponCode %></div>
+              </div>
+            <% } %>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-title">
+            <strong>العناصر / Items</strong>
+            <span><%= items.length %> item(s)</span>
+          </div>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>العنصر / Item</th>
+                <th>قبل الخصم / Before</th>
+                <th>الخصم / Discount</th>
+                <th>بعد الخصم / After</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!items.length) { %>
+                <tr>
+                  <td colspan="5">لا توجد عناصر في هذه الفاتورة / No items available for this invoice</td>
+                </tr>
+              <% } %>
+              <% items.forEach(item => { %>
+                <tr>
+                  <td class="item-price"><%= item.index %></td>
+                  <td>
+                    <div class="item-title"><%= item.title %></div>
+                  </td>
+                  <td class="item-price"><%= displayMoney(item.priceBefore) %></td>
+                  <td class="item-price"><%= displayMoney(item.discountAmount) %></td>
+                  <td class="item-price"><%= displayMoney(item.priceAfter) %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="section">
+          <div class="section-title">
+            <strong>الملخص / Summary</strong>
+            <span>Total</span>
+          </div>
+          <div class="summary">
+            <div class="summary-row">
+              <div class="summary-label">إجمالي قبل الخصم<br>Total Before Discount</div>
+              <div class="summary-value"><%= displayMoney(totals.totalBefore) %></div>
+            </div>
+            <div class="summary-row">
+              <div class="summary-label">إجمالي الخصم<br>Total Discount</div>
+              <div class="summary-value"><%= displayMoney(totals.totalDiscount) %></div>
+            </div>
+            <div class="summary-row total">
+              <div class="summary-label">الإجمالي النهائي<br>Final Total</div>
+              <div class="summary-value"><%= displayMoney(totals.totalAfter) %></div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

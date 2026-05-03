@@ -65,11 +65,11 @@
 
       <div class="stats-grid" style="margin-top: 18px;">
         <div class="stat-card">
-          <div class="stat-value"><%= summary && Number.isFinite(Number(summary.totalRevenue)) ? summary.totalRevenue : 0 %> ج</div>
+          <div class="stat-value"><%= summary && Number.isFinite(Number(summary.totalRevenue)) ? displayMoney(summary.totalRevenue) : displayMoney(0) %></div>
           <div class="stat-label">إيرادات الاشتراكات (بعد الخصم)</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value"><%= summary && Number.isFinite(Number(summary.totalDiscounts)) ? summary.totalDiscounts : 0 %> ج</div>
+          <div class="stat-value"><%= summary && Number.isFinite(Number(summary.totalDiscounts)) ? displayMoney(summary.totalDiscounts) : displayMoney(0) %></div>
           <div class="stat-label">إجمالي الخصومات</div>
         </div>
         <div class="stat-card">
@@ -110,9 +110,9 @@
                   <tr>
                     <td><%= r.userLabel %></td>
                     <td><%= r.planLabel %></td>
-                    <td><strong><%= r.amount %></strong> ج</td>
-                    <td><%= r.priceBefore %> ج</td>
-                    <td><%= r.discountAmount %> ج</td>
+                    <td><strong><%= displayMoney(r.amount) %></strong></td>
+                    <td><%= displayMoney(r.priceBefore) %></td>
+                    <td><%= displayMoney(r.discountAmount) %></td>
                     <td><%= r.couponCode ? r.couponCode : '-' %></td>
                     <td><%= r.createdAt ? new Date(r.createdAt).toLocaleString('ar-EG') : '-' %></td>
                   </tr>

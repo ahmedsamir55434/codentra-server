@@ -42,7 +42,7 @@
         <% plans.forEach(plan => { %>
           <div class="purchase-card">
             <h2 style="margin-bottom: 6px;"><%= plan.name %></h2>
-            <div style="margin-bottom: 10px; opacity: .9;">السعر: <strong><%= plan.price %> <%= plan.currency %></strong> / <%= plan.durationDays %> يوم</div>
+            <div style="margin-bottom: 10px; opacity: .9;">السعر: <strong><%= displayMoney(plan.price) %></strong> / <%= plan.durationDays %> يوم</div>
 
             <% if (Array.isArray(plan.features) && plan.features.length) { %>
               <ul style="margin:0; padding:0 18px 0 0; line-height: 1.9;">

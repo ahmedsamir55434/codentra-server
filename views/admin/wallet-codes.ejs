@@ -101,7 +101,7 @@
                 <% walletCodes.slice().reverse().forEach(c => { %>
                   <tr>
                     <td><%= c.code %></td>
-                    <td><%= Number(c.amount || 0) %> ج</td>
+                    <td><%= displayMoney(c.amount || 0) %></td>
                     <td>
                       <% if (c.active) { %>
                         <span class="status-badge approved">✓ فعّال</span>

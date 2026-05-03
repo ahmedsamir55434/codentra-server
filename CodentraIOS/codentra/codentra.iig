@@ -1,0 +1,21 @@
+//
+//  codentra.iig
+//  codentra
+//
+//  Created by Ahmed Samir on 4/26/26.
+//
+
+#ifndef codentra_h
+#define codentra_h
+
+#include <Availability.h>
+#include <DriverKit/IOService.iig>
+
+class codentra: public IOService
+{
+public:
+    virtual kern_return_t
+    Start(IOService * provider) override;
+};
+
+#endif /* codentra_h */

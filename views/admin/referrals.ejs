@@ -71,7 +71,7 @@
                       <span class="status-badge pending">⏳ بانتظار أول شراء</span>
                     <% } %>
                   </td>
-                  <td><%= Number(r.rewardAmount || 0) %> ج</td>
+                  <td><%= displayMoney(r.rewardAmount || 0) %></td>
                   <td><%= r.createdAt ? new Date(r.createdAt).toLocaleDateString('ar-EG') : '-' %></td>
                   <td><%= r.rewardedAt ? new Date(r.rewardedAt).toLocaleDateString('ar-EG') : '-' %></td>
                 </tr>

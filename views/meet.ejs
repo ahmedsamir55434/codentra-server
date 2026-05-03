@@ -15,7 +15,9 @@
     id="meetConfig"
     data-room-id="<%= roomId %>"
     data-user-role="<%= user && user.role ? user.role : '' %>"
-    data-user-id="<%= currentUserId || '' %>"></div>
+    data-user-id="<%= currentUserId || '' %>"
+    data-return-url="<%= returnUrl || '/my-appointments' %>"
+    data-livekit-enabled="<%= liveKitEnabled ? '1' : '0' %>"></div>
 
   <main class="meet-page">
     <div class="container">
@@ -27,12 +29,16 @@
       <div class="meet-grid">
         <section class="meet-video-card">
           <div class="meet-video-title">الفيديو الخاص بك</div>
-          <video id="localVideo" autoplay playsinline muted></video>
+          <div class="meet-video-frame">
+            <video id="localVideo" autoplay playsinline muted></video>
+          </div>
         </section>
 
         <section class="meet-video-card">
-          <div class="meet-video-title">الطرف الآخر</div>
-          <video id="remoteVideo" autoplay playsinline></video>
+          <div class="meet-video-title">المشاركون</div>
+          <div class="meet-remote-grid" id="remoteParticipants">
+            <div class="meet-empty-state" id="remoteEmptyState">في انتظار انضمام المشاركين...</div>
+          </div>
         </section>
       </div>
 
@@ -48,6 +54,7 @@
     </div>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"></script>
   <script src="/js/meet.js"></script>
 
   <%- include('partials/footer') %>

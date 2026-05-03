@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>اطلب مشروعك - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/purchases.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="purchases-page">
+    <div class="container">
+      <h1>اطلب مشروعك</h1>
+      <p class="wallet-card-note" style="margin-bottom:16px;">أرسل لنا فكرتك، وسيراجعها فريق Codentra ويرد عليك داخل نفس الطلب.</p>
+
+      <% if (error) { %>
+        <div class="error-message"><%= error %></div>
+      <% } %>
+      <% if (success) { %>
+        <div class="success-message"><%= success %></div>
+      <% } %>
+
+      <div class="purchase-card stacked-card" style="margin-bottom: 16px;">
+        <div class="purchase-info">
+          <h3 style="margin-top: 0;">بيانات المشروع</h3>
+          <form action="/custom-project" method="POST" class="wallet-topup-form" style="margin-top: 12px;">
+            <div class="form-group">
+              <label for="title">اسم المشروع</label>
+              <input type="text" id="title" name="title" required placeholder="مثال: منصة حجوزات أو تطبيق متجر">
+            </div>
+            <div class="form-group">
+              <label for="projectType">نوع المشروع</label>
+              <select id="projectType" name="projectType" required>
+                <option value="">اختر النوع</option>
+                <option value="ويب">ويب</option>
+                <option value="موبايل">موبايل</option>
+                <option value="لوحة تحكم">لوحة تحكم</option>
+                <option value="API / Backend">API / Backend</option>
+                <option value="ذكاء اصطناعي">ذكاء اصطناعي</option>
+                <option value="أخرى">أخرى</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="budget">الميزانية التقريبية</label>
+              <input type="text" id="budget" name="budget" placeholder="مثال: من $100 إلى $250">
+            </div>
+            <div class="form-group">
+              <label for="timeline">المدة المتوقعة</label>
+              <input type="text" id="timeline" name="timeline" placeholder="مثال: 2 إلى 3 أسابيع">
+            </div>
+            <div class="form-group">
+              <label for="description">وصف المشروع</label>
+              <textarea id="description" name="description" rows="6" required placeholder="اكتب فكرتك بالتفصيل، المطلوب، الصفحات، الخصائص، وأي ملاحظات مهمة"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">إرسال الطلب</button>
+          </form>
+        </div>
+      </div>
+
+      <% if (requests && requests.length) { %>
+        <div class="purchases-list">
+          <% requests.forEach(request => { %>
+            <div class="purchase-card stacked-card">
+              <div class="purchase-info">
+                <h3><%= request.title %></h3>
+                <div class="purchase-meta">
+                  <span><%= request.projectType %></span>
+                  <span class="status-badge <%= request.status === 'accepted' ? 'approved' : request.status === 'rejected' ? 'rejected' : 'pending' %>">
+                    <%= request.status === 'accepted' ? 'مقبول' : request.status === 'rejected' ? 'مرفوض' : request.status === 'quoted' ? 'تم الرد' : request.status === 'reviewing' ? 'قيد المراجعة' : 'جديد' %>
+                  </span>
+                  <span><%= new Date(request.createdAt).toLocaleDateString('ar-EG') %></span>
+                </div>
+                <% if (request.budget) { %>
+                  <p class="wallet-activity-note">الميزانية: <strong><%= request.budget %></strong></p>
+                <% } %>
+                <% if (request.timeline) { %>
+                  <p class="wallet-activity-note">المدة المتوقعة: <strong><%= request.timeline %></strong></p>
+                <% } %>
+                <p class="wallet-activity-message"><%= request.description %></p>
+                <% if (request.adminReply) { %>
+                  <div class="wallet-activity-item" style="margin-top: 12px;">
+                    <div class="wallet-activity-head">
+                      <strong>رد الإدارة</strong>
+                      <span><%= new Date(request.updatedAt || request.createdAt).toLocaleString('ar-EG') %></span>
+                    </div>
+                    <p class="wallet-activity-message"><%= request.adminReply %></p>
+                  </div>
+                <% } %>
+                <div style="margin-top: 14px;">
+                  <a href="/custom-project/<%= request.id %>" class="btn btn-secondary">فتح الطلب</a>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= requestItem.title %> - إدارة الطلب</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/messages.css">
+  <link rel="stylesheet" href="/css/purchases.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/custom-projects" class="active">طلبات المشاريع المخصصة</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/admin/messages">الرسائل</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <% if (error) { %><div class="error-message"><%= error %></div><% } %>
+      <% if (success) { %><div class="success-message"><%= success %></div><% } %>
+
+      <div class="purchase-card stacked-card" style="margin-bottom:16px;">
+        <div class="purchase-info">
+          <a href="/admin/custom-projects" class="back-link">← العودة إلى الطلبات</a>
+          <h2 style="margin:0 0 10px;"><%= requestItem.title %></h2>
+          <div class="purchase-meta">
+            <span><strong><%= requestItem.userName %></strong> - <%= requestItem.userEmail %></span>
+            <span><%= requestItem.projectType %></span>
+            <span>الدفع: <strong><%= requestItem.paymentStatus === 'paid' ? 'مدفوع' : 'غير مدفوع' %></strong></span>
+          </div>
+          <p class="wallet-activity-message"><%= requestItem.description %></p>
+
+          <form action="/admin/custom-projects/<%= requestItem.id %>" method="POST" style="display:grid; gap:12px; margin-top:14px;">
+            <div class="form-group">
+              <label>الحالة</label>
+              <select name="status" required>
+                <option value="new" <%= requestItem.status === 'new' ? 'selected' : '' %>>جديد</option>
+                <option value="reviewing" <%= requestItem.status === 'reviewing' ? 'selected' : '' %>>قيد المراجعة</option>
+                <option value="quoted" <%= requestItem.status === 'quoted' ? 'selected' : '' %>>تم التسعير</option>
+                <option value="accepted" <%= requestItem.status === 'accepted' ? 'selected' : '' %>>مقبول</option>
+                <option value="completed" <%= requestItem.status === 'completed' ? 'selected' : '' %>>مكتمل</option>
+                <option value="rejected" <%= requestItem.status === 'rejected' ? 'selected' : '' %>>مرفوض</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>السعر المحدد</label>
+              <input type="number" name="quotedPrice" min="1" step="0.01" value="<%= requestItem.quotedPrice || '' %>" placeholder="مثال: 6500">
+            </div>
+            <div class="form-group">
+              <label>المدة المحددة</label>
+              <input type="text" name="quotedTimeline" value="<%= requestItem.quotedTimeline || '' %>" placeholder="مثال: 14 يوم">
+            </div>
+            <div class="form-group">
+              <label>رد الإدارة</label>
+              <textarea name="adminReply" rows="4" placeholder="اكتب عرض السعر أو الخطوة التالية"><%= requestItem.adminReply || '' %></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">حفظ التحديث</button>
+          </form>
+
+          <form action="/admin/custom-projects/<%= requestItem.id %>/upload" method="POST" enctype="multipart/form-data" style="display:grid; gap:12px; margin-top:16px;">
+            <div class="form-group">
+              <label>رفع الملف النهائي</label>
+              <input type="file" name="deliveryFile" required>
+            </div>
+            <button type="submit" class="btn btn-secondary">رفع الملف</button>
+          </form>
+
+          <% if (requestItem.filePath) { %>
+            <div class="wallet-activity-item" style="margin-top:14px;">
+              <div class="wallet-activity-head">
+                <strong>الملف الحالي المرفوع</strong>
+                <span><%= new Date(requestItem.fileUploadedAt || requestItem.updatedAt || requestItem.createdAt).toLocaleString('ar-EG') %></span>
+              </div>
+              <p class="wallet-activity-message" style="margin-bottom:10px;">
+                <strong>الاسم:</strong> <%= requestItem.originalFileName || 'ملف المشروع' %>
+              </p>
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <a href="/admin/custom-projects/<%= requestItem.id %>/download" class="btn btn-primary" target="_blank">تنزيل الملف الحالي</a>
+              </div>
+            </div>
+          <% } else { %>
+            <p class="wallet-activity-message" style="margin-top:12px;">بعد رفع الملف سيظهر هنا مباشرة مع وقت الرفع.</p>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="chat-container" style="max-width:100%;">
+        <div class="chat-header">
+          <h2>💬 محادثة الطلب</h2>
+          <p>تواصل مع العميل حول هذا المشروع المخصص.</p>
+        </div>
+        <div class="chat-messages">
+          <% if (!messages || !messages.length) { %>
+            <div class="empty-chat"><p>لا توجد رسائل بعد</p></div>
+          <% } else { %>
+            <% messages.forEach(msg => { %>
+              <div class="message <%= msg.senderId === 'admin' ? 'sent' : 'received' %>">
+                <div class="message-content"><%= msg.content %></div>
+                <div class="message-meta">
+                  <span class="sender"><%= msg.senderId === 'admin' ? 'الإدارة' : requestItem.userName %></span>
+                  <span class="time"><%= new Date(msg.createdAt).toLocaleString('ar-EG') %></span>
+                </div>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+        <div class="chat-input">
+          <form action="/admin/custom-projects/<%= requestItem.id %>/messages" method="POST" class="message-form">
+            <textarea name="content" placeholder="اكتب رسالتك هنا..." required rows="3"></textarea>
+            <button type="submit" class="btn btn-primary">إرسال</button>
+          </form>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

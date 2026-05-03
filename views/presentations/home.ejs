@@ -60,12 +60,12 @@
           <div class="presentations-stat">
             <span>بطاقة المحفظة</span>
             <strong><%= walletCardNumber || 'سجّل الدخول لعرض بطاقتك' %></strong>
-            <small><%= presentationUser ? `${Number(presentationUser.walletBalance || 0).toFixed(2)} جنيه رصيد متاح` : 'مرتبطة بنفس محفظة Codentra' %></small>
+            <small><%= presentationUser ? `${displayMoney(presentationUser.walletBalance || 0)} رصيد متاح` : 'مرتبطة بنفس محفظة Codentra' %></small>
           </div>
 
           <div class="presentations-stat presentations-stat-highlight">
             <span>الرصيد الحالي</span>
-            <strong><%= presentationUser ? `${Number(presentationUser.walletBalance || 0).toFixed(2)} جنيه` : 'سجّل الدخول' %></strong>
+            <strong><%= presentationUser ? `${displayMoney(presentationUser.walletBalance || 0)}` : 'سجّل الدخول' %></strong>
             <small>يُخصم مباشرة من نفس الحساب</small>
           </div>
         </div>
@@ -101,7 +101,7 @@
           </div>
           <div class="presentations-card">
             <span>الرصيد</span>
-            <strong><%= Number(presentationUser.walletBalance || 0).toFixed(2) %> جنيه</strong>
+            <strong><%= displayMoney(presentationUser.walletBalance || 0) %></strong>
             <small>يستخدم نفس بطاقة Codentra</small>
           </div>
           <div class="presentations-card">
@@ -126,7 +126,7 @@
                     <div>
                       <strong>كود التحقق: <span class="presentations-code"><%= attempt.ownerVisibleCode %></span></strong>
                       <p>
-                        مبلغ <%= Number(attempt.amount || 0).toFixed(2) %> جنيه
+                        مبلغ <%= displayMoney(attempt.amount || 0) %>
                         • آخر 4 أرقام <%= attempt.payerCardLast4 %>
                       </p>
                     </div>
@@ -185,8 +185,8 @@
             <p><%= plan.description %></p>
 
             <div class="presentations-price">
-              <strong><%= Number(plan.price || 0).toFixed(2) %></strong>
-              <span>جنيه</span>
+              <strong><%= displayMoney(plan.price || 0) %></strong>
+              <span><%= displayCurrencyCode %></span>
             </div>
 
             <ul>
@@ -201,6 +201,7 @@
                   <span>رقم بطاقة المحفظة</span>
                   <input type="text" name="walletCardNumber" value="<%= walletCardNumber %>" placeholder="يمكنك الدفع ببطاقتك أو بطاقة مستخدم آخر">
                 </label>
+                <small>لو استخدمت بطاقة شخص آخر سيظهر له كود التحقق في إشعارات بطاقته. ولو استخدمت بطاقتك أنت لن تحتاج كود.</small>
                 <button type="submit" class="btn btn-primary btn-full">اشترك الآن</button>
               </form>
             <% } else { %>

@@ -18,6 +18,21 @@
         <% if (error) { %>
           <div class="error-message"><%= error %></div>
         <% } %>
+        <% if (googleAuthEnabled) { %>
+          <a href="/auth/google?mode=register<%= referralPrefill ? `&ref=${encodeURIComponent(referralPrefill)}` : '' %>" class="google-auth-btn" aria-label="إنشاء حساب باستخدام جوجل">
+            <span class="google-auth-icon">G</span>
+            <span>إنشاء حساب باستخدام جوجل</span>
+          </a>
+        <% } %>
+        <% if (githubAuthEnabled) { %>
+          <a href="/auth/github?mode=register<%= referralPrefill ? `&ref=${encodeURIComponent(referralPrefill)}` : '' %>" class="github-auth-btn" aria-label="إنشاء حساب باستخدام GitHub">
+            <span class="github-auth-icon">GH</span>
+            <span>إنشاء حساب باستخدام GitHub</span>
+          </a>
+        <% } %>
+        <% if (googleAuthEnabled || githubAuthEnabled) { %>
+          <div class="auth-divider"><span>أو أكمل يدويًا</span></div>
+        <% } %>
         <form action="/register" method="POST">
           <div class="form-group">
             <label for="name">الاسم الكامل</label>

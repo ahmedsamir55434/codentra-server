@@ -1,511 +1,266 @@
 (function () {
   var configEl = document.getElementById('meetConfig');
   var roomId = configEl ? configEl.getAttribute('data-room-id') : null;
-  var userRole = configEl ? configEl.getAttribute('data-user-role') : '';
-  var currentUserId = configEl ? configEl.getAttribute('data-user-id') : '';
+  var returnUrl = configEl ? (configEl.getAttribute('data-return-url') || '/my-appointments') : '/my-appointments';
+  var liveKitEnabled = configEl ? configEl.getAttribute('data-livekit-enabled') === '1' : false;
   var statusEl = document.getElementById('meetStatus');
   var localVideo = document.getElementById('localVideo');
-  var remoteVideo = document.getElementById('remoteVideo');
+  var remoteParticipantsEl = document.getElementById('remoteParticipants');
+  var remoteEmptyStateEl = document.getElementById('remoteEmptyState');
   var btnMic = document.getElementById('btnToggleMic');
   var btnCam = document.getElementById('btnToggleCam');
   var btnShare = document.getElementById('btnShareScreen');
   var btnEndMeeting = document.getElementById('btnEndMeeting');
 
+  var room = null;
+  var isMicEnabled = true;
+  var isCamEnabled = true;
+  var isScreenEnabled = false;
+  var remoteTrackMap = new Map();
+
   function setStatus(text) {
     if (statusEl) statusEl.textContent = text;
   }
 
-  if (!roomId) {
-    setStatus('غرفة غير صحيحة');
-    return;
+  function ensureLiveKit() {
+    return window.LivekitClient || window.livekit;
   }
 
-  var pc = null;
-  var localStream = null;
-  var screenStream = null;
-  var isMicEnabled = true;
-  var isCamEnabled = true;
-  var pollTimer = null;
-  var pollDelayMs = 1000;
-  var isDisposed = false;
-  var hasSentJoin = false;
-  var isCreatingOffer = false;
-  var lastSignalSeq = 0;
-  var pendingCandidates = [];
+  function getRemoteContainer(participantSid, participantName) {
+    if (!remoteParticipantsEl) return null;
 
-  var recorder = null;
-  var recordedChunks = [];
-  var isUploading = false;
-  var shouldAutoRecord = (userRole === 'admin');
+    var existing = remoteParticipantsEl.querySelector('[data-participant-sid="' + participantSid + '"]');
+    if (existing) return existing;
 
-  var RTC_CONFIG = {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' }
-    ]
-  };
+    var wrapper = document.createElement('div');
+    wrapper.className = 'meet-remote-tile';
+    wrapper.setAttribute('data-participant-sid', participantSid);
 
-  function compareIds(a, b) {
-    return String(a || '').localeCompare(String(b || ''));
+    var videoWrap = document.createElement('div');
+    videoWrap.className = 'meet-remote-video';
+
+    var label = document.createElement('div');
+    label.className = 'meet-remote-label';
+    label.textContent = participantName || 'مشارك';
+
+    wrapper.appendChild(videoWrap);
+    wrapper.appendChild(label);
+    remoteParticipantsEl.appendChild(wrapper);
+    syncRemoteState();
+    return wrapper;
   }
 
-  function shouldInitiateOffer(signalEvent) {
-    if (!signalEvent || !signalEvent.senderId || signalEvent.senderId === currentUserId) return false;
-    if (userRole === 'admin' && signalEvent.senderRole !== 'admin') return true;
-    if (userRole !== 'admin' && signalEvent.senderRole === 'admin') return false;
-    return compareIds(currentUserId, signalEvent.senderId) < 0;
+  function syncRemoteState() {
+    if (!remoteParticipantsEl || !remoteEmptyStateEl) return;
+    var tiles = remoteParticipantsEl.querySelectorAll('.meet-remote-tile');
+    remoteEmptyStateEl.style.display = tiles.length ? 'none' : 'flex';
   }
 
-  function scheduleSignalPoll(delay) {
-    if (isDisposed) return;
-    if (pollTimer) clearTimeout(pollTimer);
-    pollTimer = setTimeout(fetchSignals, typeof delay === 'number' ? delay : pollDelayMs);
+  function removeRemoteContainer(participantSid) {
+    if (!remoteParticipantsEl) return;
+    var existing = remoteParticipantsEl.querySelector('[data-participant-sid="' + participantSid + '"]');
+    if (existing) existing.remove();
+    remoteTrackMap.delete(participantSid);
+    syncRemoteState();
   }
 
-  async function sendSignal(type, payload) {
-    if (isDisposed) return;
-    var resp = await fetch('/meet/' + encodeURIComponent(roomId) + '/signals', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        type: type,
-        payload: payload || {}
-      })
+  function attachLocalTracks() {
+    if (!room || !localVideo) return;
+    var publications = Array.from(room.localParticipant.videoTrackPublications.values());
+    var cameraPub = publications.find(function (pub) {
+      return pub && pub.source === 'camera' && pub.track;
     });
 
-    if (!resp.ok) {
-      throw new Error('signal_post_failed_' + resp.status);
-    }
+    if (!cameraPub || !cameraPub.track) return;
 
-    return resp.json().catch(function () { return { ok: true }; });
+    try {
+      localVideo.srcObject = null;
+      localVideo.innerHTML = '';
+      var attached = cameraPub.track.attach();
+      attached.muted = true;
+      attached.autoplay = true;
+      attached.playsInline = true;
+      localVideo.replaceWith(attached);
+      attached.id = 'localVideo';
+      localVideo = attached;
+    } catch (e) {}
   }
 
-  async function flushPendingCandidates() {
-    if (!pc || !pc.remoteDescription) return;
-    while (pendingCandidates.length) {
-      var candidate = pendingCandidates.shift();
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (e) {}
+  function attachRemoteTrack(participant, track) {
+    if (!participant || !track || !remoteParticipantsEl) return;
+    var container = getRemoteContainer(participant.sid, participant.name);
+    if (!container) return;
+
+    var videoWrap = container.querySelector('.meet-remote-video');
+    if (!videoWrap) return;
+
+    if (track.kind === 'video') {
+      var old = remoteTrackMap.get(participant.sid);
+      if (old && old !== track) {
+        try { old.detach().forEach(function (el) { el.remove(); }); } catch (e) {}
+      }
+      videoWrap.innerHTML = '';
+      var el = track.attach();
+      el.autoplay = true;
+      el.playsInline = true;
+      videoWrap.appendChild(el);
+      remoteTrackMap.set(participant.sid, track);
+    }
+
+    if (track.kind === 'audio') {
+      var audioEl = track.attach();
+      audioEl.autoplay = true;
+      videoWrap.appendChild(audioEl);
     }
   }
 
-  function ensurePeerConnection() {
-    if (pc) return pc;
-
-    pc = new RTCPeerConnection(RTC_CONFIG);
-
-    pc.onicecandidate = function (event) {
-      if (event.candidate) {
-        sendSignal('ice-candidate', { candidate: event.candidate }).catch(function () {});
+  function attachExistingParticipantTracks(participant) {
+    if (!participant) return;
+    participant.trackPublications.forEach(function (publication) {
+      if (publication && publication.isSubscribed && publication.track) {
+        attachRemoteTrack(participant, publication.track);
       }
-    };
+    });
+  }
 
-    pc.ontrack = function (event) {
-      if (!remoteVideo) return;
-      var stream = event.streams && event.streams[0] ? event.streams[0] : null;
-      if (stream) remoteVideo.srcObject = stream;
-      startAutoRecordingIfPossible();
-    };
+  async function fetchMeetingToken() {
+    var resp = await fetch('/meet/' + encodeURIComponent(roomId) + '/token', {
+      headers: { Accept: 'application/json' }
+    });
+    var data = await resp.json().catch(function () { return {}; });
+    if (!resp.ok || !data.ok) {
+      throw new Error(data.error || 'تعذر بدء الاجتماع');
+    }
+    return data;
+  }
 
-    pc.onconnectionstatechange = function () {
-      setStatus('حالة الاتصال: ' + pc.connectionState);
-      if (pc.connectionState === 'failed') {
-        setStatus('فشل الاتصال المباشر. غالباً تحتاج TURN server للاجتماعات الأونلاين.');
+  async function connectRoom() {
+    if (!roomId) {
+      setStatus('غرفة غير صحيحة');
+      return;
+    }
+
+    if (!liveKitEnabled) {
+      setStatus('LiveKit غير مُفعّل بعد. أضف LIVEKIT_URL وLIVEKIT_API_KEY وLIVEKIT_API_SECRET.');
+      return;
+    }
+
+    var LivekitClient = ensureLiveKit();
+    if (!LivekitClient) {
+      setStatus('تعذر تحميل مكتبة LiveKit');
+      return;
+    }
+
+    setStatus('جاري تجهيز الاجتماع...');
+    var credentials = await fetchMeetingToken();
+
+    room = new LivekitClient.Room({
+      adaptiveStream: true,
+      dynacast: true,
+      videoCaptureDefaults: {
+        resolution: LivekitClient.VideoPresets.h720.resolution
       }
-    };
+    });
 
-    if (localStream) {
-      localStream.getTracks().forEach(function (track) {
-        pc.addTrack(track, localStream);
+    room
+      .on(LivekitClient.RoomEvent.TrackSubscribed, function (track, publication, participant) {
+        attachRemoteTrack(participant, track);
+        setStatus('تم اتصال المشاركين بنجاح');
+      })
+      .on(LivekitClient.RoomEvent.TrackUnsubscribed, function (track, publication, participant) {
+        try { track.detach().forEach(function (el) { el.remove(); }); } catch (e) {}
+        if (track.kind === 'video') removeRemoteContainer(participant.sid);
+      })
+      .on(LivekitClient.RoomEvent.ParticipantDisconnected, function (participant) {
+        removeRemoteContainer(participant.sid);
+        setStatus('غادر أحد المشاركين الغرفة');
+      })
+      .on(LivekitClient.RoomEvent.ParticipantConnected, function (participant) {
+        getRemoteContainer(participant.sid, participant.name);
+        setStatus('انضم مشارك جديد إلى الاجتماع');
+      })
+      .on(LivekitClient.RoomEvent.LocalTrackPublished, function () {
+        attachLocalTracks();
+      })
+      .on(LivekitClient.RoomEvent.ConnectionQualityChanged, function () {
+        setStatus('الاتصال مستقر عبر LiveKit');
+      })
+      .on(LivekitClient.RoomEvent.Disconnected, function () {
+        setStatus('تم إنهاء الاتصال بالغرفة');
       });
-    }
 
-    return pc;
+    await room.connect(credentials.url, credentials.token);
+    setStatus('تم الدخول إلى الاجتماع');
+
+    await room.localParticipant.setCameraEnabled(true);
+    await room.localParticipant.setMicrophoneEnabled(true);
+    attachLocalTracks();
+    updateButtons();
+
+    room.remoteParticipants.forEach(function (participant) {
+      getRemoteContainer(participant.sid, participant.name);
+      attachExistingParticipantTracks(participant);
+    });
+    syncRemoteState();
   }
 
   function updateButtons() {
     if (btnMic) btnMic.textContent = isMicEnabled ? 'الميك: شغال' : 'الميك: مقفول';
     if (btnCam) btnCam.textContent = isCamEnabled ? 'الكاميرا: شغالة' : 'الكاميرا: مقفولة';
+    if (btnShare) btnShare.textContent = isScreenEnabled ? 'إيقاف مشاركة الشاشة' : 'مشاركة الشاشة';
   }
 
-  function toggleMic() {
-    if (!localStream) return;
+  async function toggleMic() {
+    if (!room) return;
     isMicEnabled = !isMicEnabled;
-    localStream.getAudioTracks().forEach(function (track) { track.enabled = isMicEnabled; });
+    await room.localParticipant.setMicrophoneEnabled(isMicEnabled);
     updateButtons();
   }
 
-  function toggleCam() {
-    if (!localStream) return;
+  async function toggleCam() {
+    if (!room) return;
     isCamEnabled = !isCamEnabled;
-    localStream.getVideoTracks().forEach(function (track) { track.enabled = isCamEnabled; });
+    await room.localParticipant.setCameraEnabled(isCamEnabled);
+    if (isCamEnabled) attachLocalTracks();
     updateButtons();
   }
 
-  function getVideoSender() {
-    if (!pc) return null;
-    var senders = pc.getSenders ? pc.getSenders() : [];
-    for (var i = 0; i < senders.length; i += 1) {
-      var sender = senders[i];
-      if (sender && sender.track && sender.track.kind === 'video') return sender;
-    }
-    return null;
-  }
-
-  function stopScreenShare() {
-    if (!screenStream) return;
+  async function toggleScreenShare() {
+    if (!room) return;
     try {
-      screenStream.getTracks().forEach(function (track) { track.stop(); });
-    } catch (e) {}
-    screenStream = null;
-
-    var sender = getVideoSender();
-    var camTrack = localStream && localStream.getVideoTracks && localStream.getVideoTracks()[0];
-    if (sender && camTrack && sender.replaceTrack) {
-      sender.replaceTrack(camTrack);
-    }
-    if (localVideo && localStream) localVideo.srcObject = localStream;
-    if (btnShare) btnShare.textContent = 'مشاركة الشاشة';
-  }
-
-  async function shareScreen() {
-    if (screenStream) {
-      stopScreenShare();
-      return;
-    }
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-      setStatus('مشاركة الشاشة غير مدعومة على هذا المتصفح');
-      return;
-    }
-
-    try {
-      screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-      var screenTrack = screenStream.getVideoTracks()[0];
-      if (!screenTrack) return;
-
-      ensurePeerConnection();
-      var sender = getVideoSender();
-      if (sender && sender.replaceTrack) {
-        sender.replaceTrack(screenTrack);
-      }
-
-      if (localVideo) localVideo.srcObject = screenStream;
-      if (btnShare) btnShare.textContent = 'إيقاف مشاركة الشاشة';
-
-      screenTrack.addEventListener('ended', function () {
-        stopScreenShare();
-      });
-    } catch (e) {
-      setStatus('فشل مشاركة الشاشة');
-    }
-  }
-
-  async function startLocalMedia() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setStatus('المتصفح لا يدعم تشغيل الكاميرا/الميك');
-      return;
-    }
-
-    setStatus('جاري تشغيل الكاميرا والميك...');
-    try {
-      localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      if (localVideo) localVideo.srcObject = localStream;
+      isScreenEnabled = !isScreenEnabled;
+      await room.localParticipant.setScreenShareEnabled(isScreenEnabled);
       updateButtons();
-      setStatus('تم تشغيل الكاميرا والميك. في انتظار الطرف الآخر...');
-    } catch (e) {
-      setStatus('تعذر تشغيل الكاميرا/الميك. تأكد من الصلاحيات');
-      throw e;
-    }
-  }
-
-  async function createOfferAndSend() {
-    if (isCreatingOffer) return;
-    var peer = ensurePeerConnection();
-    if (peer.signalingState !== 'stable') return;
-
-    isCreatingOffer = true;
-    setStatus('جاري إنشاء الاتصال...');
-
-    try {
-      var offer = await peer.createOffer();
-      await peer.setLocalDescription(offer);
-      await sendSignal('offer', { offer: offer });
-    } finally {
-      isCreatingOffer = false;
-    }
-  }
-
-  async function handleOffer(offer) {
-    var peer = ensurePeerConnection();
-    if (peer.signalingState !== 'stable') return;
-    await peer.setRemoteDescription(new RTCSessionDescription(offer));
-    await flushPendingCandidates();
-    var answer = await peer.createAnswer();
-    await peer.setLocalDescription(answer);
-    await sendSignal('answer', { answer: answer });
-  }
-
-  async function handleAnswer(answer) {
-    if (!pc) return;
-    await pc.setRemoteDescription(new RTCSessionDescription(answer));
-    await flushPendingCandidates();
-  }
-
-  async function handleCandidate(candidate) {
-    if (!candidate) return;
-    if (!pc || !pc.remoteDescription) {
-      pendingCandidates.push(candidate);
-      return;
-    }
-
-    try {
-      await pc.addIceCandidate(new RTCIceCandidate(candidate));
-    } catch (e) {}
-  }
-
-  async function fetchSignals() {
-    if (isDisposed) return;
-
-    try {
-      var resp = await fetch('/meet/' + encodeURIComponent(roomId) + '/signals?after=' + encodeURIComponent(lastSignalSeq), {
-        headers: { 'Accept': 'application/json' },
-        cache: 'no-store'
-      });
-
-      if (!resp.ok) {
-        setStatus('تعذر مزامنة الاجتماع مع السيرفر');
-        scheduleSignalPoll(2000);
-        return;
-      }
-
-      var data = await resp.json();
-      var events = Array.isArray(data && data.events) ? data.events : [];
-      for (var i = 0; i < events.length; i += 1) {
-        var event = events[i];
-        lastSignalSeq = Math.max(lastSignalSeq, Number(event && event.seq) || 0);
-        await handleSignalEvent(event);
-      }
-    } catch (e) {
-      setStatus('تعذر الوصول إلى إشارات الاجتماع. جاري إعادة المحاولة...');
-    }
-
-    scheduleSignalPoll();
-  }
-
-  async function handleSignalEvent(event) {
-    if (!event || !event.type) return;
-
-    if (event.type === 'join') {
-      setStatus('دخل الطرف الآخر إلى الغرفة');
-      if (shouldInitiateOffer(event)) {
-        try {
-          await createOfferAndSend();
-        } catch (e) {
-          setStatus('حدث خطأ أثناء إنشاء الاتصال');
-        }
-      }
-      startAutoRecordingIfPossible();
-      return;
-    }
-
-    if (event.type === 'leave') {
-      setStatus('الطرف الآخر خرج من الاجتماع');
-      if (remoteVideo) remoteVideo.srcObject = null;
-      stopAndUploadRecording();
-      return;
-    }
-
-    if (event.type === 'offer' && event.payload && event.payload.offer) {
-      try {
-        await handleOffer(event.payload.offer);
-      } catch (e) {
-        setStatus('فشل استقبال الاتصال');
-      }
-      return;
-    }
-
-    if (event.type === 'answer' && event.payload && event.payload.answer) {
-      try {
-        await handleAnswer(event.payload.answer);
-      } catch (e) {
-        setStatus('فشل تثبيت الاتصال');
-      }
-      return;
-    }
-
-    if (event.type === 'ice-candidate' && event.payload && event.payload.candidate) {
-      await handleCandidate(event.payload.candidate);
-    }
-  }
-
-  function buildRecordingStream() {
-    var tracks = [];
-    var remoteStream = remoteVideo && remoteVideo.srcObject ? remoteVideo.srcObject : null;
-    var local = localStream;
-
-    if (remoteStream && remoteStream.getVideoTracks && remoteStream.getVideoTracks().length) {
-      tracks.push(remoteStream.getVideoTracks()[0]);
-    } else if (local && local.getVideoTracks && local.getVideoTracks().length) {
-      tracks.push(local.getVideoTracks()[0]);
-    }
-
-    if (local && local.getAudioTracks) {
-      local.getAudioTracks().forEach(function (track) { tracks.push(track); });
-    }
-    if (remoteStream && remoteStream.getAudioTracks) {
-      remoteStream.getAudioTracks().forEach(function (track) { tracks.push(track); });
-    }
-
-    return new MediaStream(tracks);
-  }
-
-  function getSupportedMimeType() {
-    var candidates = [
-      'video/webm;codecs=vp9,opus',
-      'video/webm;codecs=vp8,opus',
-      'video/webm;codecs=vp8',
-      'video/webm'
-    ];
-    for (var i = 0; i < candidates.length; i += 1) {
-      var mimeType = candidates[i];
-      if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mimeType)) {
-        return mimeType;
-      }
-    }
-    return '';
-  }
-
-  function startAutoRecordingIfPossible() {
-    if (!shouldAutoRecord) return;
-    if (recorder) return;
-    if (!window.MediaRecorder) {
-      setStatus('المتصفح لا يدعم تسجيل الاجتماع');
-      return;
-    }
-
-    var remoteStream = remoteVideo && remoteVideo.srcObject ? remoteVideo.srcObject : null;
-    if (!localStream || !remoteStream) {
-      setStatus('في انتظار الطرف الآخر...');
-      return;
-    }
-
-    try {
-      recordedChunks = [];
-      var stream = buildRecordingStream();
-      var mimeType = getSupportedMimeType();
-      var options = mimeType ? { mimeType: mimeType } : undefined;
-      recorder = new MediaRecorder(stream, options);
-
-      recorder.ondataavailable = function (event) {
-        if (event.data && event.data.size > 0) recordedChunks.push(event.data);
-      };
-
-      recorder.onstart = function () {
-        setStatus('جاري التسجيل تلقائياً...');
-      };
-
-      recorder.start(1000);
-    } catch (e) {
-      setStatus('فشل بدء التسجيل');
-      recorder = null;
-    }
-  }
-
-  async function stopAndUploadRecording() {
-    if (!shouldAutoRecord) return;
-    if (isUploading) return;
-
-    if (recorder && recorder.state !== 'inactive') {
-      try { recorder.stop(); } catch (e) {}
-    }
-
-    await new Promise(function (resolve) { setTimeout(resolve, 250); });
-
-    if (!recordedChunks.length) {
-      recorder = null;
-      return;
-    }
-
-    isUploading = true;
-    setStatus('جاري رفع التسجيل...');
-
-    try {
-      var mimeType = recorder && recorder.mimeType ? recorder.mimeType : 'video/webm';
-      var blob = new Blob(recordedChunks, { type: mimeType || 'video/webm' });
-      var form = new FormData();
-      form.append('recording', blob, 'meeting.webm');
-
-      var resp = await fetch('/meet/' + encodeURIComponent(roomId) + '/recording', {
-        method: 'POST',
-        body: form
-      });
-
-      if (!resp.ok) {
-        setStatus('فشل رفع التسجيل');
-      } else {
-        setStatus('تم حفظ التسجيل');
-      }
-    } catch (e) {
-      setStatus('فشل رفع التسجيل');
-    } finally {
-      isUploading = false;
-      recorder = null;
-      recordedChunks = [];
-    }
-  }
-
-  async function announceJoin() {
-    if (hasSentJoin) return;
-    hasSentJoin = true;
-    try {
-      await sendSignal('join', { role: userRole });
-    } catch (e) {
-      setStatus('تعذر إشعار الطرف الآخر بدخولك إلى الاجتماع');
+      setStatus(isScreenEnabled ? 'تم بدء مشاركة الشاشة' : 'تم إيقاف مشاركة الشاشة');
+    } catch (error) {
+      isScreenEnabled = false;
+      updateButtons();
+      setStatus('تعذر تشغيل مشاركة الشاشة');
     }
   }
 
   async function leaveMeeting() {
-    if (isDisposed) return;
-    if (pollTimer) clearTimeout(pollTimer);
-    try { await sendSignal('leave', {}); } catch (e) {}
-    isDisposed = true;
-    try { if (pc) pc.close(); } catch (e2) {}
-    try { if (localStream) localStream.getTracks().forEach(function (track) { track.stop(); }); } catch (e3) {}
-    try { if (screenStream) screenStream.getTracks().forEach(function (track) { track.stop(); }); } catch (e4) {}
+    try {
+      if (room) {
+        room.disconnect();
+      }
+    } catch (e) {}
+    window.location.href = returnUrl;
   }
 
-  async function init() {
-    await startLocalMedia();
-    ensurePeerConnection();
-    scheduleSignalPoll(0);
-    await announceJoin();
+  if (btnMic) btnMic.addEventListener('click', function () { toggleMic().catch(function () {}); });
+  if (btnCam) btnCam.addEventListener('click', function () { toggleCam().catch(function () {}); });
+  if (btnShare) btnShare.addEventListener('click', function () { toggleScreenShare().catch(function () {}); });
+  if (btnEndMeeting) btnEndMeeting.addEventListener('click', function () { leaveMeeting(); });
 
-    window.addEventListener('beforeunload', function () {
-      try { navigator.sendBeacon('/meet/' + encodeURIComponent(roomId) + '/signals', new Blob([JSON.stringify({ type: 'leave', payload: {} })], { type: 'application/json' })); } catch (e) {}
-      try { leaveMeeting(); } catch (e2) {}
-      try { stopAndUploadRecording(); } catch (e3) {}
-    });
+  window.addEventListener('beforeunload', function () {
+    try {
+      if (room) room.disconnect();
+    } catch (e) {}
+  });
 
-    if (btnMic) btnMic.addEventListener('click', toggleMic);
-    if (btnCam) btnCam.addEventListener('click', toggleCam);
-    if (btnShare) btnShare.addEventListener('click', function () {
-      shareScreen();
-    });
-    if (btnEndMeeting) btnEndMeeting.addEventListener('click', async function () {
-      await stopAndUploadRecording();
-      await leaveMeeting();
-      setTimeout(function () {
-        window.location.href = userRole === 'admin' ? '/admin/appointments' : '/my-appointments';
-      }, 500);
-    });
-  }
-
-  init().catch(function () {
-    // status already handled where possible
+  connectRoom().catch(function (error) {
+    console.error(error);
+    setStatus(error && error.message ? error.message : 'تعذر بدء الاجتماع');
   });
 })();

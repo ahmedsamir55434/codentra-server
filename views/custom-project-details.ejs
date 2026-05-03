@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= requestItem.title %> - طلب مشروع مخصص</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/messages.css">
+  <link rel="stylesheet" href="/css/purchases.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="messages-page">
+    <div class="container" style="display:grid; gap:16px;">
+      <% if (error) { %><div class="error-message"><%= error %></div><% } %>
+      <% if (success) { %><div class="success-message"><%= success %></div><% } %>
+
+      <div class="purchase-card stacked-card">
+        <div class="purchase-info">
+          <a href="/custom-project" class="back-link">← العودة إلى طلبات المشاريع</a>
+          <h2 style="margin:0 0 10px;"><%= requestItem.title %></h2>
+          <div class="purchase-meta">
+            <span><%= requestItem.projectType %></span>
+            <span class="status-badge <%= requestItem.status === 'accepted' || requestItem.status === 'completed' ? 'approved' : requestItem.status === 'rejected' ? 'rejected' : 'pending' %>">
+              <%= requestItem.status === 'completed' ? 'مكتمل' : requestItem.status === 'accepted' ? 'مقبول' : requestItem.status === 'quoted' ? 'تم التسعير' : requestItem.status === 'reviewing' ? 'قيد المراجعة' : requestItem.status === 'rejected' ? 'مرفوض' : 'جديد' %>
+            </span>
+            <span><%= new Date(requestItem.createdAt).toLocaleDateString('ar-EG') %></span>
+          </div>
+          <p class="wallet-activity-message"><%= requestItem.description %></p>
+          <div class="wallet-activity-meta">
+            <span>الميزانية المقترحة: <strong><%= requestItem.budget || 'غير محددة' %></strong></span>
+            <span>المدة المقترحة: <strong><%= requestItem.timeline || 'غير محددة' %></strong></span>
+            <span>سعر الإدارة: <strong><%= requestItem.quotedPrice ? displayMoney(requestItem.quotedPrice) : 'لم يحدد بعد' %></strong></span>
+            <span>مدة التنفيذ من الإدارة: <strong><%= requestItem.quotedTimeline || 'لم تحدد بعد' %></strong></span>
+            <span>الدفع: <strong><%= requestItem.paymentStatus === 'paid' ? 'مدفوع' : 'غير مدفوع' %></strong></span>
+          </div>
+          <% if (requestItem.adminReply) { %>
+            <div class="wallet-activity-item" style="margin-top:12px;">
+              <div class="wallet-activity-head">
+                <strong>رد الإدارة</strong>
+                <span><%= new Date(requestItem.updatedAt || requestItem.createdAt).toLocaleString('ar-EG') %></span>
+              </div>
+              <p class="wallet-activity-message"><%= requestItem.adminReply %></p>
+            </div>
+          <% } %>
+          <% if (requestItem.quotedPrice && requestItem.paymentStatus !== 'paid' && requestItem.status !== 'rejected') { %>
+            <div style="margin-top: 14px; display:grid; gap:12px;">
+              <form action="/custom-project/<%= requestItem.id %>/pay-wallet" method="POST" class="wallet-topup-form">
+                <button type="submit" class="btn btn-primary">ادفع من رصيد المحفظة - <%= displayMoney(requestItem.quotedPrice) %></button>
+              </form>
+              <form action="/custom-project/<%= requestItem.id %>/pay" method="POST" class="wallet-topup-form">
+                <div class="form-group">
+                  <label for="walletCardNumber">أو ادفع ببطاقة المحفظة</label>
+                  <input type="text" id="walletCardNumber" name="walletCardNumber" placeholder="اتركه فارغًا لاستخدام بطاقتك أنت">
+                </div>
+                <button type="submit" class="btn btn-secondary">الدفع ببطاقة المحفظة</button>
+              </form>
+            </div>
+          <% } else if (!requestItem.quotedPrice && requestItem.status !== 'rejected') { %>
+            <p class="wallet-activity-message" style="margin-top:14px;">زر الدفع سيظهر هنا تلقائيًا بعد ما الأدمن يحدد السعر.</p>
+          <% } %>
+          <% if (requestItem.paymentStatus === 'paid') { %>
+            <div style="margin-top: 14px; display:flex; gap:10px; flex-wrap:wrap;">
+              <a href="/invoice/custom-<%= requestItem.id %>.pdf" class="btn btn-secondary" target="_blank">عرض الفاتورة</a>
+              <% if (requestItem.filePath) { %>
+                <a href="/custom-project/download/<%= requestItem.id %>" class="btn btn-primary">تحميل الملف النهائي</a>
+              <% } %>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="chat-container" style="max-width:100%;">
+        <div class="chat-header">
+          <h2>💬 التواصل بخصوص الطلب</h2>
+          <p>تحدث مع الإدارة بخصوص هذا المشروع المخصص.</p>
+        </div>
+        <div class="chat-messages">
+          <% if (!messages || !messages.length) { %>
+            <div class="empty-chat"><p>ابدأ المحادثة الآن</p></div>
+          <% } else { %>
+            <% messages.forEach(msg => { %>
+              <div class="message <%= msg.senderId === user.id ? 'sent' : 'received' %>">
+                <div class="message-content"><%= msg.content %></div>
+                <div class="message-meta">
+                  <span class="sender"><%= msg.senderId === user.id ? 'أنت' : 'الإدارة' %></span>
+                  <span class="time"><%= new Date(msg.createdAt).toLocaleString('ar-EG') %></span>
+                </div>
+              </div>
+            <% }) %>
+          <% } %>
+        </div>
+        <div class="chat-input">
+          <form action="/custom-project/<%= requestItem.id %>/messages" method="POST" class="message-form">
+            <textarea name="content" placeholder="اكتب رسالتك هنا..." required rows="3"></textarea>
+            <button type="submit" class="btn btn-primary">إرسال</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

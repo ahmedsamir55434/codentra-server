@@ -21,6 +21,7 @@
         <% } %>
         <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.purchases))) { %>
           <a href="/admin/purchases">المشتريات</a>
+          <a href="/admin/custom-projects">طلبات المشاريع المخصصة</a>
         <% } %>
         <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.modifications))) { %>
           <a href="/admin/modifications">طلبات التعديل</a>
@@ -83,8 +84,15 @@
           <div class="stat-label">المشتريات</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.salesMonth))) ? reports.salesMonth : 0 %> ج</div>
+          <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.salesMonth))) ? displayMoney(reports.salesMonth) : displayMoney(0) %></div>
           <div class="stat-label">مبيعات الشهر</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">طلبات</div>
+          <div class="stat-label">المشاريع المخصصة</div>
+          <div style="margin-top:10px;">
+            <a href="/admin/custom-projects" class="btn btn-sm btn-secondary">فتح الطلبات</a>
+          </div>
         </div>
       </div>
 
@@ -126,15 +134,15 @@
 
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.salesToday))) ? reports.salesToday : 0 %> ج</div>
+            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.salesToday))) ? displayMoney(reports.salesToday) : displayMoney(0) %></div>
             <div class="stat-label">مبيعات اليوم</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.salesWeek))) ? reports.salesWeek : 0 %> ج</div>
+            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.salesWeek))) ? displayMoney(reports.salesWeek) : displayMoney(0) %></div>
             <div class="stat-label">مبيعات الأسبوع</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.totalDiscounts))) ? reports.totalDiscounts : 0 %> ج</div>
+            <div class="stat-value"><%= (reports && Number.isFinite(Number(reports.totalDiscounts))) ? displayMoney(reports.totalDiscounts) : displayMoney(0) %></div>
             <div class="stat-label">إجمالي الخصومات</div>
           </div>
           <div class="stat-card">
@@ -192,7 +200,7 @@
                       <% } %>
                     </td>
                     <td><strong><%= row.count %></strong></td>
-                    <td><%= row.revenue %> ج</td>
+                    <td><%= displayMoney(row.revenue) %></td>
                   </tr>
                 <% }) %>
               </tbody>
@@ -223,7 +231,7 @@
                 <tr>
                   <td><%= project.title %></td>
                   <td><%= project.category %></td>
-                  <td><%= project.price %> ج</td>
+                  <td><%= displayMoney(project.price) %></td>
                   <td><%= new Date(project.createdAt).toLocaleDateString('ar-EG') %></td>
                   <td class="actions">
                     <a href="/project/<%= project.id %>" class="btn btn-sm btn-secondary" target="_blank">عرض</a>

@@ -24,12 +24,82 @@
       <% } %>
 
       <% if (user && (user.referralCode || Number(user.walletBalance || 0) > 0)) { %>
-        <div class="purchase-card" style="margin-bottom: 16px;">
+        <div class="purchase-card stacked-card" style="margin-bottom: 16px;">
           <div class="purchase-info">
+            <h3 style="margin-top: 0;">الإحالة ورصيد المحفظة</h3>
+            <p style="margin: 0 0 8px;">رصيد المحفظة: <strong><%= displayMoney(user.walletBalance || 0) %></strong></p>
             <% if (user.referralCode) { %>
-              <p style="margin: 0 0 8px;">كود الإحالة الخاص بك: <strong><%= user.referralCode %></strong></p>
+              <div class="referral-box">
+                <div class="referral-box-head">
+                  <strong>كود الإحالة الخاص بك</strong>
+                  <span class="wallet-code-badge"><%= user.referralCode %></span>
+                </div>
+                <p class="wallet-card-note">عندما يسجل شخص باستخدام كودك تحصل على <strong>50 نقطة</strong> فورًا، وعندما يكمل أول شراء معتمد تحصل على <strong>100 نقطة</strong> إضافية.</p>
+                <div class="referral-actions">
+                  <input
+                    type="text"
+                    id="referralLink"
+                    class="referral-link-input"
+                    value="<%= referralLink || '' %>"
+                    readonly>
+                  <button type="button" class="btn btn-secondary" id="copyReferralLink">نسخ رابط الدعوة</button>
+                </div>
+              </div>
             <% } %>
-            <p style="margin: 0;">رصيد المحفظة: <strong><%= Number(user.walletBalance || 0) %></strong> جنيه</p>
+          </div>
+        </div>
+      <% } %>
+
+      <div class="purchase-card stacked-card" style="margin-bottom: 16px;">
+        <div class="purchase-info">
+          <h3 style="margin-top: 0;">شحن الرصيد عبر Atlos</h3>
+          <p class="wallet-card-note">الموقع يعرض الأسعار بالدولار تلقائيًا بحسب سعر اليوم، وسيتم إنشاء عملية الشحن عبر بوابة Atlos بنفس قيمة الدولار التي تدخلها.</p>
+          <% if (atlosEnabled) { %>
+            <form action="/wallet/topup/start" method="POST" class="wallet-topup-form" style="margin-top: 12px;">
+              <div class="form-group">
+                <label for="topupAmount">مبلغ الشحن</label>
+                <input type="number" id="topupAmount" name="amount" min="1" step="0.01" placeholder="مثال: 25" required>
+              </div>
+              <div class="wallet-topup-presets">
+                <button type="button" class="btn btn-secondary topup-preset-btn" data-topup-amount="10">$10</button>
+                <button type="button" class="btn btn-secondary topup-preset-btn" data-topup-amount="25">$25</button>
+                <button type="button" class="btn btn-secondary topup-preset-btn" data-topup-amount="50">$50</button>
+                <button type="button" class="btn btn-secondary topup-preset-btn" data-topup-amount="100">$100</button>
+              </div>
+              <button type="submit" class="btn btn-primary">اشحن الآن</button>
+            </form>
+          <% } else { %>
+            <div class="error-message">إعدادات Atlos غير مكتملة بعد. أضف `ATLOS_API_URL` و`ATLOS_API_KEY` أولًا.</div>
+          <% } %>
+        </div>
+      </div>
+
+      <% if (walletTopups && walletTopups.length) { %>
+        <div class="purchase-card stacked-card" style="margin-bottom: 16px;">
+          <div class="purchase-info">
+            <h3 style="margin-top: 0;">سجل شحن الرصيد</h3>
+          </div>
+          <div class="wallet-activity-list">
+            <% walletTopups.forEach(topup => { %>
+              <div class="wallet-activity-item">
+                <div class="wallet-activity-head">
+                  <strong>شحن رصيد <%= formatUsdAmount(topup.amountUsd || convertEgpToUsd(topup.amount || 0)) %></strong>
+                  <span class="status-badge <%= topup.status === 'paid' ? 'approved' : topup.status === 'failed' ? 'rejected' : 'pending' %>">
+                    <%= topup.status === 'paid' ? 'تم الدفع' : topup.status === 'failed' ? 'فشل الدفع' : 'بانتظار الدفع' %>
+                  </span>
+                </div>
+                <div class="wallet-activity-meta">
+                  <span>المرجع: <strong><%= topup.reference %></strong></span>
+                  <span>الحالة: <strong><%= topup.status === 'paid' ? 'تم الدفع' : topup.status === 'failed' ? 'فشل الدفع' : 'بانتظار الدفع' %></strong></span>
+                  <span><%= new Date(topup.createdAt).toLocaleString('ar-EG') %></span>
+                </div>
+                <% if (topup.status !== 'paid' && topup.checkoutUrl) { %>
+                  <div style="margin-top: 10px;">
+                    <a href="<%= topup.checkoutUrl %>" class="btn btn-secondary">استكمال الدفع</a>
+                  </div>
+                <% } %>
+              </div>
+            <% }) %>
           </div>
         </div>
       <% } %>
@@ -44,26 +114,124 @@
             <div class="success-message"><%= walletCardSuccess %></div>
           <% } %>
           <p style="margin: 0 0 8px;">رقم البطاقة: <strong><%= walletCardNumber || '-' %></strong></p>
-          <p style="margin: 0 0 12px; color: #666;">أي مستخدم يمكنه الدفع بهذه البطاقة، لكن كود التحقق سيصل إلى إيميلك أنت.</p>
+          <p style="margin: 0 0 8px;">حد البطاقة الحالي:
+            <strong><%= walletCardSpendingLimit != null ? displayMoney(walletCardSpendingLimit) : 'بدون حد' %></strong>
+          </p>
+          <p class="wallet-card-note">أي مستخدم يمكنه طلب الدفع بهذه البطاقة، لكن كود التحقق سيظهر لك هنا في تنبيهات البطاقة. وإذا كنت أنت صاحب البطاقة وتدفع بنفسك فلن يطلب منك كود تحقق.</p>
           <form action="/wallet-card/password" method="POST" style="margin-top: 10px;">
             <div class="form-group">
               <label for="walletPassword">تعيين أو تغيير كلمة مرور البطاقة</label>
-              <input type="password" id="walletPassword" name="walletPassword" placeholder="مطلوبة فوق 5000 جنيه" required minlength="4">
+              <input type="password" id="walletPassword" name="walletPassword" placeholder="اختياري - لا يقل عن 4 أحرف">
             </div>
-            <button type="submit" class="btn btn-secondary">حفظ كلمة مرور البطاقة</button>
+            <div class="form-group">
+              <label for="walletCardSpendingLimit">حد البطاقة لكل عملية</label>
+              <input
+                type="number"
+                id="walletCardSpendingLimit"
+                name="walletCardSpendingLimit"
+                min="1"
+                step="0.01"
+                value="<%= walletCardSpendingLimit != null ? displayMoneyValue(walletCardSpendingLimit) : '' %>"
+                placeholder="مثال: 80">
+            </div>
+            <button type="submit" class="btn btn-secondary">حفظ إعدادات البطاقة</button>
           </form>
         </div>
       </div>
 
-      <div class="purchase-card" style="margin-bottom: 16px;">
+      <% if (incomingApprovals && incomingApprovals.length) { %>
+        <div class="purchase-card stacked-card" style="margin-bottom: 16px;">
+          <div class="purchase-info">
+            <h3 style="margin-top: 0;">طلبات استخدام بطاقتك الآن</h3>
+            <p class="wallet-card-note">هذه الطلبات لم تُستكمل بعد. شارك الكود فقط إذا كنت موافقًا على الدفع.</p>
+          </div>
+          <div class="wallet-activity-list">
+            <% incomingApprovals.forEach(attempt => { %>
+              <div class="wallet-activity-item">
+                <div class="wallet-activity-head">
+                  <strong><%= attempt.purposeLabel || 'استخدام بطاقة المحفظة' %></strong>
+                  <span class="wallet-code-badge"><%= attempt.ownerVisibleCode %></span>
+                </div>
+                <div class="wallet-activity-meta">
+                  <span>المبلغ: <strong><%= displayMoney(attempt.amount || 0) %></strong></span>
+                  <span>الطالب: <strong><%= attempt.buyerDisplayName || 'مستخدم' %></strong></span>
+                  <span>ينتهي: <strong><%= new Date(attempt.expiresAt).toLocaleString('ar-EG') %></strong></span>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (walletCardNotifications && walletCardNotifications.length) { %>
+        <div class="purchase-card stacked-card" style="margin-bottom: 16px;">
+          <div class="purchase-info">
+            <h3 style="margin-top: 0;">إشعارات البطاقة</h3>
+          </div>
+          <div class="wallet-activity-list">
+            <% walletCardNotifications.forEach(notification => { %>
+              <div class="wallet-activity-item">
+                <div class="wallet-activity-head">
+                  <strong><%= notification.title %></strong>
+                  <% if (notification.metadata && notification.metadata.verificationCode) { %>
+                    <span class="wallet-code-badge"><%= notification.metadata.verificationCode %></span>
+                  <% } %>
+                </div>
+                <p class="wallet-activity-message"><%= notification.message %></p>
+                <div class="wallet-activity-meta">
+                  <% if (notification.metadata && notification.metadata.amount != null) { %>
+                    <span>المبلغ: <strong><%= displayMoney(notification.metadata.amount) %></strong></span>
+                  <% } %>
+                  <% if (notification.metadata && notification.metadata.purposeLabel) { %>
+                    <span>الغرض: <strong><%= notification.metadata.purposeLabel %></strong></span>
+                  <% } %>
+                  <span><%= new Date(notification.createdAt).toLocaleString('ar-EG') %></span>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+
+      <% if (walletCardUsageLog && walletCardUsageLog.length) { %>
+        <div class="purchase-card stacked-card" style="margin-bottom: 16px;">
+          <div class="purchase-info">
+            <h3 style="margin-top: 0;">سجل استخدام البطاقة</h3>
+          </div>
+          <div class="wallet-activity-list">
+            <% walletCardUsageLog.forEach(entry => { %>
+              <div class="wallet-activity-item">
+                <div class="wallet-activity-head">
+                  <strong><%= entry.purposeLabel %></strong>
+                  <span class="wallet-limit-badge status-<%= entry.status %>"><%= entry.status === 'completed' ? 'مكتمل' : entry.status === 'pending_verification' ? 'بانتظار التحقق' : entry.status === 'expired' ? 'منتهي' : 'تم الاستخدام' %></span>
+                </div>
+                <p class="wallet-activity-message">
+                  <strong><%= entry.buyerName || 'مستخدم' %></strong>
+                  استخدم البطاقة بمبلغ
+                  <strong><%= displayMoney(entry.amount || 0) %></strong>
+                </p>
+                <% if (entry.note) { %>
+                  <p class="wallet-activity-note"><%= entry.note %></p>
+                <% } %>
+                <div class="wallet-activity-meta">
+                  <span><%= new Date(entry.createdAt).toLocaleString('ar-EG') %></span>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      <% } %>
+
+      <div class="purchase-card stacked-card" style="margin-bottom: 16px;">
         <div class="purchase-info">
-          <h3 style="margin-top: 0;">شحن الرصيد</h3>
+          <h3 style="margin-top: 0;">أكواد شحن الرصيد</h3>
           <% if (redeemError) { %>
             <div class="error-message"><%= redeemError %></div>
           <% } %>
           <% if (redeemSuccess) { %>
             <div class="success-message"><%= redeemSuccess %></div>
           <% } %>
+          <p class="wallet-card-note">إذا أعطاك الأدمن كود شحن، اكتبه هنا وسيتم إضافة الرصيد مباشرة إلى محفظتك إذا كان الكود صالحًا.</p>
           <form action="/wallet/redeem" method="POST" style="margin-top: 10px;">
             <div class="form-group">
               <label for="walletCode">كود الشحن</label>
@@ -103,7 +271,7 @@
                 <h3><%= plan ? plan.name : (pay.planId || 'Subscription') %></h3>
                 <div class="purchase-meta">
                   <span class="purchase-date"><%= pay.createdAt ? new Date(pay.createdAt).toLocaleDateString('ar-EG') : '-' %></span>
-                  <span class="purchase-price"><%= after %> جنيه</span>
+                  <span class="purchase-price"><%= displayMoney(after) %></span>
                   <% if (sub && sub.status === 'active') { %>
                     <span class="status-badge approved">✓ نشط</span>
                   <% } else if (sub && sub.status === 'canceled') { %>
@@ -151,7 +319,7 @@
                   <span class="purchase-date">
                     <%= new Date(purchase.purchasedAt).toLocaleDateString('ar-EG') %>
                   </span>
-                  <span class="purchase-price"><%= purchase.price %> جنيه</span>
+                  <span class="purchase-price"><%= displayMoney(purchase.price) %></span>
                   <% if (purchase.status === 'pending') { %>
                     <span class="status-badge pending">⏳ بانتظار الموافقة</span>
                   <% } else if (purchase.status === 'approved') { %>
@@ -176,7 +344,7 @@
                 <% } %>
                 <% if (purchase.walletRefundAmount) { %>
                   <p class="modification-note" style="color: #28a745;">
-                    تم استرداد مبلغ: <strong><%= purchase.walletRefundAmount %></strong> جنيه للمحفظة
+                    تم استرداد مبلغ: <strong><%= displayMoney(purchase.walletRefundAmount) %></strong> للمحفظة
                   </p>
                 <% } %>
               </div>
@@ -190,10 +358,13 @@
                   <% if (inv) { %>
                     <a href="/invoice/<%= orderId %>.pdf" class="btn btn-secondary" target="_blank">تحميل الفاتورة PDF</a>
                   <% } %>
+                  <a href="/messages/purchase/<%= purchase.id %>" class="btn btn-secondary">محادثة الطلب</a>
                   <a href="/request-modification/<%= purchase.id %>" class="btn btn-secondary">طلب تعديل</a>
                 <% } else if (purchase.status === 'pending') { %>
+                  <a href="/messages/purchase/<%= purchase.id %>" class="btn btn-secondary">محادثة الطلب</a>
                   <span class="waiting-text">بانتظار موافقة الأدمن</span>
                 <% } else { %>
+                  <a href="/messages/purchase/<%= purchase.id %>" class="btn btn-secondary">محادثة الطلب</a>
                   <span class="rejected-text">تم رفض الطلب</span>
                 <% } %>
               </div>
@@ -205,5 +376,40 @@
   </main>
 
   <%- include('partials/footer') %>
+  <script>
+    (function () {
+      const amountInput = document.getElementById('topupAmount');
+      if (!amountInput) return;
+      document.querySelectorAll('.topup-preset-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+          amountInput.value = button.getAttribute('data-topup-amount') || '';
+          amountInput.focus();
+        });
+      });
+    })();
+
+    (function () {
+      const copyBtn = document.getElementById('copyReferralLink');
+      const referralInput = document.getElementById('referralLink');
+      if (!copyBtn || !referralInput) return;
+
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(referralInput.value);
+          copyBtn.textContent = 'تم النسخ';
+          setTimeout(() => {
+            copyBtn.textContent = 'نسخ رابط الدعوة';
+          }, 1500);
+        } catch (error) {
+          referralInput.select();
+          document.execCommand('copy');
+          copyBtn.textContent = 'تم النسخ';
+          setTimeout(() => {
+            copyBtn.textContent = 'نسخ رابط الدعوة';
+          }, 1500);
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

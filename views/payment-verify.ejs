@@ -23,8 +23,8 @@
         <div style="text-align:right; margin-bottom:16px; color:#444;">
           <p style="margin:0 0 8px;">سيتم الخصم من البطاقة: <strong><%= walletCardMasked || '-' %></strong></p>
           <p style="margin:0 0 8px;">صاحب البطاقة: <strong><%= payerName %></strong></p>
-          <p style="margin:0 0 8px;">تم إرسال كود التحقق إلى: <strong><%= payerEmailMasked %></strong></p>
-          <p style="margin:0;">المبلغ المطلوب: <strong><%= amount %></strong> جنيه</p>
+          <p style="margin:0 0 8px;">كود التحقق يظهر لصاحب البطاقة داخل قسم <strong>إشعارات البطاقة</strong> في صفحة مشترياته، وقد يصل أيضًا إلى بريده المسجل إذا كانت خدمة الإرسال مفعلة.</p>
+          <p style="margin:0;">المبلغ المطلوب: <strong><%= displayMoney(amount) %></strong></p>
         </div>
 
         <form action="/payment/verify/<%= attempt.id %>" method="POST">
@@ -36,7 +36,7 @@
           <% if (requiresPassword) { %>
             <div class="form-group">
               <label for="paymentPassword">كلمة مرور البطاقة</label>
-              <input type="password" id="paymentPassword" name="paymentPassword" required placeholder="مطلوبة لأن المبلغ أكبر من 5000 جنيه">
+              <input type="password" id="paymentPassword" name="paymentPassword" required placeholder="مطلوبة لأن المبلغ كبير ويتجاوز حد التحقق">
             </div>
           <% } %>
 

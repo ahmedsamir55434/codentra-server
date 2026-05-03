@@ -8,11 +8,13 @@
     { href: '/', label: 'المشاريع' },
     { href: '/community', label: 'Community' },
     { href: '/my-purchases', label: 'مشترياتي' },
-    { href: '/appointments', label: 'الجلسات' },
-    { href: '/messages', label: 'التواصل' }
+    { href: '/notifications', label: 'الإشعارات', badge: user && user.unreadNotificationsCount ? user.unreadNotificationsCount : 0 },
+    { href: '/appointments', label: 'الجلسات' }
   ];
 
   const userSecondaryLinks = [
+    { href: '/custom-project', label: 'اطلب مشروعك' },
+    { href: '/messages', label: 'التواصل' },
     { href: '/cart', label: 'السلة' },
     { href: '/subscriptions', label: 'الاشتراكات' },
     { href: '/loyalty', label: 'نقاطي' },
@@ -55,7 +57,12 @@
     <nav class="main-nav smart-nav" aria-label="التنقل الرئيسي">
       <div class="nav-primary" role="list">
         <% primaryLinks.forEach(link => { %>
-          <a href="<%= link.href %>" class="nav-pill"><%= link.label %></a>
+          <a href="<%= link.href %>" class="nav-pill">
+            <span><%= link.label %></span>
+            <% if (link.badge) { %>
+              <span class="nav-pill-badge"><%= link.badge > 9 ? '9+' : link.badge %></span>
+            <% } %>
+          </a>
         <% }) %>
       </div>
 
@@ -121,7 +128,12 @@
       <div class="mobile-nav-body">
         <nav class="mobile-nav-list" aria-label="روابط الهاتف">
           <% mobileLinks.forEach(link => { %>
-            <a href="<%= link.href %>" class="mobile-nav-link"><span><%= link.label %></span></a>
+            <a href="<%= link.href %>" class="mobile-nav-link">
+              <span><%= link.label %></span>
+              <% if (link.badge) { %>
+                <span class="mobile-nav-badge"><%= link.badge > 9 ? '9+' : link.badge %></span>
+              <% } %>
+            </a>
           <% }) %>
         </nav>
 

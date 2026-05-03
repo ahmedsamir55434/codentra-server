@@ -131,8 +131,8 @@
     <aside class="project-sidebar">
       <div class="purchase-box">
         <div class="price-tag">
-          <span class="amount"><%= project.price %></span>
-          <span class="currency">جنيه</span>
+          <span class="amount"><%= displayMoneyValue(project.price) %></span>
+          <span class="currency"><%= displayCurrencyCode %></span>
         </div>
 
         <% if (user && user.role === 'user' && user.subscription && user.subscription.status === 'active') { %>

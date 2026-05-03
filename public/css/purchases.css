@@ -123,6 +123,142 @@
   gap: 8px;
 }
 
+.stacked-card {
+  display: block;
+}
+
+.wallet-card-note {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.wallet-topup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.referral-box {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+}
+
+.referral-box-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.referral-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.referral-link-input {
+  flex: 1;
+  min-width: 240px;
+}
+
+.wallet-topup-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.topup-preset-btn {
+  min-height: 42px;
+}
+
+.wallet-activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.wallet-activity-item {
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.03) 100%);
+}
+
+.wallet-activity-head,
+.wallet-activity-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.wallet-activity-message,
+.wallet-activity-note {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.wallet-activity-note {
+  color: var(--text-primary);
+}
+
+.wallet-activity-meta {
+  margin-top: 10px;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.wallet-code-badge,
+.wallet-limit-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.wallet-code-badge {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+}
+
+.wallet-limit-badge {
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text-primary);
+}
+
+.wallet-limit-badge.status-completed {
+  color: #5dd39e;
+  border-color: rgba(25, 135, 84, 0.28);
+  background: linear-gradient(135deg, rgba(25, 135, 84, 0.14) 0%, rgba(25, 135, 84, 0.06) 100%);
+}
+
+.wallet-limit-badge.status-pending_verification {
+  color: #ffc107;
+  border-color: rgba(255, 193, 7, 0.28);
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.14) 0%, rgba(255, 193, 7, 0.06) 100%);
+}
+
+.wallet-limit-badge.status-expired {
+  color: #ff8a98;
+  border-color: rgba(220, 53, 69, 0.28);
+  background: linear-gradient(135deg, rgba(220, 53, 69, 0.14) 0%, rgba(220, 53, 69, 0.06) 100%);
+}
+
 @media (max-width: 768px) {
   .purchase-card {
     flex-direction: column;
@@ -140,6 +276,30 @@
   }
 
   .purchase-actions .btn {
+    width: 100%;
+  }
+
+  .wallet-activity-head,
+  .wallet-activity-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .wallet-topup-presets {
+    flex-direction: column;
+  }
+
+  .wallet-topup-presets .btn {
+    width: 100%;
+  }
+
+  .referral-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .referral-link-input {
+    min-width: 0;
     width: 100%;
   }
 }

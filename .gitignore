@@ -1,0 +1,9 @@
+.env
+node_modules/
+uploads/
+private_uploads/
+.DS_Store
+public/.DS_Store
+.windsurf/
+CodentraIOS/.build/
+CodentraIOS/DerivedData/

@@ -87,6 +87,7 @@
             <tbody>
               <% 
               // Group purchases by orderId
+              const safeInvoices = Array.isArray(invoices) ? invoices : [];
               const orders = {};
               purchases.forEach(purchase => {
                 const orderId = purchase.orderId || purchase.id; // single purchase uses its own id
@@ -105,6 +106,8 @@
                 const orderPurchases = orders[orderId];
                 const firstPurchase = orderPurchases[0];
                 const user = users.find(u => u.id === firstPurchase.userId);
+                const payer = users.find(u => u.id === firstPurchase.payerUserId);
+                const invoice = safeInvoices.find(inv => inv && inv.orderId === orderId);
                 const isMultiItem = orderPurchases.length > 1;
               %>
                 <tr>
@@ -126,10 +129,22 @@
                       </div>
                     <% } %>
                   </td>
-                  <td><%= user ? user.name : 'غير معروف' %> (<%= user ? user.email : '' %>)</td>
+                  <td>
+                    <div><%= user ? user.name : 'غير معروف' %> (<%= user ? user.email : '' %>)</div>
+                    <div style="margin-top: 6px; font-size: 0.85rem; color: var(--text-secondary);">
+                      الدفع من:
+                      <strong><%= payer ? payer.name : 'غير معروف' %></strong>
+                      <% if (payer && payer.email) { %>
+                        (<%= payer.email %>)
+                      <% } %>
+                    </div>
+                    <div style="margin-top: 4px; font-size: 0.85rem; color: var(--text-secondary);">
+                      البطاقة: <strong><%= firstPurchase.payerCardLast4 ? `**** **** **** ${firstPurchase.payerCardLast4}` : '-' %></strong>
+                    </div>
+                  </td>
                   <td>
                     <% const orderTotal = orderPurchases.reduce((sum, p) => sum + Number(p.price || 0), 0); %>
-                    <%= orderTotal %> ج
+                    <%= displayMoney(orderTotal) %>
                     <% if (firstPurchase.couponCode) { %>
                       <div style="margin-top: 6px; color: var(--text-secondary); font-size: 0.85rem;">
                         كوبون: <%= firstPurchase.couponCode %>
@@ -137,7 +152,7 @@
                     <% } %>
                     <% if (orderPurchases.some(p => p.walletRefundAmount)) { %>
                       <div style="margin-top: 6px; color: #28a745; font-size: 0.85rem;">
-                        تم استرداد: <%= orderPurchases.reduce((sum, p) => sum + Number(p.walletRefundAmount || 0), 0) %> ج
+                        تم استرداد: <%= displayMoney(orderPurchases.reduce((sum, p) => sum + Number(p.walletRefundAmount || 0), 0)) %>
                       </div>
                     <% } %>
                   </td>
@@ -176,6 +191,26 @@
                           <input type="file" name="modifiedFile" accept=".zip" class="file-input">
                           <button type="submit" class="btn btn-sm btn-primary">📤 <%= p.projectTitle %></button>
                         </form>
+                        <div style="margin-top: 6px;">
+                          <a href="/admin/purchases/<%= p.id %>/messages" class="btn btn-sm btn-secondary">💬 محادثة الطلب</a>
+                        </div>
+                      <% }) %>
+                      <% if (invoice) { %>
+                        <div style="margin-top: 8px;">
+                          <a href="/admin/invoice/<%= orderId %>.pdf" class="btn btn-sm btn-secondary" target="_blank">🧾 الفاتورة</a>
+                        </div>
+                      <% } %>
+                    <% } else if (anyPending) { %>
+                      <% orderPurchases.filter(p => p.status === 'pending').forEach(p => { %>
+                        <div style="margin-top: 6px;">
+                          <a href="/admin/purchases/<%= p.id %>/messages" class="btn btn-sm btn-secondary">💬 محادثة الطلب</a>
+                        </div>
+                      <% }) %>
+                    <% } else if (allRejected) { %>
+                      <% orderPurchases.forEach(p => { %>
+                        <div style="margin-top: 6px;">
+                          <a href="/admin/purchases/<%= p.id %>/messages" class="btn btn-sm btn-secondary">💬 محادثة الطلب</a>
+                        </div>
                       <% }) %>
                     <% } %>
                   </td>

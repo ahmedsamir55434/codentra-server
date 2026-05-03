@@ -28,9 +28,9 @@
           <h2 style="margin-bottom: 8px;">ملخص</h2>
           <div class="loyalty-stats">
             <div>نقاطك الحالية: <strong><%= points %></strong></div>
-            <div>رصيد المحفظة: <strong><%= Number(user.walletBalance || 0) %></strong> جنيه</div>
+            <div>رصيد المحفظة: <strong><%= displayMoney(user.walletBalance || 0) %></strong></div>
             <div style="opacity:.9;">الحد الأدنى للاستبدال: <strong><%= minPoints %></strong> نقطة</div>
-            <div style="opacity:.9;">قيمة النقاط: <strong><%= pointsToEGP %></strong> جنيه لكل نقطة</div>
+            <div style="opacity:.9;">قيمة النقاط: <strong><%= displayMoney(pointsToEGP) %></strong> لكل نقطة</div>
           </div>
         </div>
 

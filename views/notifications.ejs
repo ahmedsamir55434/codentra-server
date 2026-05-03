@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الإشعارات - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+  <link rel="stylesheet" href="/css/notifications.css">
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="notifications-page">
+    <div class="container">
+      <div class="notifications-shell">
+        <div class="notifications-hero">
+          <div>
+            <h1>لوحة الإشعارات</h1>
+            <p>كل التنبيهات المهمة الخاصة بالمشتريات والبطاقة والرسائل في مكان واحد.</p>
+          </div>
+          <a href="/my-purchases" class="btn btn-secondary">العودة إلى مشترياتي</a>
+        </div>
+
+        <% if (!notifications || !notifications.length) { %>
+          <div class="notifications-empty">
+            <div class="notifications-empty-icon">🔔</div>
+            <h2>لا توجد إشعارات الآن</h2>
+            <p>عندما يحدث تحديث على طلباتك أو بطاقتك أو رسائلك، سيظهر هنا مباشرة.</p>
+          </div>
+        <% } else { %>
+          <div class="notifications-list">
+            <% notifications.forEach(notification => { %>
+              <%
+                let targetHref = '/my-purchases';
+                if (notification.metadata && notification.metadata.purchaseId) {
+                  targetHref = `/messages/purchase/${notification.metadata.purchaseId}`;
+                } else if (notification.metadata && notification.metadata.customProjectRequestId) {
+                  targetHref = `/custom-project/${notification.metadata.customProjectRequestId}`;
+                }
+              %>
+              <article class="notification-card <%= notification.unread ? 'is-unread' : '' %>">
+                <div class="notification-card-top">
+                  <div>
+                    <h2><%= notification.title %></h2>
+                    <p><%= notification.message %></p>
+                  </div>
+                  <span class="notification-type"><%= notification.source === 'wallet' ? 'البطاقة' : 'إشعار' %></span>
+                </div>
+
+                <div class="notification-meta">
+                  <% if (notification.metadata && notification.metadata.projectTitle) { %>
+                    <span>المشروع: <strong><%= notification.metadata.projectTitle %></strong></span>
+                  <% } %>
+                  <% if (notification.metadata && notification.metadata.amount != null) { %>
+                    <span>المبلغ: <strong><%= displayMoney(notification.metadata.amount) %></strong></span>
+                  <% } %>
+                  <% if (notification.metadata && notification.metadata.verificationCode) { %>
+                    <span class="notification-code"><%= notification.metadata.verificationCode %></span>
+                  <% } %>
+                  <span><%= new Date(notification.createdAt).toLocaleString('ar-EG') %></span>
+                </div>
+
+                <div class="notification-actions">
+                  <% if ((notification.metadata && notification.metadata.purchaseId) || (notification.metadata && notification.metadata.customProjectRequestId)) { %>
+                    <a href="<%= targetHref %>" class="btn btn-secondary">فتح محادثة الطلب</a>
+                  <% } else { %>
+                    <a href="/my-purchases" class="btn btn-secondary">فتح مشترياتي</a>
+                  <% } %>
+                </div>
+              </article>
+            <% }) %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+</body>
+</html>

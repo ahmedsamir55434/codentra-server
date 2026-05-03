@@ -33,7 +33,7 @@
             </div>
             <div class="presentations-summary-row">
               <span>المبلغ</span>
-              <strong><%= Number(attempt.amount || 0).toFixed(2) %> جنيه</strong>
+              <strong><%= displayMoney(attempt.amount || 0) %></strong>
             </div>
             <div class="presentations-summary-row">
               <span>البطاقة</span>
