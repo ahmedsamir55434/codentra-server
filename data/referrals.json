@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "id": "b83640aa-367b-4ee0-9237-2292fec96884",
+    "code": "74725916",
+    "referrerUserId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "referredUserId": "6d9eb9d3-cf4d-4c8c-bb34-f80f1607ab41",
+    "status": "pending",
+    "rewardAmount": 100,
+    "rewardType": "loyalty-points",
+    "createdAt": "2026-04-25T07:52:34.075Z",
+    "rewardedAt": null,
+    "rewardPurchaseId": null
+  }
+]

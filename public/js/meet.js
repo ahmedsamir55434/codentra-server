@@ -3,6 +3,7 @@
   var roomId = configEl ? configEl.getAttribute('data-room-id') : null;
   var returnUrl = configEl ? (configEl.getAttribute('data-return-url') || '/my-appointments') : '/my-appointments';
   var liveKitEnabled = configEl ? configEl.getAttribute('data-livekit-enabled') === '1' : false;
+  var userRole = configEl ? (configEl.getAttribute('data-user-role') || '') : '';
   var statusEl = document.getElementById('meetStatus');
   var localVideo = document.getElementById('localVideo');
   var remoteParticipantsEl = document.getElementById('remoteParticipants');
@@ -17,9 +18,26 @@
   var isCamEnabled = true;
   var isScreenEnabled = false;
   var remoteTrackMap = new Map();
+  var isAdminRecorder = userRole === 'admin' || userRole === 'superadmin';
+  var meetingRecorder = null;
+  var recordingChunks = [];
+  var recordingCanvas = null;
+  var recordingContext = null;
+  var recordingAnimationFrame = null;
+  var recordingAudioContext = null;
+  var recordingAudioDestination = null;
+  var audioTrackSourceMap = new Map();
+  var hasUploadedRecording = false;
+  var recordingStartedAt = null;
+  var isUploadingRecording = false;
 
   function setStatus(text) {
     if (statusEl) statusEl.textContent = text;
+  }
+
+  function setRecordingStatus(text) {
+    if (!text) return;
+    setStatus(text);
   }
 
   function ensureLiveKit() {
@@ -123,6 +141,251 @@
     });
   }
 
+  function getRecordableMediaElements() {
+    var mediaEls = [];
+    if (localVideo && localVideo.tagName === 'VIDEO') {
+      mediaEls.push({ element: localVideo, label: 'أنت' });
+    }
+    if (remoteParticipantsEl) {
+      remoteParticipantsEl.querySelectorAll('.meet-remote-tile').forEach(function (tile) {
+        var labelEl = tile.querySelector('.meet-remote-label');
+        var videoEl = tile.querySelector('video');
+        if (videoEl) {
+          mediaEls.push({ element: videoEl, label: labelEl ? labelEl.textContent : 'مشارك' });
+        }
+      });
+    }
+    return mediaEls;
+  }
+
+  function drawRecordingFrame() {
+    if (!recordingContext || !recordingCanvas) return;
+
+    var width = recordingCanvas.width;
+    var height = recordingCanvas.height;
+    recordingContext.clearRect(0, 0, width, height);
+
+    var gradient = recordingContext.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, '#090b12');
+    gradient.addColorStop(1, '#191d2d');
+    recordingContext.fillStyle = gradient;
+    recordingContext.fillRect(0, 0, width, height);
+
+    var entries = getRecordableMediaElements();
+    var cards = entries.length ? entries : [];
+    var cols = cards.length > 1 ? 2 : 1;
+    var rows = Math.max(1, Math.ceil(cards.length / cols));
+    var gap = 24;
+    var padding = 28;
+    var cardWidth = (width - padding * 2 - gap * (cols - 1)) / cols;
+    var cardHeight = (height - padding * 2 - gap * (rows - 1)) / rows;
+
+    if (!cards.length) {
+      recordingContext.fillStyle = 'rgba(255,255,255,0.9)';
+      recordingContext.font = '600 34px system-ui';
+      recordingContext.textAlign = 'center';
+      recordingContext.fillText('في انتظار المشاركين...', width / 2, height / 2);
+    }
+
+    cards.forEach(function (entry, index) {
+      var col = index % cols;
+      var row = Math.floor(index / cols);
+      var x = padding + col * (cardWidth + gap);
+      var y = padding + row * (cardHeight + gap);
+      var label = entry.label || 'مشارك';
+
+      recordingContext.fillStyle = 'rgba(255,255,255,0.06)';
+      recordingContext.strokeStyle = 'rgba(255,255,255,0.18)';
+      recordingContext.lineWidth = 2;
+      recordingContext.beginPath();
+      recordingContext.roundRect(x, y, cardWidth, cardHeight, 26);
+      recordingContext.fill();
+      recordingContext.stroke();
+
+      try {
+        if (entry.element.readyState >= 2) {
+          recordingContext.save();
+          recordingContext.beginPath();
+          recordingContext.roundRect(x + 4, y + 4, cardWidth - 8, cardHeight - 8, 22);
+          recordingContext.clip();
+          recordingContext.drawImage(entry.element, x + 4, y + 4, cardWidth - 8, cardHeight - 8);
+          recordingContext.restore();
+        }
+      } catch (error) {}
+
+      recordingContext.fillStyle = 'rgba(9, 11, 18, 0.72)';
+      recordingContext.beginPath();
+      recordingContext.roundRect(x + 18, y + cardHeight - 72, Math.min(cardWidth - 36, 220), 42, 18);
+      recordingContext.fill();
+
+      recordingContext.fillStyle = '#ffffff';
+      recordingContext.font = '600 24px system-ui';
+      recordingContext.textAlign = 'right';
+      recordingContext.fillText(label, x + cardWidth - 28, y + cardHeight - 42);
+    });
+
+    recordingContext.fillStyle = 'rgba(255,255,255,0.9)';
+    recordingContext.font = '600 22px system-ui';
+    recordingContext.textAlign = 'left';
+    recordingContext.fillText('Codentra Meeting', 28, 38);
+
+    recordingContext.fillStyle = '#ff5f57';
+    recordingContext.beginPath();
+    recordingContext.arc(width - 40, 34, 10, 0, Math.PI * 2);
+    recordingContext.fill();
+    recordingContext.fillStyle = 'rgba(255,255,255,0.85)';
+    recordingContext.font = '600 18px system-ui';
+    recordingContext.textAlign = 'right';
+    recordingContext.fillText('جارٍ التسجيل', width - 60, 40);
+
+    recordingAnimationFrame = window.requestAnimationFrame(drawRecordingFrame);
+  }
+
+  function connectAudioTrack(track, key) {
+    if (!recordingAudioContext || !recordingAudioDestination || !track || !key || audioTrackSourceMap.has(key)) return;
+    var mediaStreamTrack = track.mediaStreamTrack || track._mediaStreamTrack || null;
+    if (!mediaStreamTrack || mediaStreamTrack.kind !== 'audio') return;
+    try {
+      var stream = new MediaStream([mediaStreamTrack]);
+      var source = recordingAudioContext.createMediaStreamSource(stream);
+      source.connect(recordingAudioDestination);
+      audioTrackSourceMap.set(key, { source: source, stream: stream });
+    } catch (error) {
+      console.error('Audio track wiring failed', error);
+    }
+  }
+
+  function refreshRecordingAudioInputs() {
+    if (!recordingAudioContext || !recordingAudioDestination || !room) return;
+
+    room.localParticipant.audioTrackPublications.forEach(function (publication) {
+      if (publication && publication.track) {
+        connectAudioTrack(publication.track, 'local:' + publication.trackSid);
+      }
+    });
+
+    room.remoteParticipants.forEach(function (participant) {
+      participant.audioTrackPublications.forEach(function (publication) {
+        if (publication && publication.track) {
+          connectAudioTrack(publication.track, participant.sid + ':' + publication.trackSid);
+        }
+      });
+    });
+  }
+
+  async function startAutomaticRecording() {
+    if (!isAdminRecorder || meetingRecorder || !window.MediaRecorder) return;
+
+    try {
+      recordingCanvas = document.createElement('canvas');
+      recordingCanvas.width = 1280;
+      recordingCanvas.height = 720;
+      recordingContext = recordingCanvas.getContext('2d');
+      recordingAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+      if (recordingAudioContext.state === 'suspended') {
+        await recordingAudioContext.resume().catch(function () {});
+      }
+      recordingAudioDestination = recordingAudioContext.createMediaStreamDestination();
+      refreshRecordingAudioInputs();
+      drawRecordingFrame();
+
+      var videoStream = recordingCanvas.captureStream(24);
+      var tracks = [];
+      videoStream.getVideoTracks().forEach(function (track) { tracks.push(track); });
+      recordingAudioDestination.stream.getAudioTracks().forEach(function (track) { tracks.push(track); });
+      var finalStream = new MediaStream(tracks);
+
+      var options = [
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm'
+      ].find(function (mimeType) {
+        return window.MediaRecorder.isTypeSupported(mimeType);
+      });
+
+      meetingRecorder = new MediaRecorder(finalStream, options ? { mimeType: options } : undefined);
+      recordingChunks = [];
+      recordingStartedAt = new Date().toISOString();
+      hasUploadedRecording = false;
+
+      meetingRecorder.ondataavailable = function (event) {
+        if (event.data && event.data.size) recordingChunks.push(event.data);
+      };
+
+      meetingRecorder.start(2000);
+      setRecordingStatus('تم بدء التسجيل التلقائي وسيُرفع بعد إنهاء الاجتماع');
+    } catch (error) {
+      console.error('Auto recording failed to start', error);
+      setRecordingStatus('تعذر بدء التسجيل التلقائي');
+    }
+  }
+
+  async function uploadMeetingRecording(blob) {
+    if (!blob || !blob.size || hasUploadedRecording || isUploadingRecording) return;
+    isUploadingRecording = true;
+
+    try {
+      var formData = new FormData();
+      var stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      formData.append('recording', blob, 'meeting-' + roomId + '-' + stamp + '.webm');
+      if (recordingStartedAt) formData.append('recordingStartedAt', recordingStartedAt);
+
+      var response = await fetch('/meet/' + encodeURIComponent(roomId) + '/recording', {
+        method: 'POST',
+        body: formData
+      });
+      var data = await response.json().catch(function () { return {}; });
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || 'فشل رفع التسجيل');
+      }
+      hasUploadedRecording = true;
+      setRecordingStatus('تم حفظ تسجيل الاجتماع ورفعه بنجاح');
+    } catch (error) {
+      console.error('Recording upload failed', error);
+      setRecordingStatus('انتهى الاجتماع لكن رفع التسجيل لم يكتمل');
+    } finally {
+      isUploadingRecording = false;
+    }
+  }
+
+  async function stopAutomaticRecording() {
+    if (!meetingRecorder) return;
+
+    var recorder = meetingRecorder;
+    meetingRecorder = null;
+
+    var blob = await new Promise(function (resolve) {
+      recorder.onstop = function () {
+        resolve(recordingChunks.length ? new Blob(recordingChunks, { type: recorder.mimeType || 'video/webm' }) : null);
+      };
+      try {
+        if (recorder.state !== 'inactive') recorder.stop();
+        else resolve(null);
+      } catch (error) {
+        resolve(null);
+      }
+    });
+
+    try {
+      if (recordingAnimationFrame) window.cancelAnimationFrame(recordingAnimationFrame);
+      recordingAnimationFrame = null;
+      if (recordingAudioContext) recordingAudioContext.close().catch(function () {});
+    } catch (error) {}
+
+    [recordingCanvas, recordingContext, recordingAudioContext, recordingAudioDestination].forEach(function () {});
+    recordingCanvas = null;
+    recordingContext = null;
+    recordingAudioContext = null;
+    recordingAudioDestination = null;
+    audioTrackSourceMap.forEach(function (entry) {
+      try { entry.source.disconnect(); } catch (error) {}
+    });
+    audioTrackSourceMap = new Map();
+
+    await uploadMeetingRecording(blob);
+    recordingChunks = [];
+  }
+
   async function fetchMeetingToken() {
     var resp = await fetch('/meet/' + encodeURIComponent(roomId) + '/token', {
       headers: { Accept: 'application/json' }
@@ -165,6 +428,7 @@
     room
       .on(LivekitClient.RoomEvent.TrackSubscribed, function (track, publication, participant) {
         attachRemoteTrack(participant, track);
+        refreshRecordingAudioInputs();
         setStatus('تم اتصال المشاركين بنجاح');
       })
       .on(LivekitClient.RoomEvent.TrackUnsubscribed, function (track, publication, participant) {
@@ -181,6 +445,7 @@
       })
       .on(LivekitClient.RoomEvent.LocalTrackPublished, function () {
         attachLocalTracks();
+        refreshRecordingAudioInputs();
       })
       .on(LivekitClient.RoomEvent.ConnectionQualityChanged, function () {
         setStatus('الاتصال مستقر عبر LiveKit');
@@ -202,6 +467,8 @@
       attachExistingParticipantTracks(participant);
     });
     syncRemoteState();
+    refreshRecordingAudioInputs();
+    await startAutomaticRecording();
   }
 
   function updateButtons() {
@@ -240,10 +507,15 @@
   }
 
   async function leaveMeeting() {
+    btnEndMeeting && (btnEndMeeting.disabled = true);
+    setStatus('جاري إنهاء الاجتماع...');
     try {
-      if (room) {
-        room.disconnect();
-      }
+      await stopAutomaticRecording();
+    } catch (error) {
+      console.error(error);
+    }
+    try {
+      if (room) room.disconnect();
     } catch (e) {}
     window.location.href = returnUrl;
   }
@@ -255,6 +527,7 @@
 
   window.addEventListener('beforeunload', function () {
     try {
+      if (meetingRecorder && meetingRecorder.state !== 'inactive') meetingRecorder.stop();
       if (room) room.disconnect();
     } catch (e) {}
   });

@@ -50,7 +50,12 @@
         <a class="btn btn-primary" href="/my-appointments">رجوع</a>
       </div>
 
-      <div class="meet-status" id="meetStatus">جاري التحضير...</div>
+      <div class="meet-status-wrap">
+        <div class="meet-status" id="meetStatus">جاري التحضير...</div>
+        <% if (user && (user.role === 'admin' || user.role === 'superadmin')) { %>
+          <div class="meet-recording-note">سيبدأ تسجيل الجلسة تلقائيًا وسيُرفع إلى صفحة تسجيلات الاجتماعات بعد إنهائها.</div>
+        <% } %>
+      </div>
     </div>
   </main>
 

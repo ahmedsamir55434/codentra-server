@@ -1,1 +1,28 @@
-[]
+[
+  {
+    "id": "bda5f02c-74eb-400a-acaf-77f4b52fa9b2",
+    "code": "SAVE 10",
+    "type": "percent",
+    "value": 1,
+    "active": true,
+    "usedCount": 1,
+    "usageLimit": 3,
+    "occasion": "والله ماعارف",
+    "durationDays": 5,
+    "expiresAt": "2026-05-08T20:59:59.999Z",
+    "createdAt": "2026-05-03T16:24:44.784Z"
+  },
+  {
+    "id": "e70c6a58-f02a-4657-90ec-5d48562a64bd",
+    "code": "K",
+    "type": "percent",
+    "value": 9,
+    "active": true,
+    "usedCount": 1,
+    "usageLimit": 9,
+    "occasion": null,
+    "durationDays": 9,
+    "expiresAt": "2026-05-13T20:59:59.999Z",
+    "createdAt": "2026-05-04T07:56:55.359Z"
+  }
+]

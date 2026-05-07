@@ -782,6 +782,7 @@ const findUserByWalletCardNumber = ({ users, walletCardNumber }) => {
   return users.find(u => u && u.role === 'user' && normalizeWalletCardNumber(u.walletCardNumber) === normalized) || null;
 };
 
+// Email configuration - supports both SMTP and Resend API
 let cachedMailTransporter = null;
 
 const getMailTransporter = () => {
@@ -789,7 +790,7 @@ const getMailTransporter = () => {
   const port = Number(process.env.SMTP_PORT || 0);
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM;
+  const from = process.env.SMTP_FROM || process.env.RESEND_FROM_EMAIL;
 
   if (!host || !port || !user || !pass || !from) {
     throw new Error('SMTP is not configured');
@@ -800,42 +801,186 @@ const getMailTransporter = () => {
       host,
       port,
       secure: port === 465,
-      auth: { user, pass }
+      auth: { user, pass },
+      // Add timeout and connection settings
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
+      debug: process.env.NODE_ENV === 'development',
+      logger: process.env.NODE_ENV === 'development'
     });
   }
 
   return { transporter: cachedMailTransporter, from };
 };
 
-const sendPaymentVerificationCode = async ({ payerUser, buyerUser, code, amount, maskedCardNumber }) => {
-  const { transporter, from } = getMailTransporter();
-  await transporter.sendMail({
-    from,
-    to: payerUser.email,
-    subject: 'Codentra payment verification code',
-    text: [
-      `Hello ${payerUser.name || 'User'},`,
-      '',
-      `A payment request was created on Codentra using your wallet card ${maskedCardNumber || ''}.`,
-      `Buyer account: ${buyerUser && (buyerUser.name || buyerUser.email || buyerUser.id) ? (buyerUser.name || buyerUser.email || buyerUser.id) : 'Unknown user'}`,
-      `Amount: ${formatMoney(amount)} EGP`,
-      `Verification code: ${code}`,
-      '',
-      'The code expires in 10 minutes.',
-      'If this request was not expected, do not share this code.'
-    ].join('\n'),
-    html: `
-      <div style="font-family:Arial,sans-serif;direction:ltr">
-        <h2>Codentra payment verification</h2>
-        <p>Hello ${payerUser.name || 'User'},</p>
-        <p>A payment request was created using your wallet card <strong>${maskedCardNumber || ''}</strong>.</p>
-        <p><strong>Buyer:</strong> ${buyerUser && (buyerUser.name || buyerUser.email || buyerUser.id) ? (buyerUser.name || buyerUser.email || buyerUser.id) : 'Unknown user'}</p>
-        <p><strong>Amount:</strong> ${formatMoney(amount)} EGP</p>
-        <p><strong>Verification code:</strong> <span style="font-size:24px;letter-spacing:4px">${code}</span></p>
-        <p>This code expires in 10 minutes. If this request was not expected, do not share this code.</p>
-      </div>
-    `
+// Verify transporter connection
+const verifyMailTransporter = async () => {
+  try {
+    const { transporter } = getMailTransporter();
+    await transporter.verify();
+    return { success: true, error: null };
+  } catch (error) {
+    console.error('Email transporter verification failed:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+const isMailConfigured = () => {
+  return Boolean(
+    (process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS) ||
+    process.env.RESEND_API_KEY
+  ) && Boolean(process.env.SMTP_FROM || process.env.RESEND_FROM_EMAIL);
+};
+
+// Send email using Resend API (more reliable than SMTP)
+const sendEmailViaResend = async ({ to, subject, text, html }) => {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL;
+  
+  if (!apiKey || !from) {
+    throw new Error('Resend API not configured');
+  }
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      text,
+      html
+    })
   });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Resend API error: ${error}`);
+  }
+
+  return await response.json();
+};
+
+const queueNotificationEmail = async ({ user, subject, title, message }) => {
+  if (!user || user.role !== 'user' || !user.email) {
+    console.log('Email not sent: Invalid user or missing email');
+    return { success: false, error: 'Invalid user or missing email' };
+  }
+  
+  if (!isMailConfigured()) {
+    console.log('Email not sent: Mail not configured (check SMTP or RESEND_API_KEY)');
+    return { success: false, error: 'Mail not configured' };
+  }
+
+  const safeTitle = title || subject || 'Codentra';
+  const safeMessage = message || '';
+  const safeSubject = subject || safeTitle;
+  const to = user.email;
+  
+  const text = `${safeTitle}\n\n${safeMessage}\n\n---\nتم إرسال هذا الإيميل تلقائيًا من Codentra`;
+  const html = `
+    <div style="font-family:Arial,sans-serif;direction:rtl;text-align:right;max-width:600px;margin:0 auto;padding:20px;border:1px solid #e0e0e0;border-radius:8px;">
+      <h2 style="color:#333;margin:0 0 20px 0">${safeTitle}</h2>
+      <p style="color:#555;line-height:1.8;font-size:16px">${String(safeMessage).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</p>
+      <hr style="margin:24px 0;border:none;border-top:1px solid #e0e0e0"/>
+      <small style="color:#888;font-size:12px">تم إرسال هذا الإيميل تلقائيًا من Codentra</small>
+    </div>
+  `;
+
+  try {
+    // Try Resend API first (more reliable)
+    if (process.env.RESEND_API_KEY) {
+      console.log(`Sending email via Resend to: ${to}`);
+      const result = await sendEmailViaResend({ to, subject: safeSubject, text, html });
+      console.log(`Email sent successfully via Resend:`, result.id);
+      return { success: true, provider: 'resend', id: result.id };
+    }
+    
+    // Fallback to SMTP
+    if (process.env.SMTP_HOST) {
+      console.log(`Sending email via SMTP to: ${to}`);
+      const { transporter, from } = getMailTransporter();
+      const result = await transporter.sendMail({
+        from,
+        to,
+        subject: safeSubject,
+        text,
+        html
+      });
+      console.log(`Email sent successfully via SMTP:`, result.messageId);
+      return { success: true, provider: 'smtp', id: result.messageId };
+    }
+    
+    throw new Error('No email provider configured');
+  } catch (error) {
+    console.error('Failed to send email:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+const sendPaymentVerificationCode = async ({ payerUser, buyerUser, code, amount, maskedCardNumber }) => {
+  const subject = 'Codentra payment verification code';
+  const text = [
+    `Hello ${payerUser.name || 'User'},`,
+    '',
+    `A payment request was created on Codentra using your wallet card ${maskedCardNumber || ''}.`,
+    `Buyer account: ${buyerUser && (buyerUser.name || buyerUser.email || buyerUser.id) ? (buyerUser.name || buyerUser.email || buyerUser.id) : 'Unknown user'}`,
+    `Amount: ${formatMoney(amount)} EGP`,
+    `Verification code: ${code}`,
+    '',
+    'The code expires in 10 minutes.',
+    'If this request was not expected, do not share this code.'
+  ].join('\n');
+  const html = `
+    <div style="font-family:Arial,sans-serif;direction:ltr;max-width:600px;margin:0 auto;padding:20px;border:1px solid #e0e0e0;border-radius:8px;">
+      <h2>Codentra payment verification</h2>
+      <p>Hello ${payerUser.name || 'User'},</p>
+      <p>A payment request was created using your wallet card <strong>${maskedCardNumber || ''}</strong>.</p>
+      <p><strong>Buyer:</strong> ${buyerUser && (buyerUser.name || buyerUser.email || buyerUser.id) ? (buyerUser.name || buyerUser.email || buyerUser.id) : 'Unknown user'}</p>
+      <p><strong>Amount:</strong> ${formatMoney(amount)} EGP</p>
+      <p><strong>Verification code:</strong> <span style="font-size:28px;letter-spacing:4px;color:#007bff;font-weight:bold">${code}</span></p>
+      <p>This code expires in 10 minutes. If this request was not expected, do not share this code.</p>
+    </div>
+  `;
+
+  try {
+    // Try Resend API first
+    if (process.env.RESEND_API_KEY) {
+      console.log(`Sending verification email via Resend to: ${payerUser.email}`);
+      const result = await sendEmailViaResend({
+        to: payerUser.email,
+        subject,
+        text,
+        html
+      });
+      console.log('Verification email sent via Resend:', result.id);
+      return { success: true, provider: 'resend', id: result.id };
+    }
+    
+    // Fallback to SMTP
+    if (process.env.SMTP_HOST) {
+      console.log(`Sending verification email via SMTP to: ${payerUser.email}`);
+      const { transporter, from } = getMailTransporter();
+      const result = await transporter.sendMail({
+        from,
+        to: payerUser.email,
+        subject,
+        text,
+        html
+      });
+      console.log('Verification email sent via SMTP:', result.messageId);
+      return { success: true, provider: 'smtp', id: result.messageId };
+    }
+    
+    throw new Error('No email provider configured');
+  } catch (error) {
+    console.error('Failed to send verification email:', error.message);
+    throw error;
+  }
 };
 
 const sanitizeWalletCardSpendingLimit = (value) => {
@@ -902,6 +1047,15 @@ const addWalletCardNotificationEntry = ({ ownerUser, title, message, metadata = 
     entry,
     limit: MAX_WALLET_CARD_NOTIFICATIONS
   });
+
+  // Optional: send email copy of notifications
+  queueNotificationEmail({
+    user: ownerUser,
+    subject: title || 'إشعار من Codentra',
+    title,
+    message
+  });
+
   return entry;
 };
 
@@ -922,6 +1076,18 @@ const addUserNotificationEntry = ({ targetUser, type = 'general', title, message
     items: targetUser.notifications,
     entry,
     limit: MAX_USER_NOTIFICATIONS
+  });
+
+  // Send email copy of notification (await to catch errors)
+  queueNotificationEmail({
+    user: targetUser,
+    subject: title || 'إشعار من Codentra',
+    title,
+    message
+  }).then(result => {
+    if (!result.success) {
+      console.error('Failed to send notification email:', result.error);
+    }
   });
 
   return entry;
@@ -1967,6 +2133,59 @@ const parseOptionalIsoDate = (value) => {
   return d.toISOString();
 };
 
+const normalizeOptionalText = (value) => {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+};
+
+const normalizeOptionalDurationDays = (value) => {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 1) return null;
+  return Math.floor(n);
+};
+
+const resolveCouponExpiry = ({ expiresAt, durationDays }) => {
+  if (expiresAt) return expiresAt;
+  if (!durationDays) return null;
+  // Calculate exact duration: days * 24 hours * 60 minutes * 60 seconds * 1000 ms
+  const ms = durationDays * 24 * 60 * 60 * 1000;
+  const d = new Date(Date.now() + ms);
+  return d.toISOString();
+};
+
+const describeCouponDuration = (coupon) => {
+  const days = normalizeOptionalDurationDays(coupon && coupon.durationDays);
+  if (days === 7) return 'لمدة أسبوع';
+  if (days === 14) return 'لمدة أسبوعين';
+  if (days === 30) return 'لمدة شهر';
+  if (days) return `لمدة ${days} يوم`;
+  if (coupon && coupon.expiresAt) {
+    const expires = new Date(coupon.expiresAt);
+    if (!Number.isNaN(expires.getTime())) return `حتى ${expires.toLocaleDateString('ar-EG')}`;
+  }
+  return 'لفترة محدودة';
+};
+
+const buildCouponPromoCard = (coupon) => {
+  if (!coupon) return null;
+  const benefit = coupon.type === 'fixed' ? `${formatUsdAmount(convertEgpToUsd(coupon.value))} خصم` : `${coupon.value}% خصم`;
+  return {
+    code: coupon.code,
+    benefit,
+    occasion: normalizeOptionalText(coupon.occasion),
+    durationLabel: describeCouponDuration(coupon),
+    expiresAt: coupon.expiresAt || null
+  };
+};
+
+const getActiveCouponPromoCards = (coupons, eligibilityFn) => {
+  return (coupons || [])
+    .filter(c => c && c.active)
+    .filter(c => (eligibilityFn(c) || {}).eligible)
+    .map(buildCouponPromoCard);
+};
+
 const getCouponEligibility = (coupon) => {
   if (!coupon) return { eligible: false, reason: 'كوبون غير صحيح' };
   if (!coupon.active) return { eligible: false, reason: 'الكوبون غير فعّال' };
@@ -2168,7 +2387,14 @@ const summarizeCart = ({ cart, couponCode, sessionUser }) => {
     const eligibility = getCouponEligibility(coupon);
     if (eligibility.eligible) {
       appliedCoupon = coupon;
-      const calc = calculateDiscount({ priceBefore: totalBefore, coupon });
+      // Convert coupon value from USD to EGP for calculation
+      const couponValueEgp = coupon.type === 'fixed' 
+        ? convertUsdToEgp(coupon.value)
+        : coupon.value;
+      const calc = calculateDiscount({ 
+        priceBefore: totalBefore, 
+        coupon: { ...coupon, value: couponValueEgp }
+      });
       couponDiscount = Math.round(Number(calc.discountAmount || 0) * 100) / 100;
     }
   }
@@ -2208,6 +2434,50 @@ const calculateDiscount = ({ priceBefore, coupon }) => {
 
   const after = Math.round((base - discount) * 100) / 100;
   return { discountAmount: discount, priceAfter: after };
+};
+
+const getProjectSaleState = (project) => {
+  const basePrice = Number(project && project.price || 0);
+  const saleType = project && project.saleType;
+  const saleValue = Number(project && project.saleValue || 0);
+  const occasion = normalizeOptionalText(project && project.saleOccasion);
+  const expiresAt = project && project.saleExpiresAt ? new Date(project.saleExpiresAt) : null;
+  const hasExpiry = expiresAt && !Number.isNaN(expiresAt.getTime());
+  const active = Boolean(project && project.saleActive && saleType && saleValue > 0 && (!hasExpiry || expiresAt.getTime() > Date.now()));
+  if (!active || basePrice <= 0) {
+    return { active: false, basePrice, finalPrice: basePrice, discountAmount: 0, saleType: null, saleValue: 0, occasion: occasion || null, expiresAt: hasExpiry ? expiresAt.toISOString() : null, durationDays: normalizeOptionalDurationDays(project && project.saleDurationDays) };
+  }
+
+  let discountAmount = 0;
+  if (saleType === 'percent') discountAmount = Math.round((basePrice * (saleValue / 100)) * 100) / 100;
+  else if (saleType === 'fixed') discountAmount = saleValue;
+  if (!Number.isFinite(discountAmount) || discountAmount < 0) discountAmount = 0;
+  if (discountAmount > basePrice) discountAmount = basePrice;
+  const finalPrice = Math.round((basePrice - discountAmount) * 100) / 100;
+
+  return {
+    active: true,
+    basePrice,
+    finalPrice,
+    discountAmount,
+    saleType,
+    saleValue,
+    occasion: occasion || null,
+    expiresAt: hasExpiry ? expiresAt.toISOString() : null,
+    durationDays: normalizeOptionalDurationDays(project && project.saleDurationDays),
+    durationLabel: describeCouponDuration({ durationDays: project && project.saleDurationDays, expiresAt: hasExpiry ? expiresAt.toISOString() : null })
+  };
+};
+
+const decorateProjectPricing = (project) => {
+  if (!project) return project;
+  const sale = getProjectSaleState(project);
+  return {
+    ...project,
+    finalPrice: sale.finalPrice,
+    originalPrice: sale.basePrice,
+    sale
+  };
 };
 
 const normalizeReferralCode = (code) => {
@@ -4167,8 +4437,11 @@ const requireAdminPermission = (permission) => {
 
 // Home - Projects listing
 app.get('/', (req, res) => {
-  const projects = db.projects().filter(p => isProjectVisibleToUser({ project: p, sessionUser: req.session.user }));
-  const recentProjects = getRecentlyViewedProjects({ req, availableProjects: projects });
+  const projects = db.projects()
+    .filter(p => isProjectVisibleToUser({ project: p, sessionUser: req.session.user }))
+    .map(decorateProjectPricing);
+  const recentProjects = getRecentlyViewedProjects({ req, availableProjects: projects })
+    .map(decorateProjectPricing);
   res.render('index', { projects, recentProjects, user: req.session.user });
 });
 
@@ -5182,13 +5455,13 @@ app.get('/api/me', requireApiUserAuth, (req, res) => {
 });
 
 app.get('/api/projects', requireApiUserAuth, (req, res) => {
-  const projects = db.projects().filter(p => isProjectVisibleToUser({ project: p, sessionUser: { role: 'user', id: req.apiUser.id } }));
+  const projects = db.projects().filter(p => isProjectVisibleToUser({ project: p, sessionUser: { role: 'user', id: req.apiUser.id } })).map(decorateProjectPricing);
   res.json({ projects });
 });
 
 app.get('/api/projects/:id', requireApiUserAuth, (req, res) => {
   const projects = db.projects();
-  const project = projects.find(p => p.id === req.params.id);
+  const project = decorateProjectPricing(projects.find(p => p.id === req.params.id));
   if (!project) return res.status(404).json({ error: 'Project not found' });
   if (!isProjectVisibleToUser({ project, sessionUser: { role: 'user', id: req.apiUser.id } })) {
     return res.status(403).json({ error: 'Not allowed' });
@@ -5230,7 +5503,7 @@ app.post('/api/cart/add', requireApiUserAuth, (req, res) => {
     items.push({
       projectId: project.id,
       projectTitle: project.title,
-      price: Number(project.price || 0),
+      price: Number(getProjectSaleState(project).finalPrice || 0),
       createdAt: new Date().toISOString()
     });
   }
@@ -5319,6 +5592,8 @@ app.post('/api/cart/checkout', requireApiUserAuth, (req, res) => {
       projectTitle: project.title,
       price: Math.max(0, Math.round((Number(project.price || 0) - perItemDiscount) * 100) / 100),
       priceBefore: Number(project.price || 0),
+    projectSaleDiscountAmount: Number(projectSale.discountAmount || 0),
+    projectSaleOccasion: projectSale.occasion || null,
       discountAmount: perItemDiscount,
       couponCode: summary.appliedCoupon ? normalizeCouponCode(summary.appliedCoupon.code) : null,
       walletDebitAmount: perItemDebit,
@@ -6451,6 +6726,7 @@ app.get('/api/presentations', requireApiUserAuth, (req, res) => {
 
   return res.json({
     plans,
+    activeSubscriptionCouponPromos,
     activeSubscription,
     activePlan,
     decks,
@@ -6577,7 +6853,7 @@ app.get('/api/presentations/decks/:deckId/download.pptx', async (req, res, next)
 // Project detail
 app.get('/project/:id', (req, res) => {
   const projects = db.projects();
-  const project = projects.find(p => p.id === req.params.id);
+  const project = decorateProjectPricing(projects.find(p => p.id === req.params.id));
   if (!project) return res.status(404).send('Project not found');
 
   if (!isProjectVisibleToUser({ project, sessionUser: req.session.user })) {
@@ -6615,6 +6891,8 @@ app.get('/project/:id', (req, res) => {
     referralPrefill = req.query.ref || '';
   }
   
+  const activeCouponPromos = getActiveCouponPromoCards(db.coupons(), getCouponEligibility);
+
   res.render('project', {
     project,
     user: req.session.user,
@@ -6626,13 +6904,14 @@ app.get('/project/:id', (req, res) => {
     couponError: req.query.couponError || null,
     referralError: req.query.referralError || null,
     canApplyReferral,
-    referralPrefill
+    referralPrefill,
+    activeCouponPromos
   });
 });
 
 app.post('/project/:id/reviews', requireAuth, (req, res) => {
   const projects = db.projects();
-  const project = projects.find(p => p.id === req.params.id);
+  const project = decorateProjectPricing(projects.find(p => p.id === req.params.id));
   if (!project) return res.status(404).send('Project not found');
 
   const rating = Number(req.body.rating);
@@ -6744,8 +7023,9 @@ const finalizeSingleProjectPurchase = ({ buyerUserId, payerUserId, projectId, co
 
   const normalizedCouponCode = normalizeCouponCode(couponCode);
   let appliedCoupon = null;
-  let discountAmount = 0;
-  let priceAfterDiscount = Number(project.price || 0);
+  const projectSale = getProjectSaleState(project);
+  let discountAmount = Number(projectSale.discountAmount || 0);
+  let priceAfterDiscount = Number(projectSale.finalPrice || 0);
   let coupons = null;
   let couponIndex = -1;
 
@@ -6758,8 +7038,8 @@ const finalizeSingleProjectPurchase = ({ buyerUserId, payerUserId, projectId, co
       throw new Error(eligibility.reason || 'الكوبون غير صالح');
     }
 
-    const calc = calculateDiscount({ priceBefore: project.price, coupon });
-    discountAmount = calc.discountAmount;
+    const calc = calculateDiscount({ priceBefore: priceAfterDiscount, coupon });
+    discountAmount = Math.round((Number(discountAmount || 0) + Number(calc.discountAmount || 0)) * 100) / 100;
     priceAfterDiscount = calc.priceAfter;
     appliedCoupon = coupon;
   }
@@ -6807,6 +7087,8 @@ const finalizeSingleProjectPurchase = ({ buyerUserId, payerUserId, projectId, co
     projectTitle: project.title,
     price: priceAfterDiscount,
     priceBefore: Number(project.price || 0),
+    projectSaleDiscountAmount: Number(projectSale.discountAmount || 0),
+    projectSaleOccasion: projectSale.occasion || null,
     discountAmount,
     couponCode: appliedCoupon ? normalizeCouponCode(appliedCoupon.code) : null,
     walletDebitAmount: Number(priceAfterDiscount || 0),
@@ -6854,7 +7136,7 @@ const finalizeCartPurchase = ({ buyerUserId, payerUserId, projectIds, couponCode
     return {
       projectId: project.id,
       projectTitle: project.title,
-      price: Number(project.price || 0),
+      price: Number(getProjectSaleState(project).finalPrice || 0),
       project
     };
   });
@@ -6912,8 +7194,8 @@ const finalizeCartPurchase = ({ buyerUserId, payerUserId, projectIds, couponCode
       projectId: item.projectId,
       projectTitle: item.projectTitle,
       price: Math.max(0, Math.round((Number(item.price || 0) - perItemDiscount) * 100) / 100),
-      priceBefore: Number(item.price || 0),
-      discountAmount: perItemDiscount,
+      priceBefore: Number(item.project && item.project.price || item.price || 0),
+      discountAmount: Math.round((Number((item.project && getProjectSaleState(item.project).discountAmount) || 0) + Number(perItemDiscount || 0)) * 100) / 100,
       couponCode: summary.appliedCoupon ? normalizeCouponCode(summary.appliedCoupon.code) : null,
       walletDebitAmount: perItemDebit,
       walletRefundedAt: null,
@@ -6961,7 +7243,8 @@ app.post('/purchase/:id', requireAuth, async (req, res) => {
     }
 
     const couponCode = normalizeCouponCode(req.body.couponCode);
-    let priceAfterDiscount = Number(project.price || 0);
+    const projectSale = getProjectSaleState(project);
+    let priceAfterDiscount = Number(projectSale.finalPrice || 0);
     if (couponCode) {
       const coupons = db.coupons();
       const coupon = coupons.find(c => c && normalizeCouponCode(c.code) === couponCode) || null;
@@ -6969,7 +7252,7 @@ app.post('/purchase/:id', requireAuth, async (req, res) => {
       if (!eligibility.eligible) {
         return res.redirect(`/project/${project.id}?couponError=${encodeURIComponent(eligibility.reason || 'كوبون غير صالح')}`);
       }
-      const calc = calculateDiscount({ priceBefore: project.price, coupon });
+      const calc = calculateDiscount({ priceBefore: priceAfterDiscount, coupon });
       priceAfterDiscount = calc.priceAfter;
     }
 
@@ -7075,15 +7358,129 @@ app.get('/cart', requireAuth, (req, res) => {
 
   const couponCode = (req.query.couponCode || '').toString();
   const summary = summarizeCart({ cart, couponCode, sessionUser: req.session.user });
+  const activeCouponPromos = getActiveCouponPromoCards(db.coupons(), getCouponEligibility);
 
   res.render('cart', {
     user: req.session.user,
     cart,
     summary,
     couponCode,
+    activeCouponPromos,
     walletCardNumber: currentUser ? formatWalletCardNumber(currentUser.walletCardNumber) : '',
     error: req.query.error || null
   });
+});
+
+// API to validate coupon for cart
+app.post('/api/cart/validate-coupon', requireAuth, (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'user') {
+    return res.status(403).json({ valid: false, message: 'Unauthorized' });
+  }
+
+  const { couponCode } = req.body;
+  if (!couponCode || !couponCode.trim()) {
+    return res.json({ valid: false, message: 'الرجاء إدخال كود الخصم' });
+  }
+
+  const { cart } = getOrCreateCartForUser({ userId: req.session.user.id });
+  const items = (cart && Array.isArray(cart.items)) ? cart.items : [];
+
+  if (items.length === 0) {
+    return res.json({ valid: false, message: 'السلة فارغة' });
+  }
+
+  const totalBefore = Math.round(items.reduce((sum, it) => sum + Number(it.price || 0), 0) * 100) / 100;
+
+  const normalized = normalizeCouponCode(couponCode);
+  const coupons = db.coupons();
+  const coupon = coupons.find(c => normalizeCouponCode(c.code) === normalized) || null;
+
+  if (!coupon) {
+    return res.json({ valid: false, message: 'كود الخصم غير موجود' });
+  }
+
+  const eligibility = getCouponEligibility(coupon);
+  if (!eligibility.eligible) {
+    return res.json({ valid: false, message: eligibility.reason || 'الكوبون غير صالح' });
+  }
+
+  // Convert coupon value from USD to EGP for calculation (cart prices are in EGP)
+  const couponValueEgp = coupon.type === 'fixed' 
+    ? convertUsdToEgp(coupon.value)
+    : coupon.value;
+  const calc = calculateDiscount({ 
+    priceBefore: totalBefore, 
+    coupon: { ...coupon, value: couponValueEgp }
+  });
+  const discountAmount = Math.round(Number(calc.discountAmount || 0) * 100) / 100;
+  const totalAfter = Math.round((totalBefore - discountAmount) * 100) / 100;
+
+  // Convert discount back to USD for display
+  const discountUsd = convertEgpToUsd(discountAmount);
+  const totalBeforeUsd = convertEgpToUsd(totalBefore);
+  const totalAfterUsd = convertEgpToUsd(totalAfter);
+
+  res.json({
+    valid: true,
+    discountAmount: discountUsd,
+    totalBefore: totalBeforeUsd,
+    totalAfter: totalAfterUsd,
+    couponType: coupon.type,
+    couponValue: coupon.value,
+    message: `تم تطبيق خصم ${coupon.type === 'percent' ? coupon.value + '%' : '$' + coupon.value}`
+  });
+});
+
+// Test email configuration endpoint
+app.post('/api/test-email', requireAuth, async (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    // Check email configuration
+    const isConfigured = isMailConfigured();
+    const config = {
+      smtp: {
+        host: process.env.SMTP_HOST || null,
+        port: process.env.SMTP_PORT || null,
+        user: process.env.SMTP_USER ? '***' : null,
+        from: process.env.SMTP_FROM || null,
+        configured: Boolean(process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS)
+      },
+      resend: {
+        apiKey: process.env.RESEND_API_KEY ? '***' : null,
+        from: process.env.RESEND_FROM_EMAIL || null,
+        configured: Boolean(process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL)
+      }
+    };
+
+    if (!isConfigured) {
+      return res.json({
+        configured: false,
+        config,
+        message: 'Email not configured. Set SMTP_* or RESEND_API_KEY + RESEND_FROM_EMAIL in .env'
+      });
+    }
+
+    // Test sending email to admin
+    const testResult = await queueNotificationEmail({
+      user: { role: 'user', email: req.session.user.email },
+      subject: 'Codentra - اختبار إرسال الإيميل',
+      title: 'اختبار إرسال الإيميل',
+      message: 'إذا رأيت هذا الإيميل فإن إعدادات البريد تعمل بشكل صحيح! 🎉'
+    });
+
+    res.json({
+      configured: true,
+      config,
+      testResult,
+      message: testResult.success ? 'Email sent successfully! Check your inbox.' : 'Email configuration exists but sending failed.'
+    });
+  } catch (error) {
+    console.error('Email test error:', error);
+    res.status(500).json({ error: 'Failed to test email: ' + error.message });
+  }
 });
 
 app.post('/cart/add', requireAuth, (req, res) => {
@@ -7109,7 +7506,7 @@ app.post('/cart/add', requireAuth, (req, res) => {
     items.push({
       projectId: project.id,
       projectTitle: project.title,
-      price: Number(project.price || 0),
+      price: Number(getProjectSaleState(project).finalPrice || 0),
       createdAt: new Date().toISOString()
     });
   }
@@ -8907,7 +9304,14 @@ app.get('/admin/projects/new', requireAdminPermission(ADMIN_PERMISSIONS.projects
 app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), projectUpload, async (req, res) => {
   try {
     const { title, description, price, category, technologies } = req.body;
+    const priceUsd = Number(price);
     const visibility = (req.body.visibility || 'public').trim();
+    const saleType = (req.body.saleType || '').trim();
+    const saleValue = Number(req.body.saleValue || 0);
+    const saleOccasion = normalizeOptionalText(req.body.saleOccasion);
+    const saleDurationDays = normalizeOptionalDurationDays(req.body.saleDurationDays);
+    const saleExpiresAt = resolveCouponExpiry({ expiresAt: parseOptionalIsoDate(req.body.saleExpiresAt), durationDays: saleDurationDays });
+    const saleActive = Boolean(req.body.saleActive) && (saleType === 'percent' || saleType === 'fixed') && Number.isFinite(saleValue) && saleValue > 0;
     
     const projects = db.projects();
     
@@ -8930,10 +9334,16 @@ app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), 
       id: uuidv4(),
       title,
       description,
-      price: parseFloat(price),
+      price: convertUsdToEgp(priceUsd),
       category,
       technologies: technologies ? technologies.split(',').map(t => t.trim()) : [],
       visibility: (visibility === 'basic' || visibility === 'premium') ? visibility : 'public',
+      saleActive,
+      saleType: saleActive ? saleType : null,
+      saleValue: saleActive ? saleValue : 0,
+      saleOccasion: saleOccasion || null,
+      saleDurationDays,
+      saleExpiresAt: saleActive ? saleExpiresAt : null,
       filePath: req.files && req.files.projectFile && req.files.projectFile[0] ? `uploads/${req.files.projectFile[0].filename}` : null,
       originalFileName: req.files && req.files.projectFile && req.files.projectFile[0] ? req.files.projectFile[0].originalname : null,
       images: images,
@@ -8957,7 +9367,7 @@ app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), 
 // Admin - Edit Project
 app.get('/admin/projects/:id/edit', requireAdminPermission(ADMIN_PERMISSIONS.projects), (req, res) => {
   const projects = db.projects();
-  const project = projects.find(p => p.id === req.params.id);
+  const project = decorateProjectPricing(projects.find(p => p.id === req.params.id));
   if (!project) return res.status(404).send('Project not found');
   res.render('admin/project-form', { project, user: req.session.user });
 });
@@ -8965,6 +9375,13 @@ app.get('/admin/projects/:id/edit', requireAdminPermission(ADMIN_PERMISSIONS.pro
 app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.projects), projectUpload, async (req, res) => {
   try {
     const { title, description, price, category, technologies } = req.body;
+    const priceUsd = Number(price);
+    const saleType = (req.body.saleType || '').trim();
+    const saleValue = Number(req.body.saleValue || 0);
+    const saleOccasion = normalizeOptionalText(req.body.saleOccasion);
+    const saleDurationDays = normalizeOptionalDurationDays(req.body.saleDurationDays);
+    const saleExpiresAt = resolveCouponExpiry({ expiresAt: parseOptionalIsoDate(req.body.saleExpiresAt), durationDays: saleDurationDays });
+    const saleActive = Boolean(req.body.saleActive) && (saleType === 'percent' || saleType === 'fixed') && Number.isFinite(saleValue) && saleValue > 0;
     const projects = db.projects();
     const index = projects.findIndex(p => p.id === req.params.id);
     
@@ -9007,12 +9424,18 @@ app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.project
       ...projects[index],
       title,
       description,
-      price: parseFloat(price),
+      price: convertUsdToEgp(priceUsd),
       category,
       technologies: technologies ? technologies.split(',').map(t => t.trim()) : [],
       visibility: (((req.body.visibility || projects[index].visibility || 'public').trim() === 'basic' || (req.body.visibility || projects[index].visibility || 'public').trim() === 'premium')
         ? (req.body.visibility || projects[index].visibility || 'public').trim()
         : 'public'),
+      saleActive,
+      saleType: saleActive ? saleType : null,
+      saleValue: saleActive ? saleValue : 0,
+      saleOccasion: saleOccasion || null,
+      saleDurationDays,
+      saleExpiresAt: saleActive ? saleExpiresAt : null,
       filePath: req.files && req.files.projectFile && req.files.projectFile[0] ? `uploads/${req.files.projectFile[0].filename}` : projects[index].filePath,
       originalFileName: req.files && req.files.projectFile && req.files.projectFile[0] ? req.files.projectFile[0].originalname : projects[index].originalFileName,
       images: images
@@ -9035,7 +9458,7 @@ app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.project
 // Admin - Delete Project
 app.post('/admin/projects/:id/delete', requireAdminPermission(ADMIN_PERMISSIONS.projects), (req, res) => {
   const projects = db.projects();
-  const project = projects.find(p => p.id === req.params.id);
+  const project = decorateProjectPricing(projects.find(p => p.id === req.params.id));
   
   if (project) {
     // Delete project file
@@ -9265,6 +9688,41 @@ app.post('/admin/custom-projects/:id/upload', requireAdminPermission(ADMIN_PERMI
   return res.redirect(`/admin/custom-projects/${req.params.id}?success=${encodeURIComponent('تم رفع الملف بنجاح')}`);
 });
 
+
+// Admin - Product Sales (per-product temporary discounts)
+app.get('/admin/sales', requireAdminPermission(ADMIN_PERMISSIONS.projects), (req, res) => {
+  const projects = db.projects();
+  const decorated = projects.map(p => decorateProjectPricing(p));
+  const now = Date.now();
+  const active = decorated.filter(p => p && p.sale && p.sale.active);
+  const expired = decorated.filter(p => p && p.sale && !p.sale.active && (p.saleOccasion || p.saleExpiresAt || p.saleDurationDays || p.saleValue));
+
+  expired.sort((a, b) => {
+    const ta = a.saleExpiresAt ? new Date(a.saleExpiresAt).getTime() : 0;
+    const tb = b.saleExpiresAt ? new Date(b.saleExpiresAt).getTime() : 0;
+    return tb - ta;
+  });
+
+  res.render('admin/sales', { user: req.session.user, activeSales: active, expiredSales: expired, now });
+});
+
+app.post('/admin/sales/:id/disable', requireAdminPermission(ADMIN_PERMISSIONS.projects), (req, res) => {
+  const projects = db.projects();
+  const idx = projects.findIndex(p => p && p.id === req.params.id);
+  if (idx === -1) return res.redirect('/admin/sales');
+  projects[idx] = {
+    ...projects[idx],
+    saleActive: false,
+    saleType: null,
+    saleValue: 0,
+    saleOccasion: null,
+    saleDurationDays: null,
+    saleExpiresAt: null
+  };
+  db.saveProjects(projects);
+  res.redirect('/admin/sales');
+});
+
 // Admin - Coupons
 app.get('/admin/coupons', requireAdminPermission(ADMIN_PERMISSIONS.coupons), (req, res) => {
   const coupons = db.coupons();
@@ -9282,7 +9740,9 @@ app.post('/admin/subscription-coupons', requireAdminPermission(ADMIN_PERMISSIONS
   const type = (req.body.type || '').trim();
   const value = Number(req.body.value);
   const usageLimit = req.body.usageLimit ? Number(req.body.usageLimit) : null;
-  const expiresAt = parseOptionalIsoDate(req.body.expiresAt);
+  const occasion = normalizeOptionalText(req.body.occasion);
+  const durationDays = normalizeOptionalDurationDays(req.body.durationDays);
+  const expiresAt = resolveCouponExpiry({ expiresAt: parseOptionalIsoDate(req.body.expiresAt), durationDays });
 
   const coupons = db.subscriptionCoupons();
 
@@ -9313,6 +9773,8 @@ app.post('/admin/subscription-coupons', requireAdminPermission(ADMIN_PERMISSIONS
     active: true,
     usedCount: 0,
     usageLimit: usageLimit != null ? usageLimit : null,
+    occasion: occasion || null,
+    durationDays,
     expiresAt,
     createdAt: new Date().toISOString(),
     lastUsedAt: null
@@ -9464,7 +9926,9 @@ app.post('/admin/coupons', requireAdminPermission(ADMIN_PERMISSIONS.coupons), (r
   const code = normalizeCouponCode(req.body.code);
   const type = (req.body.type || '').trim();
   const value = Number(req.body.value);
-  const expiresAt = parseOptionalIsoDate(req.body.expiresAt);
+  const occasion = normalizeOptionalText(req.body.occasion);
+  const durationDays = normalizeOptionalDurationDays(req.body.durationDays);
+  const expiresAt = resolveCouponExpiry({ expiresAt: parseOptionalIsoDate(req.body.expiresAt), durationDays });
   const usageLimit = req.body.usageLimit ? Number(req.body.usageLimit) : null;
 
   const coupons = db.coupons();
@@ -9496,6 +9960,8 @@ app.post('/admin/coupons', requireAdminPermission(ADMIN_PERMISSIONS.coupons), (r
     active: true,
     usedCount: 0,
     usageLimit: usageLimit != null ? usageLimit : null,
+    occasion: occasion || null,
+    durationDays,
     expiresAt,
     createdAt: new Date().toISOString()
   });
@@ -9886,6 +10352,8 @@ app.post('/admin/wallet-codes', requireAdminPermission(ADMIN_PERMISSIONS.walletC
     active: true,
     usedCount: 0,
     usageLimit: usageLimit != null ? usageLimit : null,
+    occasion: occasion || null,
+    durationDays,
     expiresAt,
     createdAt: new Date().toISOString(),
     lastUsedAt: null
@@ -10016,10 +10484,12 @@ app.get('/subscriptions', requireAuth, (req, res) => {
   const plans = db.subscriptionPlans().filter(p => p && p.active);
   const activeSubscription = getActiveSubscriptionForUser({ userId: req.session.user.id });
   const activePlan = activeSubscription ? plans.find(p => p.id === activeSubscription.planId) : null;
+  const activeSubscriptionCouponPromos = getActiveCouponPromoCards(db.subscriptionCoupons(), getSubscriptionCouponEligibility);
 
   res.render('subscriptions', {
     user: req.session.user,
     plans,
+    activeSubscriptionCouponPromos,
     activeSubscription,
     activePlan,
     error: req.query.error || null,
@@ -10176,6 +10646,7 @@ app.get('/codentra-presentations', (req, res) => {
     user: req.session.user,
     presentationUser: currentUser,
     plans,
+    activeSubscriptionCouponPromos,
     activeSubscription,
     activePlan,
     decks,

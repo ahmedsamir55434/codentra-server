@@ -63,8 +63,9 @@
             </div>
             
             <div class="form-group">
-              <label for="price">السعر (جنيه) *</label>
-              <input type="number" id="price" name="price" min="0" step="0.01" value="<%= project ? project.price : '' %>" required>
+              <label for="price">السعر (دولار) *</label>
+              <input type="number" id="price" name="price" min="0" step="0.01" value="<%= project ? (Math.round(Number(convertEgpToUsd(project.price || 0)) * 100) / 100) : '' %>" required>
+              <small class="form-help">الإدخال بالدولار، والحفظ الداخلي بالجنيه المصري.</small>
             </div>
           </div>
 
@@ -80,6 +81,47 @@
           <div class="form-group">
             <label for="technologies">التقنيات المستخدمة (مفصولة بفواصل)</label>
             <input type="text" id="technologies" name="technologies" value="<%= project ? project.technologies.join(', ') : '' %>" placeholder="Node.js, React, MongoDB">
+          </div>
+
+          <div class="admin-section" style="margin: 18px 0; padding: 18px; border: 1px solid rgba(255,255,255,.08); border-radius: 18px;">
+            <h3 style="margin-top:0;">خصم مؤقت على المنتج</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label><input type="checkbox" name="saleActive" value="1" <%= project && project.saleActive ? 'checked' : '' %>> تفعيل خصم على هذا المنتج</label>
+              </div>
+              <div class="form-group">
+                <label for="saleType">نوع الخصم</label>
+                <select id="saleType" name="saleType">
+                  <option value="">بدون</option>
+                  <option value="percent" <%= project && project.saleType === 'percent' ? 'selected' : '' %>>نسبة %</option>
+                  <option value="fixed" <%= project && project.saleType === 'fixed' ? 'selected' : '' %>>قيمة ثابتة</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="saleValue">قيمة الخصم</label>
+                <input type="number" id="saleValue" name="saleValue" min="0" step="0.01" value="<%= project && project.saleValue ? project.saleValue : '' %>" placeholder="نسبة % أو قيمة بالدولار">
+                <small class="form-help">لو اخترت نسبة: أدخل الرقم (مثال: 20 لـ 20%). لو اخترت قيمة ثابتة: أدخل بالدولار (مثال: 10 لـ 10$)</small>
+              </div>
+              <div class="form-group">
+                <label for="saleOccasion">مناسبة الخصم (اختياري)</label>
+                <input type="text" id="saleOccasion" name="saleOccasion" value="<%= project && project.saleOccasion ? project.saleOccasion : '' %>" placeholder="مثال: عرض العيد">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="saleDurationDays">مدة الخصم بالأيام (اختياري)</label>
+                <input type="number" id="saleDurationDays" name="saleDurationDays" min="1" step="1" value="<%= project && project.saleDurationDays ? project.saleDurationDays : '' %>" placeholder="مثال: 7">
+              </div>
+              <div class="form-group">
+                <label for="saleExpiresAt">أو تاريخ انتهاء ثابت (اختياري)</label>
+                <input type="date" id="saleExpiresAt" name="saleExpiresAt" value="<%= project && project.saleExpiresAt ? new Date(project.saleExpiresAt).toISOString().slice(0,10) : '' %>">
+                <small class="form-help">لو تركته فارغًا سيظل الخصم دائمًا ما لم تحدد مدة.</small>
+              </div>
+            </div>
           </div>
           
           <div class="form-group">

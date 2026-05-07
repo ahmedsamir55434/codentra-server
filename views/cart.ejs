@@ -7,6 +7,84 @@
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/purchases.css">
   <link rel="stylesheet" href="/css/glass-v3.css">
+  <style>
+    .coupon-section {
+      margin-top: 16px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .coupon-input-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: stretch;
+    }
+    .coupon-input-group input {
+      min-width: 200px;
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.2);
+      color: inherit;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .coupon-input-group button {
+      padding: 10px 20px;
+      white-space: nowrap;
+    }
+    .coupon-message {
+      margin-top: 12px;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      display: none;
+    }
+    .coupon-message.success {
+      display: block;
+      background: rgba(125, 242, 184, 0.15);
+      color: #7df2b8;
+      border: 1px solid rgba(125, 242, 184, 0.3);
+    }
+    .coupon-message.error {
+      display: block;
+      background: rgba(255, 107, 107, 0.15);
+      color: #ff6b6b;
+      border: 1px solid rgba(255, 107, 107, 0.3);
+    }
+    .coupon-message .savings {
+      font-weight: bold;
+      color: #7df2b8;
+      font-size: 16px;
+    }
+    .coupon-message .total-after {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed rgba(125, 242, 184, 0.5);
+    }
+    .summary-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .summary-line.discount {
+      color: #7df2b8;
+    }
+    html[data-theme="light"] .coupon-section {
+      background: rgba(255, 255, 255, 0.7);
+      border-color: rgba(15, 23, 42, 0.1);
+    }
+    html[data-theme="light"] .coupon-input-group input {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(15, 23, 42, 0.15);
+      color: #0f172a;
+    }
+    .hidden {
+      display: none !important;
+    }
+  </style>
 </head>
 <body>
   <%- include('partials/header') %>
@@ -23,7 +101,7 @@
         <div class="empty-state">
           <div class="empty-icon">🛒</div>
           <h2>السلة فارغة</h2>
-          <p>اختار مشاريع واضغط “أضف للسلة”</p>
+          <p>اختار مشاريع واضغط "أضف للسلة"</p>
           <a href="/" class="btn btn-primary">تصفح المشاريع</a>
         </div>
       <% } else { %>
@@ -50,16 +128,40 @@
           <div class="purchase-info">
             <h3 style="margin-top:0;">ملخص الدفع</h3>
             <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
-              <div>الإجمالي قبل الخصم: <strong><%= displayMoney(summary.totalBefore) %></strong></div>
-              <div>خصم الكوبون: <strong><%= displayMoney(summary.couponDiscount) %></strong></div>
-              <div>خصم المشتركين: <strong><%= displayMoney(summary.subscriberDiscount) %></strong></div>
-              <div>الإجمالي بعد الخصم: <strong><%= displayMoney(summary.totalAfter) %></strong></div>
-              <div>رصيد المحفظة الحالي: <strong><%= displayMoney(user.walletBalance || 0) %></strong></div>
-              <div style="color:#666; font-size:14px;">يمكنك الدفع ببطاقتك أو ببطاقة مستخدم آخر. إذا كانت البطاقة لشخص آخر فسيظهر كود التحقق له داخل إشعارات البطاقة، أما إذا كانت بطاقتك أنت فلن يطلب منك كود.</div>
+              <div class="summary-line">
+                <span>الإجمالي قبل الخصم:</span>
+                <strong id="totalBefore"><%= displayMoney(summary.totalBefore) %></strong>
+              </div>
+              <div class="summary-line discount <%= summary.couponDiscount > 0 ? '' : 'hidden' %>" id="couponDiscountRow">
+                <span>خصم الكوبون:</span>
+                <strong id="couponDiscountDisplay">-<%= displayMoney(summary.couponDiscount) %></strong>
+              </div>
+              <div class="summary-line discount <%= summary.subscriberDiscount > 0 ? '' : 'hidden' %>" id="subscriberDiscountRow">
+                <span>خصم المشتركين:</span>
+                <strong>-<%= displayMoney(summary.subscriberDiscount) %></strong>
+              </div>
+              <div class="summary-line" style="font-size: 18px; color: #007bff; margin-top: 8px; padding-top: 8px; border-top: 2px solid #e0e0e0;">
+                <span>الإجمالي بعد الخصم:</span>
+                <strong id="totalAfter"><%= displayMoney(summary.totalAfter) %></strong>
+              </div>
+              <div style="margin-top: 8px;">
+                <span>رصيد المحفظة الحالي:</span>
+                <strong><%= displayMoney(user.walletBalance || 0) %></strong>
+              </div>
             </div>
 
-            <form action="/cart/checkout" method="POST" style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-              <input type="text" name="couponCode" placeholder="كود خصم على إجمالي السلة (اختياري)" style="min-width:260px; flex:1;" value="<%= (couponCode || '') %>">
+            <!-- Coupon Section with Apply Button -->
+            <div class="coupon-section">
+              <label style="display:block; margin-bottom:8px; font-weight:bold;">كود الخصم:</label>
+              <div class="coupon-input-group">
+                <input type="text" id="couponCodeInput" placeholder="أدخل كود الخصم (مثال: SAVE20)" value="<%= (couponCode || '') %>">
+                <button type="button" id="applyCouponBtn" class="btn btn-secondary">تطبيق الكوبون</button>
+              </div>
+              <div id="couponMessage" class="coupon-message"></div>
+            </div>
+
+            <form action="/cart/checkout" method="POST" style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+              <input type="hidden" name="couponCode" id="checkoutCouponCode" value="<%= (couponCode || '') %>">
               <input type="text" name="walletCardNumber" placeholder="رقم بطاقة المحفظة التي سيتم الخصم منها" style="min-width:260px; flex:1;" value="<%= walletCardNumber || '' %>" required>
               <button type="submit" class="btn btn-primary">إتمام الشراء</button>
             </form>
@@ -75,5 +177,88 @@
   </main>
 
   <%- include('partials/footer') %>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const applyBtn = document.getElementById('applyCouponBtn');
+      const couponInput = document.getElementById('couponCodeInput');
+      const couponMessage = document.getElementById('couponMessage');
+      const checkoutCouponCode = document.getElementById('checkoutCouponCode');
+      const totalBeforeEl = document.getElementById('totalBefore');
+      const totalAfterEl = document.getElementById('totalAfter');
+      const couponDiscountRow = document.getElementById('couponDiscountRow');
+      const couponDiscountDisplay = document.getElementById('couponDiscountDisplay');
+
+      // Format money helper (already in USD from API)
+      function formatMoney(amount) {
+        const usd = Number(amount || 0);
+        return '$' + usd.toFixed(2);
+      }
+
+      // Apply coupon button click
+      applyBtn.addEventListener('click', async function() {
+        const code = couponInput.value.trim();
+        if (!code) {
+          couponMessage.className = 'coupon-message error';
+          couponMessage.textContent = 'الرجاء إدخال كود الخصم';
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/cart/validate-coupon', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ couponCode: code })
+          });
+
+          const data = await response.json();
+
+          if (data.valid) {
+            // Show success message
+            couponMessage.className = 'coupon-message success';
+            couponMessage.innerHTML = `
+              <div class="savings">🎉 هذا الكوبون يوفر لك ${formatMoney(data.discountAmount)}</div>
+              <div class="total-after">الإجمالي بعد الخصم: ${formatMoney(data.totalAfter)}</div>
+            `;
+
+            // Update hidden input for checkout
+            checkoutCouponCode.value = code;
+
+            // Update summary display
+            totalBeforeEl.textContent = formatMoney(data.totalBefore);
+            totalAfterEl.textContent = formatMoney(data.totalAfter);
+            
+            if (data.discountAmount > 0) {
+              couponDiscountRow.classList.remove('hidden');
+              couponDiscountDisplay.textContent = '-' + formatMoney(data.discountAmount);
+            } else {
+              couponDiscountRow.classList.add('hidden');
+            }
+          } else {
+            // Show error message
+            couponMessage.className = 'coupon-message error';
+            couponMessage.textContent = data.message || 'كود الخصم غير صالح';
+            
+            // Clear coupon from checkout
+            checkoutCouponCode.value = '';
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          couponMessage.className = 'coupon-message error';
+          couponMessage.textContent = 'حدث خطأ أثناء التحقق من الكوبون';
+        }
+      });
+
+      // Also apply on Enter key
+      couponInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          applyBtn.click();
+        }
+      });
+    });
+  </script>
 </body>
 </html>

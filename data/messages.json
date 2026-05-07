@@ -1,1 +1,109 @@
-[]
+[
+  {
+    "id": "1eedaa44-6f40-4778-8733-7edd977a8405",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "تن",
+    "read": true,
+    "purchaseId": "5a419e50-b6af-4cf1-809b-8fbd0f24b563",
+    "orderId": "181b2fc9-fb88-4769-be48-47f1571c5966",
+    "projectTitle": "ChatForge",
+    "createdAt": "2026-04-23T17:24:46.719Z"
+  },
+  {
+    "id": "792b51e7-5a1f-4520-af07-af28e404fcd5",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "ت",
+    "read": true,
+    "purchaseId": "5a419e50-b6af-4cf1-809b-8fbd0f24b563",
+    "orderId": "181b2fc9-fb88-4769-be48-47f1571c5966",
+    "projectTitle": "ChatForge",
+    "createdAt": "2026-04-23T17:38:40.098Z"
+  },
+  {
+    "id": "10220614-e5b1-4ede-8865-3c83c740f3ed",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "jbhj",
+    "read": true,
+    "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+    "projectTitle": "أتت",
+    "createdAt": "2026-04-25T11:51:29.584Z"
+  },
+  {
+    "id": "82125d10-0f28-4dd6-ac64-b0a2aa0a89f1",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "Hi",
+    "read": true,
+    "createdAt": "2026-04-26T18:42:16.801Z"
+  },
+  {
+    "id": "75470f9b-7d56-4eee-a5e4-ab65e83d6b27",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "تازاتز",
+    "read": false,
+    "createdAt": "2026-04-26T18:51:00.600Z"
+  },
+  {
+    "id": "acf449d0-5a05-42b9-96bd-7b53b56a39c3",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "زات",
+    "read": false,
+    "createdAt": "2026-04-26T18:51:16.223Z"
+  },
+  {
+    "id": "17e4711e-b8cc-4d2e-892a-9e951d9831a9",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "bvgh",
+    "read": false,
+    "createdAt": "2026-05-07T15:29:27.174Z"
+  },
+  {
+    "id": "d1d5fc23-a522-4a19-9318-9fc0cc3d942e",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "ugh",
+    "read": false,
+    "createdAt": "2026-05-07T15:29:36.214Z"
+  },
+  {
+    "id": "ec9158e5-d923-4145-a428-089a15637bba",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "b ",
+    "read": false,
+    "createdAt": "2026-05-07T15:30:12.154Z"
+  },
+  {
+    "id": "6771bea9-94ed-4439-af42-00bad416cb41",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "hub",
+    "read": false,
+    "createdAt": "2026-05-07T15:30:33.646Z"
+  },
+  {
+    "id": "95f91147-cc84-463e-85da-3f6c446c5c76",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "gh",
+    "read": false,
+    "createdAt": "2026-05-07T15:30:44.629Z"
+  }
+]

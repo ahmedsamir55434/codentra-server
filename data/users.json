@@ -6,7 +6,14 @@
     "password": "$2a$10$SoxxkY6/.z2SV03QT1oFLu0lzAMGWyJrLrPh2gGM2dyPcy7nfuNAm",
     "role": "admin",
     "createdAt": "2026-02-23T13:59:16.053Z",
-    "isSuperAdmin": true
+    "isSuperAdmin": true,
+    "recentlyViewedProjectIds": [
+      "2828e22e-e740-4830-952a-99c968f2e19a",
+      "3617b9ea-425e-49c6-bb67-a04952ac921e",
+      "c3fb95ed-e047-46ec-a400-3f08d3964e7c",
+      "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+      "2574e809-55b6-4694-9108-2848ae7afb28"
+    ]
   },
   {
     "id": "30f6356d-f109-439a-b18f-aa11196bcc99",
@@ -15,17 +22,536 @@
     "password": "$2a$10$wxZyQXktb.NAT6SfDwB0auU0uO6Xgp52ul3pcWK9HBfyNNpCtJJwa",
     "role": "user",
     "createdAt": "2026-02-23T14:14:37.599Z",
-    "walletBalance": 10,
+    "walletBalance": 23567.7,
     "referralCode": "74725916",
     "referredBy": null,
-    "loyaltyPoints": 95767,
+    "loyaltyPoints": 3307,
     "isBlocked": false,
     "blockedReason": null,
     "blockedBy": null,
     "blockedAt": null,
     "blockedUntil": null,
     "walletCardNumber": "9432826350082793",
-    "walletPaymentPasswordHash": null
+    "walletPaymentPasswordHash": null,
+    "recentlyViewedProjectIds": [
+      "834550b7-f9d1-4104-823f-7353c49719bd",
+      "2828e22e-e740-4830-952a-99c968f2e19a",
+      "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+      "3617b9ea-425e-49c6-bb67-a04952ac921e"
+    ],
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [
+      {
+        "id": "43d9d661-2a97-488e-b485-ba4f783aef96",
+        "title": "تم استخدام بطاقتك",
+        "message": "استخدمت بطاقتك في شراء 1 مشروع من السلة.",
+        "metadata": {
+          "attemptId": null,
+          "amount": 11,
+          "purposeLabel": "شراء 1 مشروع من السلة"
+        },
+        "unread": false,
+        "createdAt": "2026-05-07T15:08:02.821Z"
+      },
+      {
+        "id": "6bddacf5-aa13-4566-bebb-eee1157a9444",
+        "title": "تم استخدام بطاقتك",
+        "message": "استخدمت بطاقتك في شراء 1 مشروع من السلة.",
+        "metadata": {
+          "attemptId": null,
+          "amount": 3400,
+          "purposeLabel": "شراء 1 مشروع من السلة"
+        },
+        "createdAt": "2026-04-23T14:03:53.302Z",
+        "unread": false
+      }
+    ],
+    "walletCardUsageLog": [
+      {
+        "id": "dcf5df51-9c1b-4376-9470-28a873d102cb",
+        "status": "completed",
+        "amount": 11,
+        "buyerUserId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+        "buyerName": "ahmed samir",
+        "purposeLabel": "شراء 1 مشروع من السلة",
+        "note": "تم الدفع مباشرة باستخدام بطاقتك الشخصية",
+        "attemptId": null,
+        "createdAt": "2026-05-07T15:08:02.821Z",
+        "updatedAt": "2026-05-07T15:08:02.821Z"
+      },
+      {
+        "id": "ce5d837e-d3a5-41fd-a8bd-607c112a97e1",
+        "status": "completed",
+        "amount": 3400,
+        "buyerUserId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+        "buyerName": "ahmed samir",
+        "purposeLabel": "شراء 1 مشروع من السلة",
+        "note": "تم الدفع مباشرة باستخدام بطاقتك الشخصية",
+        "attemptId": null,
+        "createdAt": "2026-04-23T14:03:53.301Z",
+        "updatedAt": "2026-04-23T14:03:53.301Z"
+      }
+    ],
+    "notifications": [
+      {
+        "id": "d1adf3a5-ecbf-459f-982e-369fc5a0960a",
+        "type": "message-received",
+        "title": "رسالة جديدة من الدعم",
+        "message": "لديك رسالة جديدة من فريق Codentra.",
+        "metadata": {},
+        "unread": true,
+        "createdAt": "2026-05-07T15:30:44.631Z"
+      },
+      {
+        "id": "05e693d3-5532-400e-8509-61596a5eab8c",
+        "type": "message-received",
+        "title": "رسالة جديدة من الدعم",
+        "message": "لديك رسالة جديدة من فريق Codentra.",
+        "metadata": {},
+        "unread": true,
+        "createdAt": "2026-05-07T15:30:33.647Z"
+      },
+      {
+        "id": "dbe643da-0ba9-433c-8bd4-150f769c5117",
+        "type": "message-received",
+        "title": "رسالة جديدة من الدعم",
+        "message": "لديك رسالة جديدة من فريق Codentra.",
+        "metadata": {},
+        "unread": true,
+        "createdAt": "2026-05-07T15:30:12.156Z"
+      },
+      {
+        "id": "03a6e886-c145-44bc-9afd-301fdb49e1c0",
+        "type": "message-received",
+        "title": "رسالة جديدة من الدعم",
+        "message": "لديك رسالة جديدة من فريق Codentra.",
+        "metadata": {},
+        "unread": true,
+        "createdAt": "2026-05-07T15:29:36.215Z"
+      },
+      {
+        "id": "5c3d2547-f69b-4731-8401-028a42d1723f",
+        "type": "message-received",
+        "title": "رسالة جديدة من الدعم",
+        "message": "لديك رسالة جديدة من فريق Codentra.",
+        "metadata": {},
+        "unread": true,
+        "createdAt": "2026-05-07T15:29:27.175Z"
+      },
+      {
+        "id": "fe7b66b2-dd49-4a29-865b-726c4011c6f6",
+        "type": "purchase-approved",
+        "title": "تمت الموافقة على طلبك",
+        "message": "تمت الموافقة على شراء bvcfg ويمكنك متابعة الطلب من مشترياتي.",
+        "metadata": {
+          "purchaseId": "8be24b4e-a9e9-4df1-95ed-bf90a965f378",
+          "orderId": "9ecaee15-2443-440d-86ea-9da50536c58b",
+          "projectTitle": "bvcfg"
+        },
+        "unread": true,
+        "createdAt": "2026-05-07T15:25:52.947Z"
+      },
+      {
+        "id": "a2113994-ff99-43a8-90f0-e10f182f6aa2",
+        "type": "purchase-approved",
+        "title": "تمت الموافقة على طلبك",
+        "message": "تمت الموافقة على شراء f4rg4 ويمكنك متابعة الطلب من مشترياتي.",
+        "metadata": {
+          "purchaseId": "093ebf2f-e5d2-4beb-8670-953c148bb61c",
+          "orderId": "ee69b07f-21f3-4213-af47-5993bd41b182",
+          "projectTitle": "f4rg4"
+        },
+        "unread": true,
+        "createdAt": "2026-05-07T15:24:44.942Z"
+      },
+      {
+        "id": "b1c1f362-769d-4048-893e-38e86ace1113",
+        "type": "message-received",
+        "title": "رسالة جديدة من الدعم",
+        "message": "لديك رسالة جديدة من فريق Codentra.",
+        "metadata": {},
+        "unread": false,
+        "createdAt": "2026-04-26T18:51:16.224Z"
+      },
+      {
+        "id": "1badcec8-eeb7-41a6-87ce-49a3295e113d",
+        "type": "message-received",
+        "title": "رسالة جديدة من الدعم",
+        "message": "لديك رسالة جديدة من فريق Codentra.",
+        "metadata": {},
+        "unread": false,
+        "createdAt": "2026-04-26T18:51:00.601Z"
+      },
+      {
+        "id": "e7c9c855-d88c-4f17-a902-b87e433ba75f",
+        "type": "purchase-approved",
+        "title": "تمت الموافقة على طلبك",
+        "message": "تمت الموافقة على شراء PDF Master Pro ويمكنك متابعة الطلب من مشترياتي.",
+        "metadata": {
+          "purchaseId": "2e14cfef-3350-42d1-8536-93fe599794ac",
+          "orderId": "4b5ce0ee-f67b-4919-99a8-69a923778791",
+          "projectTitle": "PDF Master Pro"
+        },
+        "unread": false,
+        "createdAt": "2026-04-26T18:43:18.326Z"
+      },
+      {
+        "id": "15dbb6d6-4d90-4d57-ae11-b9ee5a091089",
+        "type": "purchase-approved",
+        "title": "تمت الموافقة على طلبك",
+        "message": "تمت الموافقة على شراء  قالب بورتفوليو حديث  ويمكنك متابعة الطلب من مشترياتي.",
+        "metadata": {
+          "purchaseId": "79b63c5c-215f-499f-b8cb-a3852ec8fb29",
+          "orderId": "7b3a777b-f4af-4dd7-bda9-ff3c8181e72b",
+          "projectTitle": " قالب بورتفوليو حديث "
+        },
+        "unread": false,
+        "createdAt": "2026-04-26T18:43:05.620Z"
+      },
+      {
+        "id": "9a186526-0f0f-4a34-83d9-f27c609e2b0c",
+        "type": "purchase-approved",
+        "title": "تمت الموافقة على طلبك",
+        "message": "تمت الموافقة على شراء  Smart Reminder Pro - تطبيق التذكيرات الاحترافي ويمكنك متابعة الطلب من مشترياتي.",
+        "metadata": {
+          "purchaseId": "00c32fb9-e9dc-4474-9b27-8590afe31b83",
+          "orderId": "3a229aab-a979-4123-ab4d-ca557836caf0",
+          "projectTitle": " Smart Reminder Pro - تطبيق التذكيرات الاحترافي"
+        },
+        "unread": false,
+        "createdAt": "2026-04-26T18:42:59.202Z"
+      },
+      {
+        "id": "b6fcc45b-385e-4e33-a760-c9c07638f386",
+        "type": "purchase-approved",
+        "title": "تمت الموافقة على طلبك",
+        "message": "تمت الموافقة على شراء NeuraConnect هو منصة اجتماعية تفاعلية متكاملة تدعم اللغة العربية وتجمع بين وسائل التواصل الاجتماعي والذكاء الاصطناعي ويمكنك متابعة الطلب من مشترياتي.",
+        "metadata": {
+          "purchaseId": "9632bc94-cc39-4067-a0ac-50d3e68b128b",
+          "orderId": "a226fdb3-ed39-4a61-86e3-86796ffd9e4d",
+          "projectTitle": "NeuraConnect هو منصة اجتماعية تفاعلية متكاملة تدعم اللغة العربية وتجمع بين وسائل التواصل الاجتماعي والذكاء الاصطناعي"
+        },
+        "unread": false,
+        "createdAt": "2026-04-26T18:42:46.749Z"
+      },
+      {
+        "id": "971e78b7-fbc5-4195-b355-0aa9d55fe75b",
+        "type": "purchase-approved",
+        "title": "تمت الموافقة على طلبك",
+        "message": "تمت الموافقة على شراء  CityShift: 2D Drive - لعبة قيادة سيارات ثنائية الأبعاد ويمكنك متابعة الطلب من مشترياتي.",
+        "metadata": {
+          "purchaseId": "98beb9b9-4399-4a77-a1c9-0a43ecd6371a",
+          "orderId": "0faf60b7-f602-488f-84df-742483abdb22",
+          "projectTitle": " CityShift: 2D Drive - لعبة قيادة سيارات ثنائية الأبعاد"
+        },
+        "unread": false,
+        "createdAt": "2026-04-26T16:27:02.313Z"
+      },
+      {
+        "id": "3fb0aa22-dab4-496c-9b5f-d0cd872b6cb1",
+        "type": "custom-project-paid",
+        "title": "تم دفع طلب المشروع المخصص",
+        "message": "تم دفع طلب أتت بنجاح.",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "amount": 77,
+          "projectTitle": "أتت"
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T11:55:12.875Z"
+      },
+      {
+        "id": "0100f49e-d5a5-4d42-b023-4b8170a244ee",
+        "type": "custom-project-update",
+        "title": "تحديث على طلب مشروعك المخصص",
+        "message": "تم تحديث الطلب: أتت. السعر المحدد حاليًا 77.00 جنيه والمدة ١٤.",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت",
+          "amount": 77
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T11:48:22.593Z"
+      },
+      {
+        "id": "6049323c-15d6-4869-b307-32f882f9ac8d",
+        "type": "custom-project-update",
+        "title": "تحديث على طلب مشروعك المخصص",
+        "message": "تم تحديث الطلب: أتت. السعر المحدد حاليًا 77.00 جنيه والمدة ١٤.",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت",
+          "amount": 77
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T11:48:18.300Z"
+      },
+      {
+        "id": "2583fda9-5343-4e78-8d03-034901515c85",
+        "type": "custom-project-file",
+        "title": "تم رفع ملف مشروعك المخصص",
+        "message": "تم رفع الملف النهائي لطلب أتت ويمكنك تحميله الآن.",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت"
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T11:47:36.322Z"
+      },
+      {
+        "id": "6dc734bc-acd6-4ec7-959a-f64a8d5c02fe",
+        "type": "custom-project-update",
+        "title": "تحديث على طلب مشروعك المخصص",
+        "message": "تم استلام الطلب: أتت.",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت",
+          "amount": null
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T11:47:29.157Z"
+      },
+      {
+        "id": "aa0889cf-e0dc-4638-94fb-4036053bf625",
+        "type": "custom-project-update",
+        "title": "تحديث على طلب مشروعك المخصص",
+        "message": "تم تحديث الطلب: أتت.",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت",
+          "amount": null
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T11:47:27.770Z"
+      },
+      {
+        "id": "17b83697-6fb1-4fcd-9b2f-c74a31a7f38c",
+        "type": "custom-project-file",
+        "title": "تم رفع ملف مشروعك المخصص",
+        "message": "تم رفع الملف النهائي لطلب أتت ويمكنك تحميله الآن.",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت"
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T11:46:55.391Z"
+      },
+      {
+        "id": "2dac44c0-02b0-49ba-bd8b-2bbed359c278",
+        "type": "custom-project-file",
+        "title": "تم رفع ملف مشروعك المخصص",
+        "message": "تم رفع الملف النهائي لطلب أتت ويمكنك تحميله الآن.",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت"
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T11:46:47.259Z"
+      },
+      {
+        "id": "399078fe-a0f8-4732-a5f5-06127097a393",
+        "type": "custom-project-update",
+        "title": "تحديث على طلب مشروعك المخصص",
+        "message": "تم تحديث الطلب: أتت.",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت",
+          "amount": null
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T11:45:04.674Z"
+      },
+      {
+        "id": "4fb5e385-b4b5-4b62-8d95-2c8d4c44dd87",
+        "type": "custom-project-file",
+        "title": "تم رفع ملف مشروعك المخصص",
+        "message": "تم رفع الملف النهائي لطلب أتت ويمكنك تحميله الآن.",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت"
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T11:45:00.699Z"
+      },
+      {
+        "id": "a1029b35-d588-47a1-b73a-40d78a3e6937",
+        "type": "custom-project-update",
+        "title": "تحديث على طلب مشروعك المخصص",
+        "message": "تم قبول الطلب: أتت.",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت",
+          "amount": null
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T11:44:42.311Z"
+      },
+      {
+        "id": "a2298766-db81-4e53-8b75-9f0a8f674f71",
+        "type": "custom-project-update",
+        "title": "تحديث على طلب مشروعك المخصص",
+        "message": "تم قبول الطلب: أتت. السعر المحدد حاليًا 1000.00 جنيه.",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت",
+          "amount": 1000
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T11:43:41.504Z"
+      },
+      {
+        "id": "27474afc-9145-40f5-a998-8e49fd343748",
+        "type": "custom-project-update",
+        "title": "تحديث على طلب مشروعك المخصص",
+        "message": "تم قبول الطلب: أتت",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت"
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T08:36:42.182Z"
+      },
+      {
+        "id": "3ff5bf99-6b83-4f66-9d48-c53bf0b46601",
+        "type": "custom-project-update",
+        "title": "تحديث على طلب مشروعك المخصص",
+        "message": "قيد المراجعة: أتت",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت"
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T08:36:39.463Z"
+      },
+      {
+        "id": "a3d4d553-8e98-4915-a3ab-97813a1df071",
+        "type": "custom-project-update",
+        "title": "تحديث على طلب مشروعك المخصص",
+        "message": "تم استلام الطلب: أتت",
+        "metadata": {
+          "customProjectRequestId": "9d3425ad-c679-430f-91bc-8ff36ae7e90b",
+          "projectTitle": "أتت"
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T08:36:32.726Z"
+      },
+      {
+        "id": "b05df1e7-e567-4c2b-b2ac-9246b82ee60c",
+        "type": "wallet-topup-failed",
+        "title": "فشل شحن الرصيد",
+        "message": "لم تكتمل عملية شحن الرصيد. يمكنك المحاولة مرة أخرى.",
+        "metadata": {
+          "topupId": "e36ce5e2-7e2f-4c3e-8a75-23054bcdbf2a",
+          "amount": 100,
+          "gateway": "paymob"
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T08:04:14.781Z"
+      },
+      {
+        "id": "d1e6fa04-05fb-4eb5-855f-6b0d61ab3913",
+        "type": "referral-signup",
+        "title": "مكافأة إحالة جديدة",
+        "message": "سجل مستخدم جديد باستخدام كودك، وتمت إضافة 50 نقطة إلى حسابك.",
+        "metadata": {
+          "referredUserId": "6d9eb9d3-cf4d-4c8c-bb34-f80f1607ab41",
+          "rewardAmount": 50,
+          "rewardType": "loyalty-points"
+        },
+        "unread": false,
+        "createdAt": "2026-04-25T07:52:34.076Z"
+      },
+      {
+        "id": "01cc5f35-876d-4e17-bc54-aac1f12dea73",
+        "type": "wallet-topup-failed",
+        "title": "فشل شحن الرصيد",
+        "message": "لم تكتمل عملية شحن الرصيد. يمكنك المحاولة مرة أخرى.",
+        "metadata": {
+          "topupId": "e36ce5e2-7e2f-4c3e-8a75-23054bcdbf2a",
+          "amount": 100,
+          "gateway": "paymob"
+        },
+        "unread": false,
+        "createdAt": "2026-04-24T16:55:31.046Z"
+      },
+      {
+        "id": "f5f239be-dac0-4d1b-bf0f-b45e153c44e8",
+        "type": "wallet-topup-failed",
+        "title": "فشل شحن الرصيد",
+        "message": "لم تكتمل عملية شحن الرصيد. يمكنك المحاولة مرة أخرى.",
+        "metadata": {
+          "topupId": "ce3f6ae7-9d96-4fc0-8987-36438a7423c0",
+          "amount": 10,
+          "gateway": "paymob"
+        },
+        "unread": false,
+        "createdAt": "2026-04-24T16:50:32.136Z"
+      },
+      {
+        "id": "e3ef1904-3932-4ac3-bd6b-322a1725dcec",
+        "type": "wallet-topup-failed",
+        "title": "فشل شحن الرصيد",
+        "message": "لم تكتمل عملية شحن الرصيد. يمكنك المحاولة مرة أخرى.",
+        "metadata": {
+          "topupId": "d32136d3-4f12-4c2e-a819-7f7c271ca1f6",
+          "amount": 10,
+          "gateway": "paymob"
+        },
+        "unread": false,
+        "createdAt": "2026-04-24T16:45:48.142Z"
+      },
+      {
+        "id": "d374b252-8b1e-4aa0-9268-874874453548",
+        "type": "wallet-topup-failed",
+        "title": "فشل شحن الرصيد",
+        "message": "لم تكتمل عملية شحن الرصيد. يمكنك المحاولة مرة أخرى.",
+        "metadata": {
+          "topupId": "ee9b0c11-cca7-47ad-aa54-646fc0575213",
+          "amount": 250,
+          "gateway": "paymob"
+        },
+        "unread": false,
+        "createdAt": "2026-04-24T16:39:31.493Z"
+      },
+      {
+        "id": "d49a1462-a9db-4747-bae7-747f88e4b93c",
+        "type": "wallet-topup-failed",
+        "title": "فشل شحن الرصيد",
+        "message": "لم تكتمل عملية شحن الرصيد. يمكنك المحاولة مرة أخرى.",
+        "metadata": {
+          "topupId": "734bd9c0-b19e-4096-93c1-b10a38d95be8",
+          "amount": 1000,
+          "gateway": "paymob"
+        },
+        "unread": false,
+        "createdAt": "2026-04-24T16:39:20.654Z"
+      }
+    ],
+    "pushDevices": [
+      {
+        "pushToken": "local-58A3440E-8DA1-4FC3-BBFE-656404555FAB",
+        "platform": "ios-local",
+        "updatedAt": "2026-04-26T19:54:37.871Z"
+      },
+      {
+        "pushToken": "local-355992A8-639A-46D1-85D8-77179F8C99F7",
+        "platform": "ios-local",
+        "updatedAt": "2026-04-27T09:39:15.837Z"
+      },
+      {
+        "pushToken": "local-162ADBFB-21A6-4CC0-A855-3CF8BA768C13",
+        "platform": "ios-local",
+        "updatedAt": "2026-04-27T09:41:06.934Z"
+      },
+      {
+        "pushToken": "local-1F8ECB38-BE1C-4A1A-AB21-8F12CEBF5F0A",
+        "platform": "ios-local",
+        "updatedAt": "2026-04-27T09:45:59.365Z"
+      }
+    ],
+    "githubId": "163656135",
+    "githubLogin": "ahmedsamir55434",
+    "authProvider": "github"
   },
   {
     "id": "e809661f-3c95-4777-995a-ac358e92fc5f",
@@ -44,7 +570,16 @@
     "blockedAt": null,
     "blockedUntil": null,
     "walletCardNumber": "2565186290882378",
-    "walletPaymentPasswordHash": null
+    "walletPaymentPasswordHash": null,
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [],
+    "walletCardUsageLog": [],
+    "notifications": [],
+    "googleId": "116427301876856242996",
+    "authProvider": "google",
+    "recentlyViewedProjectIds": [
+      "31c57f4a-b3df-4666-a0d2-9297a19469dc"
+    ]
   },
   {
     "id": "f32f34e5-e1ac-455e-8286-097aed9ea9be",
@@ -66,7 +601,11 @@
     "blockedAt": null,
     "blockedUntil": null,
     "walletCardNumber": "7209122129968901",
-    "walletPaymentPasswordHash": null
+    "walletPaymentPasswordHash": null,
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [],
+    "walletCardUsageLog": [],
+    "notifications": []
   },
   {
     "id": "3cab6d8d-6243-4a9a-be8b-55aa93a5ff90",
@@ -105,7 +644,11 @@
     "createdAt": "2026-02-26T13:52:21.709Z",
     "loyaltyPoints": 0,
     "walletCardNumber": "4732326293661822",
-    "walletPaymentPasswordHash": null
+    "walletPaymentPasswordHash": null,
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [],
+    "walletCardUsageLog": [],
+    "notifications": []
   },
   {
     "id": "83d43a89-4e04-4edc-8482-e947c156c0e3",
@@ -119,6 +662,303 @@
     "createdAt": "2026-03-24T18:29:50.893Z",
     "loyaltyPoints": 606,
     "walletCardNumber": "6342535384595667",
-    "walletPaymentPasswordHash": null
+    "walletPaymentPasswordHash": null,
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [],
+    "walletCardUsageLog": [],
+    "notifications": []
+  },
+  {
+    "id": "6d9eb9d3-cf4d-4c8c-bb34-f80f1607ab41",
+    "name": "ahmed samir",
+    "email": "befoca9750@soppat.com",
+    "password": "$2a$10$lLXeK6M30jrF1L5wj/3Eze8a2h4C3zcFZUB9x3ej7TdgX4i9.yLPS",
+    "role": "user",
+    "referralCode": "40EA1FC2",
+    "walletBalance": 0,
+    "walletCardNumber": "6486508833843453",
+    "walletPaymentPasswordHash": "$2a$10$QaZeHdJLIkg/HE9vBCO8K.M2ReTdIlj1owMeEoEFEOS1iLhDUfQ9C",
+    "referredBy": {
+      "referrerUserId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+      "code": "74725916",
+      "createdAt": "2026-04-25T07:52:34.074Z",
+      "rewardedAt": null
+    },
+    "loyaltyPoints": 0,
+    "createdAt": "2026-04-25T07:52:34.074Z",
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [],
+    "notifications": [],
+    "walletCardUsageLog": []
+  },
+  {
+    "id": "ff920b84-7244-44bf-a84a-b5e32752ddc4",
+    "name": "Samir Sabry",
+    "email": "ssabry33@yahoo.com",
+    "password": "$2a$10$HnOZ3x//TShhkNfHYhKr0eXX1I.PEZC/Pkars7lHE9HFSIVA7twFa",
+    "role": "user",
+    "referralCode": "EA70FD76",
+    "walletBalance": 0,
+    "walletCardNumber": "2849175916384200",
+    "walletPaymentPasswordHash": "$2a$10$Xf4dJAE4D//S5dm.MdqiiOce.tPuh4sXm8qlOImPt/ejkgm9vHDim",
+    "referredBy": null,
+    "loyaltyPoints": 0,
+    "createdAt": "2026-04-28T15:25:09.271Z",
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [],
+    "notifications": [],
+    "walletCardUsageLog": []
+  },
+  {
+    "id": "2324abb2-fc85-459e-b20a-c01220fae4e8",
+    "name": "Rabab Sabry ",
+    "email": "Rababsabry00@gmail.com",
+    "password": "$2a$10$bC6./kpPPYfM0ZwWlxbl2uZFXl9EcNaRi0t.J7vK4kayiRxs/4KeK",
+    "role": "user",
+    "referralCode": "D76EDA37",
+    "walletBalance": 0,
+    "walletCardNumber": "2340972607492384",
+    "walletPaymentPasswordHash": "$2a$10$Bot57vtyexao/hQLS4bSAeehEDOj1gbK07eRcNJD71/L5StO3aLCS",
+    "referredBy": null,
+    "loyaltyPoints": 0,
+    "createdAt": "2026-04-28T15:34:29.971Z",
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [],
+    "notifications": [],
+    "walletCardUsageLog": []
+  },
+  {
+    "id": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "name": "try",
+    "email": "ssabry333388@icloud.com",
+    "password": "$2a$10$awqqGbpyTgwur/d9y5VajuUZottGu5DvugsWRJNx5RuGans/Szh1i",
+    "role": "user",
+    "referralCode": "2A760C1C",
+    "walletBalance": 5950,
+    "walletCardNumber": "2198097813280750",
+    "walletPaymentPasswordHash": "$2a$10$ConZ/2ggTvj8mgtuJT9CxeUhua1Q4vakNySL1MNrJAUOMKg2sV71S",
+    "referredBy": null,
+    "loyaltyPoints": 0,
+    "createdAt": "2026-04-29T16:48:17.295Z",
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [],
+    "notifications": [
+      {
+        "id": "041b69df-6bda-447c-aa02-3c8be5b9ccfe",
+        "type": "wallet-topup-failed",
+        "title": "فشل شحن الرصيد",
+        "message": "لم تكتمل عملية شحن الرصيد. يمكنك المحاولة مرة أخرى.",
+        "metadata": {
+          "topupId": "8659eb79-32a6-4ba1-9293-6382fa09b3f4",
+          "amount": 1000,
+          "gateway": "paymob"
+        },
+        "unread": false,
+        "createdAt": "2026-04-29T16:49:26.771Z"
+      }
+    ],
+    "walletCardUsageLog": [],
+    "recentlyViewedProjectIds": [
+      "c3fb95ed-e047-46ec-a400-3f08d3964e7c",
+      "3617b9ea-425e-49c6-bb67-a04952ac921e",
+      "2828e22e-e740-4830-952a-99c968f2e19a",
+      "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+      "834550b7-f9d1-4104-823f-7353c49719bd"
+    ]
+  },
+  {
+    "id": "9cdd341f-c043-4e10-80be-f2ec4167208c",
+    "name": "ahmed samir",
+    "email": "ahmedsamir2666681@gmail.com",
+    "password": null,
+    "role": "user",
+    "authProvider": "google",
+    "googleId": "117506799041325365156",
+    "referralCode": "10EA31EC",
+    "walletBalance": 0,
+    "walletCardNumber": "7185709815303779",
+    "walletPaymentPasswordHash": "$2a$10$5YRLTCzZ54na.1zekqltQOAFbaCjaL7z4t/MY6VG0vY2jdf3uw0li",
+    "referredBy": null,
+    "loyaltyPoints": 0,
+    "createdAt": "2026-05-03T07:32:24.472Z",
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [],
+    "notifications": [],
+    "walletCardUsageLog": []
+  },
+  {
+    "id": "ccf671dd-44c8-4c3b-a674-d36a413381ae",
+    "name": "Magic C",
+    "email": "magicc709@gmail.com",
+    "password": null,
+    "role": "user",
+    "authProvider": "google",
+    "googleId": "109693295764329475670",
+    "referralCode": "0CFAF555",
+    "walletBalance": 2030,
+    "walletCardNumber": "3694825049836831",
+    "walletPaymentPasswordHash": "$2a$10$aTMdBgega.caOqFbksSWpuK9tNOxImff4b1zvU.AX8CiJdyJ2qoNq",
+    "referredBy": null,
+    "loyaltyPoints": 297,
+    "createdAt": "2026-05-03T07:33:17.401Z",
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [
+      {
+        "id": "6cc654d5-ea96-4c12-a08d-c63ab365a1e2",
+        "title": "تم استخدام بطاقتك",
+        "message": "استخدمت بطاقتك في شراء 1 مشروع من السلة.",
+        "metadata": {
+          "attemptId": null,
+          "amount": 2970,
+          "purposeLabel": "شراء 1 مشروع من السلة"
+        },
+        "unread": false,
+        "createdAt": "2026-05-03T16:27:50.145Z"
+      }
+    ],
+    "notifications": [],
+    "walletCardUsageLog": [
+      {
+        "id": "620e5d84-1c06-43f5-badc-d17648990c71",
+        "status": "completed",
+        "amount": 2970,
+        "buyerUserId": "ccf671dd-44c8-4c3b-a674-d36a413381ae",
+        "buyerName": "Magic C",
+        "purposeLabel": "شراء 1 مشروع من السلة",
+        "note": "تم الدفع مباشرة باستخدام بطاقتك الشخصية",
+        "attemptId": null,
+        "createdAt": "2026-05-03T16:27:50.145Z",
+        "updatedAt": "2026-05-03T16:27:50.145Z"
+      }
+    ],
+    "recentlyViewedProjectIds": [
+      "3617b9ea-425e-49c6-bb67-a04952ac921e"
+    ]
+  },
+  {
+    "id": "098f2217-54cf-4d6d-9838-2ba657b533bd",
+    "name": "Om Ahmed",
+    "email": "omahmad20100@gmail.com",
+    "password": null,
+    "role": "user",
+    "authProvider": "google",
+    "googleId": "100942162069602309529",
+    "referralCode": "8805202A",
+    "walletBalance": 0,
+    "walletCardNumber": "2040503977483161",
+    "walletPaymentPasswordHash": "$2a$10$zZ19Rbye5GxoSaRuOModRe8OooMoBhp5yZYDVrWC.WtS2TW7LDTza",
+    "referredBy": null,
+    "loyaltyPoints": 0,
+    "createdAt": "2026-05-04T07:54:38.427Z",
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [],
+    "notifications": [],
+    "walletCardUsageLog": [],
+    "recentlyViewedProjectIds": [
+      "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+      "c3fb95ed-e047-46ec-a400-3f08d3964e7c",
+      "3617b9ea-425e-49c6-bb67-a04952ac921e"
+    ]
+  },
+  {
+    "id": "bd93a9f4-0a18-4e0d-a7c3-acddae35461f",
+    "name": "Far",
+    "email": "far45037@gmail.com",
+    "password": null,
+    "role": "user",
+    "authProvider": "google",
+    "googleId": "117058701055015833507",
+    "referralCode": "90814163",
+    "walletBalance": 4497286.3,
+    "walletCardNumber": "1648665036542083",
+    "walletPaymentPasswordHash": "$2a$10$9BE7rZrRM3ocy91yIFGoJeIZeaP2s8UtVzncNpktBUUevj9lw85xe",
+    "referredBy": null,
+    "loyaltyPoints": 271,
+    "createdAt": "2026-05-07T14:34:14.086Z",
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [
+      {
+        "id": "deebb4db-0eae-4834-86bf-f80ba2d395e1",
+        "title": "تم استخدام بطاقتك",
+        "message": "استخدمت بطاقتك في شراء 1 مشروع من السلة.",
+        "metadata": {
+          "attemptId": null,
+          "amount": 11,
+          "purposeLabel": "شراء 1 مشروع من السلة"
+        },
+        "unread": false,
+        "createdAt": "2026-05-07T15:16:41.079Z"
+      },
+      {
+        "id": "1229a8a7-afcd-4b67-9c44-610548ac94f4",
+        "title": "تم استخدام بطاقتك",
+        "message": "استخدمت بطاقتك في شراء 1 مشروع من السلة.",
+        "metadata": {
+          "attemptId": null,
+          "amount": 2702.7,
+          "purposeLabel": "شراء 1 مشروع من السلة"
+        },
+        "unread": false,
+        "createdAt": "2026-05-07T14:44:11.790Z"
+      }
+    ],
+    "notifications": [
+      {
+        "id": "1086c6b2-2a89-4161-b7a5-29d71495e3ad",
+        "type": "purchase-approved",
+        "title": "تمت الموافقة على طلبك",
+        "message": "تمت الموافقة على شراء  قالب بورتفوليو حديث  ويمكنك متابعة الطلب من مشترياتي.",
+        "metadata": {
+          "purchaseId": "292f7224-2ae4-4b24-a369-144b4ce3c80b",
+          "orderId": "81574de6-3fb4-4dac-ae0d-f50ad0000be7",
+          "projectTitle": " قالب بورتفوليو حديث "
+        },
+        "unread": true,
+        "createdAt": "2026-05-07T15:25:41.773Z"
+      },
+      {
+        "id": "da104e6b-5032-4017-b919-2f438e75647c",
+        "type": "purchase-approved",
+        "title": "تمت الموافقة على طلبك",
+        "message": "تمت الموافقة على شراء f4rg4 ويمكنك متابعة الطلب من مشترياتي.",
+        "metadata": {
+          "purchaseId": "02dffb6f-dc5a-4290-9c52-684fd4f30cfd",
+          "orderId": "566c9960-0776-42c2-9447-af49e0878dee",
+          "projectTitle": "f4rg4"
+        },
+        "unread": true,
+        "createdAt": "2026-05-07T15:25:25.490Z"
+      }
+    ],
+    "walletCardUsageLog": [
+      {
+        "id": "c32daae3-26d6-4821-b7e5-fb4d2e77b144",
+        "status": "completed",
+        "amount": 11,
+        "buyerUserId": "bd93a9f4-0a18-4e0d-a7c3-acddae35461f",
+        "buyerName": "Far",
+        "purposeLabel": "شراء 1 مشروع من السلة",
+        "note": "تم الدفع مباشرة باستخدام بطاقتك الشخصية",
+        "attemptId": null,
+        "createdAt": "2026-05-07T15:16:41.078Z",
+        "updatedAt": "2026-05-07T15:16:41.078Z"
+      },
+      {
+        "id": "599d313a-68aa-4069-a2c1-31dcf8b29b74",
+        "status": "completed",
+        "amount": 2702.7,
+        "buyerUserId": "bd93a9f4-0a18-4e0d-a7c3-acddae35461f",
+        "buyerName": "Far",
+        "purposeLabel": "شراء 1 مشروع من السلة",
+        "note": "تم الدفع مباشرة باستخدام بطاقتك الشخصية",
+        "attemptId": null,
+        "createdAt": "2026-05-07T14:44:11.790Z",
+        "updatedAt": "2026-05-07T14:44:11.790Z"
+      }
+    ],
+    "recentlyViewedProjectIds": [
+      "834550b7-f9d1-4104-823f-7353c49719bd",
+      "3617b9ea-425e-49c6-bb67-a04952ac921e"
+    ]
   }
 ]

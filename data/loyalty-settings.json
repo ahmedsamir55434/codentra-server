@@ -1,1 +1,9 @@
-{}
+{
+  "enabled": true,
+  "pointsPerEGP": 0.1,
+  "redeem": {
+    "enabled": true,
+    "pointsToEGP": 0.1,
+    "minPoints": 100
+  }
+}

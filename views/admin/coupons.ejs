@@ -76,6 +76,17 @@
                 <label for="usageLimit">عدد مرات الاستخدام (اختياري)</label>
                 <input id="usageLimit" name="usageLimit" type="number" min="1" step="1">
               </div>
+              <div class="form-group">
+                <label for="durationDays">مدة الخصم بالأيام (اختياري)</label>
+                <input id="durationDays" name="durationDays" type="number" min="1" step="1" placeholder="مثال: 7">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="occasion">مناسبة الخصم (اختياري)</label>
+                <input id="occasion" name="occasion" type="text" placeholder="مثال: عرض العيد">
+              </div>
             </div>
 
             <button type="submit" class="btn btn-primary">إضافة</button>
@@ -103,6 +114,7 @@
                   <th>الحالة</th>
                   <th>الاستخدام</th>
                   <th>الانتهاء</th>
+                  <th>المدة/المناسبة</th>
                   <th>إجراءات</th>
                 </tr>
               </thead>
@@ -133,6 +145,10 @@
                     </td>
                     <td>
                       <%= c.expiresAt ? new Date(c.expiresAt).toLocaleDateString('ar-EG') : '-' %>
+                    </td>
+                    <td>
+                      <div><%= c.durationDays ? (c.durationDays === 7 ? 'أسبوع' : (c.durationDays === 14 ? 'أسبوعين' : (c.durationDays === 30 ? 'شهر' : c.durationDays + ' يوم'))) : '-' %></div>
+                      <small style="opacity:.75"><%= c.occasion || 'بدون مناسبة' %></small>
                     </td>
                     <td class="actions">
                       <form action="/admin/coupons/<%= c.id %>/toggle" method="POST" class="inline-form">

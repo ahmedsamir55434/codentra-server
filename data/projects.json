@@ -19,7 +19,13 @@
       "uploads/project-images/f764e4d8-4af3-4905-84e1-d4bf880b9bb0-image.png",
       "uploads/project-images/69cc0f5a-3f35-4164-801c-6f9c8194f1b4-image.png",
       "uploads/project-images/d44efbe7-d434-440c-a9de-0bf00d42ba6a-image.png"
-    ]
+    ],
+    "saleActive": true,
+    "saleType": "percent",
+    "saleValue": 1,
+    "saleOccasion": "unn",
+    "saleDurationDays": null,
+    "saleExpiresAt": "2026-05-16T00:00:00.000Z"
   },
   {
     "id": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
@@ -41,7 +47,13 @@
       "uploads/project-images/44e94756-ee0b-4cb8-a3b4-51aba9441b1e-image.png",
       "uploads/project-images/1f9eca42-13a8-42ce-a257-fa25af9feebe-image.png",
       "uploads/project-images/dd719113-2ad1-4524-826a-ba2d7fc09665-image.png"
-    ]
+    ],
+    "saleActive": false,
+    "saleType": null,
+    "saleValue": 0,
+    "saleOccasion": null,
+    "saleDurationDays": 9,
+    "saleExpiresAt": null
   },
   {
     "id": "13c1c09d-0357-4918-a60d-d935b86c1c5d",
@@ -120,7 +132,13 @@
       "uploads/project-images/37b64830-3b50-40a6-9bb9-4385c0823c43-image.png",
       "uploads/project-images/ae65b738-2a8a-4823-b37a-ec48ad6ab481-image.png"
     ],
-    "createdAt": "2026-03-24T18:54:21.319Z"
+    "createdAt": "2026-03-24T18:54:21.319Z",
+    "saleActive": true,
+    "saleType": "fixed",
+    "saleValue": 9,
+    "saleOccasion": null,
+    "saleDurationDays": null,
+    "saleExpiresAt": "2026-05-19T00:00:00.000Z"
   },
   {
     "id": "c208d7ef-c2fa-46f9-ba21-2d69006dbb87",
@@ -149,5 +167,39 @@
       "uploads/project-images/6a112173-9eb8-4791-adad-6cc4ea9bb701-image.png"
     ],
     "createdAt": "2026-03-24T20:24:22.160Z"
+  },
+  {
+    "id": "c3fb95ed-e047-46ec-a400-3f08d3964e7c",
+    "title": "bvcfg",
+    "description": "kjhgfdfxsxdghjk",
+    "price": 66,
+    "category": "Mobile",
+    "technologies": [
+      "ncxdgfh"
+    ],
+    "visibility": "public",
+    "filePath": "uploads/1e0bbb29-44e1-4115-b4ae-e1f0de8fe1a4-ChatForge-Template-Sale.zip",
+    "originalFileName": "ChatForge-Template-Sale.zip",
+    "images": [],
+    "createdAt": "2026-04-27T09:50:23.030Z",
+    "saleActive": true,
+    "saleType": "percent",
+    "saleValue": 90,
+    "saleOccasion": "عرض العيد",
+    "saleDurationDays": null,
+    "saleExpiresAt": "2026-05-22T00:00:00.000Z"
+  },
+  {
+    "id": "834550b7-f9d1-4104-823f-7353c49719bd",
+    "title": "f4rg4",
+    "description": "g4g4bt",
+    "price": 11,
+    "category": "Mobile",
+    "technologies": [],
+    "visibility": "public",
+    "filePath": "uploads/313c0be1-7013-4d4b-a9e9-e5e1cdce68cd-codentra-vps-deploy-20260325_130641.zip",
+    "originalFileName": "codentra-vps-deploy-20260325_130641.zip",
+    "images": [],
+    "createdAt": "2026-05-02T18:18:45.538Z"
   }
 ]

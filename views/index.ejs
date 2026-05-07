@@ -81,7 +81,23 @@
                   <% }) %>
                 </div>
                 <div class="project-footer">
+                <% if (project.sale && project.sale.active) { %>
+                  <span class="price sale-price"><%= displayMoney(project.finalPrice) %></span>
+                  <small style="display:block;opacity:.7;text-decoration:line-through;"><%= displayMoney(project.originalPrice) %></small>
+                  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;">
+                    <span class="sale-badge"><%= project.sale.saleType === 'percent' ? ('-' + project.sale.saleValue + '%') : 'SALE' %></span>
+                    <small style="display:block;color:#7df2b8;">
+                      <% if (project.sale.saleType === 'percent') { %>
+                        خصم <%= project.sale.saleValue %>%
+                      <% } else { %>
+                        خصم <%= displayMoney(project.sale.discountAmount) %>
+                      <% } %>
+                      <%= project.sale.occasion ? '• ' + project.sale.occasion : '' %>
+                    </small>
+                  </div>
+                <% } else { %>
                   <span class="price"><%= displayMoney(project.price) %></span>
+                <% } %>
                   <a href="/project/<%= project.id %>" class="btn btn-secondary">متابعة</a>
                 </div>
               </div>
@@ -123,7 +139,23 @@
                 <% }) %>
               </div>
               <div class="project-footer">
-                <span class="price"><%= displayMoney(project.price) %></span>
+                <% if (project.sale && project.sale.active) { %>
+                  <span class="price sale-price"><%= displayMoney(project.finalPrice) %></span>
+                  <small style="display:block;opacity:.7;text-decoration:line-through;"><%= displayMoney(project.originalPrice) %></small>
+                  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;">
+                    <span class="sale-badge"><%= project.sale.saleType === 'percent' ? ('-' + project.sale.saleValue + '%') : 'SALE' %></span>
+                    <small style="display:block;color:#7df2b8;">
+                      <% if (project.sale.saleType === 'percent') { %>
+                        خصم <%= project.sale.saleValue %>%
+                      <% } else { %>
+                        خصم <%= displayMoney(project.sale.discountAmount) %>
+                      <% } %>
+                      <%= project.sale.occasion ? '• ' + project.sale.occasion : '' %>
+                    </small>
+                  </div>
+                <% } else { %>
+                  <span class="price"><%= displayMoney(project.price) %></span>
+                <% } %>
                 <a href="/project/<%= project.id %>" class="btn btn-primary">تفاصيل</a>
               </div>
             </div>

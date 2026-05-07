@@ -1,1 +1,30 @@
-[]
+[
+  {
+    "id": "dae21bf7-5309-4507-b9f1-42ce879d3306",
+    "type": "meeting",
+    "senderId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "senderName": "Admin",
+    "roomId": "9f94ce5a-d152-4bd2-b267-7c1b87e9e926",
+    "meetingLink": "/meet/9f94ce5a-d152-4bd2-b267-7c1b87e9e926",
+    "createdAt": "2026-04-23T17:29:00.619Z"
+  },
+  {
+    "id": "d6cc691a-dbab-420d-8f5a-c6558193ecf5",
+    "type": "text",
+    "senderId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "senderName": "Admin",
+    "content": "jj",
+    "createdAt": "2026-04-23T17:29:14.485Z"
+  },
+  {
+    "id": "1e7e90b9-6ec0-471b-8994-fb57830f1e9d",
+    "type": "file",
+    "senderId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "senderName": "Admin",
+    "filePath": "uploads/admin-team/051b9970-e96f-426c-81f7-646f894c9e18-Simulator_Screenshot_-_iPhone_16_-_2025-07-02_at_18.44.10.png",
+    "originalFileName": "Simulator Screenshot - iPhone 16 - 2025-07-02 at 18.44.10.png",
+    "mimeType": "image/png",
+    "size": 2629041,
+    "createdAt": "2026-04-23T17:29:28.490Z"
+  }
+]

@@ -726,3 +726,125 @@ body {
     padding: 5px 8px;
   }
 }
+
+.promo-strip {
+  display: grid;
+  gap: 10px;
+}
+
+.promo-chip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(16px);
+}
+
+.promo-chip small {
+  opacity: .85;
+}
+
+html[data-theme="light"] .promo-chip {
+  background: rgba(255,255,255,0.78);
+  border-color: rgba(20,20,40,0.08);
+}
+
+/* Cart coupon UI readability */
+.coupon-section {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+}
+
+.coupon-input-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.coupon-input-group input {
+  flex: 1;
+  min-width: 220px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--text-primary);
+}
+
+.coupon-input-group input::placeholder {
+  color: var(--text-secondary);
+}
+
+html[data-theme="light"] .coupon-section {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="light"] .coupon-input-group input {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(15, 23, 42, 0.12);
+  color: #0f172a;
+}
+
+#applyCouponBtn.btn {
+  min-width: 160px;
+}
+
+/* Dark mode: ensure apply button is readable */
+html:not([data-theme="light"]) #applyCouponBtn.btn-secondary {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+html:not([data-theme="light"]) #applyCouponBtn.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+html[data-theme="light"] #applyCouponBtn.btn-secondary {
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+html[data-theme="light"] #applyCouponBtn.btn-secondary:hover {
+  filter: brightness(1.06);
+}
+
+/* Sale badge (project cards) */
+.sale-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background: rgba(125, 242, 184, 0.16);
+  border: 1px solid rgba(125, 242, 184, 0.35);
+  color: #7df2b8;
+}
+
+html[data-theme="light"] .sale-badge {
+  background: rgba(15, 23, 42, 0.08);
+  border-color: rgba(15, 23, 42, 0.14);
+  color: #0f172a;
+}
+
+.sale-countdown {
+  color: #7df2b8;
+  font-weight: 700;
+}
+
+.sale-countdown-ended {
+  color: #ff6b6b;
+}

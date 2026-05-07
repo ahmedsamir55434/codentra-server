@@ -1,1 +1,53 @@
-[]
+[
+  {
+    "id": "1bb57151-b8e7-4045-ae9c-b538d298fe4a",
+    "roomId": "codentra-5254e664-ba64-42eb-af35-ec814313b561-e809661f-3c95-4777-995a-ac358e92fc5f-80b7c1a3-4237-40bc-accb-4477ad7c0d2c",
+    "bookingId": "aaf02947-6267-4b5f-97b4-c3834bd4f2b6",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminName": "Admin",
+    "userId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "userName": "ahmed samir",
+    "startAt": "2026-05-30T20:11:00.000Z",
+    "durationMinutes": 30,
+    "filePath": "uploads/meeting-recordings/542d97fa-76b7-41e4-bc7b-f51d6b33a8b4.webm",
+    "originalFileName": "meeting-codentra-5254e664-ba64-42eb-af35-ec814313b561-e809661f-3c95-4777-995a-ac358e92fc5f-80b7c1a3-4237-40bc-accb-4477ad7c0d2c-2026-05-03T11-40-49-133Z.webm",
+    "mimeType": "text/plain",
+    "size": 14271396,
+    "sha256": "9402113855a5338433cb5a0748d2dc523133a475bc395a75450d851f29b2b430",
+    "createdAt": "2026-05-03T11:40:49.190Z"
+  },
+  {
+    "id": "3873370e-c043-4ca3-b18e-ffdb6d253cc1",
+    "roomId": "codentra-5254e664-ba64-42eb-af35-ec814313b561-e809661f-3c95-4777-995a-ac358e92fc5f-80b7c1a3-4237-40bc-accb-4477ad7c0d2c",
+    "bookingId": "aaf02947-6267-4b5f-97b4-c3834bd4f2b6",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminName": "Admin",
+    "userId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "userName": "ahmed samir",
+    "startAt": "2026-05-30T20:11:00.000Z",
+    "durationMinutes": 30,
+    "filePath": "uploads/meeting-recordings/327673ae-7abd-4e6c-a2d0-7451b2bec3c8.webm",
+    "originalFileName": "meeting-codentra-5254e664-ba64-42eb-af35-ec814313b561-e809661f-3c95-4777-995a-ac358e92fc5f-80b7c1a3-4237-40bc-accb-4477ad7c0d2c-2026-05-03T11-47-30-514Z.webm",
+    "mimeType": "text/plain",
+    "size": 14168321,
+    "sha256": "970b1979a27d779f86646ec79167c3f0bc161dd93cfb91b8c948c11d924305e5",
+    "createdAt": "2026-05-03T11:47:30.562Z"
+  },
+  {
+    "id": "491cf729-d3e3-487d-a08e-b76a8672bf1e",
+    "roomId": "codentra-5254e664-ba64-42eb-af35-ec814313b561-e809661f-3c95-4777-995a-ac358e92fc5f-80b7c1a3-4237-40bc-accb-4477ad7c0d2c",
+    "bookingId": "aaf02947-6267-4b5f-97b4-c3834bd4f2b6",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminName": "Admin",
+    "userId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "userName": "ahmed samir",
+    "startAt": "2026-05-30T20:11:00.000Z",
+    "durationMinutes": 30,
+    "filePath": "uploads/meeting-recordings/e6e51f74-b58c-4a2c-ae72-8f6c7d41c54c.webm",
+    "originalFileName": "meeting-codentra-5254e664-ba64-42eb-af35-ec814313b561-e809661f-3c95-4777-995a-ac358e92fc5f-80b7c1a3-4237-40bc-accb-4477ad7c0d2c-2026-05-03T11-48-16-312Z.webm",
+    "mimeType": "text/plain",
+    "size": 2287088,
+    "sha256": "3c78ae809036521495dd0cc9501c74217941fbe10667dabfd136b17af9edaa9d",
+    "createdAt": "2026-05-03T11:48:16.328Z"
+  }
+]

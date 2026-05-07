@@ -1,4 +1,144 @@
 {
-  "timeSlots": [],
-  "bookings": []
+  "timeSlots": [
+    {
+      "id": "4294dbe6-d39a-484b-a5e5-9f9274a55475",
+      "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+      "startAt": "2026-04-30T09:06:00.000Z",
+      "durationMinutes": 30,
+      "status": "booked",
+      "createdAt": "2026-04-28T14:34:41.306Z"
+    },
+    {
+      "id": "0b3e7573-7f34-4836-b18b-dbbcae00ae40",
+      "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+      "startAt": "2026-04-30T18:59:00.000Z",
+      "durationMinutes": 30,
+      "status": "booked",
+      "createdAt": "2026-04-28T15:17:02.244Z"
+    },
+    {
+      "id": "70432816-f1f3-41ed-bd92-d02a9060a1d4",
+      "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+      "startAt": "2026-04-30T20:11:00.000Z",
+      "durationMinutes": 30,
+      "status": "booked",
+      "createdAt": "2026-04-28T15:29:32.960Z"
+    },
+    {
+      "id": "2443f240-4b0c-4801-b842-0777e36afd47",
+      "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+      "startAt": "2026-05-30T09:59:00.000Z",
+      "durationMinutes": 27,
+      "status": "booked",
+      "createdAt": "2026-04-28T15:35:03.501Z"
+    },
+    {
+      "id": "f92d319e-4030-4fe5-ab65-1b4facf28b27",
+      "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+      "startAt": "2026-09-30T09:59:00.000Z",
+      "durationMinutes": 30,
+      "status": "booked",
+      "createdAt": "2026-04-28T16:00:14.117Z"
+    },
+    {
+      "id": "80b7c1a3-4237-40bc-accb-4477ad7c0d2c",
+      "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+      "startAt": "2026-05-30T20:11:00.000Z",
+      "durationMinutes": 30,
+      "status": "booked",
+      "createdAt": "2026-05-03T11:38:03.611Z"
+    }
+  ],
+  "bookings": [
+    {
+      "id": "733d6450-e177-4836-933a-e7c4d4750248",
+      "userId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+      "userName": "ahmed samir",
+      "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+      "adminName": "Admin",
+      "slotId": "4294dbe6-d39a-484b-a5e5-9f9274a55475",
+      "startAt": "2026-04-30T09:06:00.000Z",
+      "durationMinutes": 30,
+      "roomId": "codentra-5254e664-ba64-42eb-af35-ec814313b561-e809661f-3c95-4777-995a-ac358e92fc5f-4294dbe6-d39a-484b-a5e5-9f9274a55475",
+      "meetingLink": "/meet/codentra-5254e664-ba64-42eb-af35-ec814313b561-e809661f-3c95-4777-995a-ac358e92fc5f-4294dbe6-d39a-484b-a5e5-9f9274a55475",
+      "notes": null,
+      "status": "confirmed",
+      "createdAt": "2026-04-28T14:35:08.425Z"
+    },
+    {
+      "id": "111eb7f6-1c9d-4901-b030-b0208f48eeee",
+      "userId": "ff920b84-7244-44bf-a84a-b5e32752ddc4",
+      "userName": "Samir Sabry",
+      "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+      "adminName": "Admin",
+      "slotId": "0b3e7573-7f34-4836-b18b-dbbcae00ae40",
+      "startAt": "2026-04-30T18:59:00.000Z",
+      "durationMinutes": 30,
+      "roomId": "codentra-5254e664-ba64-42eb-af35-ec814313b561-ff920b84-7244-44bf-a84a-b5e32752ddc4-0b3e7573-7f34-4836-b18b-dbbcae00ae40",
+      "meetingLink": "/meet/codentra-5254e664-ba64-42eb-af35-ec814313b561-ff920b84-7244-44bf-a84a-b5e32752ddc4-0b3e7573-7f34-4836-b18b-dbbcae00ae40",
+      "notes": null,
+      "status": "confirmed",
+      "createdAt": "2026-04-28T15:25:36.603Z"
+    },
+    {
+      "id": "5689b2d0-a533-4933-a9c3-d90adff5703f",
+      "userId": "83d43a89-4e04-4edc-8482-e947c156c0e3",
+      "userName": "Samir",
+      "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+      "adminName": "Admin",
+      "slotId": "70432816-f1f3-41ed-bd92-d02a9060a1d4",
+      "startAt": "2026-04-30T20:11:00.000Z",
+      "durationMinutes": 30,
+      "roomId": "codentra-5254e664-ba64-42eb-af35-ec814313b561-83d43a89-4e04-4edc-8482-e947c156c0e3-70432816-f1f3-41ed-bd92-d02a9060a1d4",
+      "meetingLink": "/meet/codentra-5254e664-ba64-42eb-af35-ec814313b561-83d43a89-4e04-4edc-8482-e947c156c0e3-70432816-f1f3-41ed-bd92-d02a9060a1d4",
+      "notes": null,
+      "status": "confirmed",
+      "createdAt": "2026-04-28T15:29:40.741Z"
+    },
+    {
+      "id": "cd85f543-a6ec-4e04-81e0-77f0a1df4970",
+      "userId": "2324abb2-fc85-459e-b20a-c01220fae4e8",
+      "userName": "Rabab Sabry ",
+      "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+      "adminName": "Admin",
+      "slotId": "2443f240-4b0c-4801-b842-0777e36afd47",
+      "startAt": "2026-05-30T09:59:00.000Z",
+      "durationMinutes": 27,
+      "roomId": "codentra-5254e664-ba64-42eb-af35-ec814313b561-2324abb2-fc85-459e-b20a-c01220fae4e8-2443f240-4b0c-4801-b842-0777e36afd47",
+      "meetingLink": "/meet/codentra-5254e664-ba64-42eb-af35-ec814313b561-2324abb2-fc85-459e-b20a-c01220fae4e8-2443f240-4b0c-4801-b842-0777e36afd47",
+      "notes": "Hhu",
+      "status": "confirmed",
+      "createdAt": "2026-04-28T15:35:23.299Z"
+    },
+    {
+      "id": "e4a22af4-ee20-4d49-8fda-e336d34891f9",
+      "userId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+      "userName": "ahmed samir",
+      "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+      "adminName": "Admin",
+      "slotId": "f92d319e-4030-4fe5-ab65-1b4facf28b27",
+      "startAt": "2026-09-30T09:59:00.000Z",
+      "durationMinutes": 30,
+      "roomId": "codentra-5254e664-ba64-42eb-af35-ec814313b561-30f6356d-f109-439a-b18f-aa11196bcc99-f92d319e-4030-4fe5-ab65-1b4facf28b27",
+      "meetingLink": "/meet/codentra-5254e664-ba64-42eb-af35-ec814313b561-30f6356d-f109-439a-b18f-aa11196bcc99-f92d319e-4030-4fe5-ab65-1b4facf28b27",
+      "notes": null,
+      "status": "confirmed",
+      "createdAt": "2026-04-28T16:00:19.858Z"
+    },
+    {
+      "id": "aaf02947-6267-4b5f-97b4-c3834bd4f2b6",
+      "userId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+      "userName": "ahmed samir",
+      "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+      "adminName": "Admin",
+      "slotId": "80b7c1a3-4237-40bc-accb-4477ad7c0d2c",
+      "startAt": "2026-05-30T20:11:00.000Z",
+      "durationMinutes": 30,
+      "roomId": "codentra-5254e664-ba64-42eb-af35-ec814313b561-e809661f-3c95-4777-995a-ac358e92fc5f-80b7c1a3-4237-40bc-accb-4477ad7c0d2c",
+      "meetingLink": "/meet/codentra-5254e664-ba64-42eb-af35-ec814313b561-e809661f-3c95-4777-995a-ac358e92fc5f-80b7c1a3-4237-40bc-accb-4477ad7c0d2c",
+      "notes": null,
+      "status": "confirmed",
+      "createdAt": "2026-05-03T11:38:28.294Z"
+    }
+  ]
 }

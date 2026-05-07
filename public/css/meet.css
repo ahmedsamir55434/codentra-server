@@ -153,3 +153,18 @@
     width: 100%;
   }
 }
+
+.meet-status-wrap {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.meet-recording-note {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}

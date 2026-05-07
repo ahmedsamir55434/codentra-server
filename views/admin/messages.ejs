@@ -17,6 +17,7 @@
         <a href="/admin">الرئيسية</a>
         <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.projects))) { %>
           <a href="/admin/projects/new">إضافة مشروع</a>
+          <a href="/admin/sales">عروض المنتجات</a>
         <% } %>
         <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.purchases))) { %>
           <a href="/admin/purchases">المشتريات</a>
