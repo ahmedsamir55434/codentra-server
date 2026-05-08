@@ -114,10 +114,22 @@
             <div class="success-message"><%= walletCardSuccess %></div>
           <% } %>
           <p style="margin: 0 0 8px;">رقم البطاقة: <strong><%= walletCardNumber || '-' %></strong></p>
+          <p style="margin: 0 0 8px;">حالة البطاقة:
+            <% if (walletCardFrozen) { %>
+              <span style="color: #dc3545; font-weight: bold;">🚫 مجمدة</span>
+            <% } else { %>
+              <span style="color: #28a745; font-weight: bold;">✅ نشطة</span>
+            <% } %>
+          </p>
           <p style="margin: 0 0 8px;">حد البطاقة الحالي:
             <strong><%= walletCardSpendingLimit != null ? displayMoney(walletCardSpendingLimit) : 'بدون حد' %></strong>
           </p>
           <p class="wallet-card-note">أي مستخدم يمكنه طلب الدفع بهذه البطاقة، لكن كود التحقق سيظهر لك هنا في تنبيهات البطاقة. وإذا كنت أنت صاحب البطاقة وتدفع بنفسك فلن يطلب منك كود تحقق.</p>
+          <form action="/wallet-card/freeze" method="POST" style="margin: 10px 0;">
+            <button type="submit" class="btn <%= walletCardFrozen ? 'btn-success' : 'btn-danger' %>">
+              <%= walletCardFrozen ? '🔓 فك تجميد البطاقة' : '🚫 تجميد البطاقة' %>
+            </button>
+          </form>
           <form action="/wallet-card/password" method="POST" style="margin-top: 10px;">
             <div class="form-group">
               <label for="walletPassword">تعيين أو تغيير كلمة مرور البطاقة</label>

@@ -515,6 +515,10 @@ const finalizeCustomProjectPayment = ({ requestId, buyerUserId, payerUserId, ski
   const request = requests[index];
   const amount = Math.round(Number(request.quotedPrice || 0) * 100) / 100;
 
+  if (payer.walletCardFrozen) {
+    throw new Error('البطاقة مجمدة. يمكن لصاحبها فقط فك التجميد من إعدادات البطاقة');
+  }
+
   if (!(amount > 0)) throw new Error('لم يتم تحديد سعر لهذا الطلب بعد');
   if (request.paymentStatus === 'paid') throw new Error('تم دفع هذا الطلب بالفعل');
   if (!skipWalletDebit) {
@@ -779,7 +783,7 @@ const isPaymentAttemptExpired = (attempt) => {
 const findUserByWalletCardNumber = ({ users, walletCardNumber }) => {
   const normalized = normalizeWalletCardNumber(walletCardNumber);
   if (!normalized) return null;
-  return users.find(u => u && u.role === 'user' && normalizeWalletCardNumber(u.walletCardNumber) === normalized) || null;
+  return users.find(u => u && u.role === 'user' && normalizeWalletCardNumber(u.walletCardNumber) === normalized && !u.walletCardFrozen) || null;
 };
 
 // Email configuration - supports both SMTP and Resend API
@@ -2620,6 +2624,7 @@ const buildSessionUser = (user) => {
     walletCardNumberMasked: user.role === 'user' ? maskWalletCardNumber(user.walletCardNumber) : null,
     hasWalletPaymentPassword: user.role === 'user' ? Boolean(user.walletPaymentPasswordHash) : false,
     walletCardSpendingLimit: user.role === 'user' ? sanitizeWalletCardSpendingLimit(user.walletCardSpendingLimit) : null,
+    walletCardFrozen: user.role === 'user' ? Boolean(user.walletCardFrozen) : false,
     loyaltyPoints: user.role === 'user' ? normalizeLoyaltyPoints(user.loyaltyPoints) : 0,
     unreadNotificationsCount: user.role === 'user' ? getUnreadNotificationCount(user) : 0,
     subscription: activeSubscription ? {
@@ -6969,6 +6974,10 @@ const finalizeSingleProjectPurchase = ({ buyerUserId, payerUserId, projectId, co
   if (ensureUserPaymentProfile({ user: buyer, users })) shouldSaveUsers = true;
   if (ensureUserPaymentProfile({ user: payer, users })) shouldSaveUsers = true;
 
+  if (payer.walletCardFrozen) {
+    throw new Error('البطاقة مجمدة. يمكن لصاحبها فقط فك التجميد من إعدادات البطاقة');
+  }
+
   const projects = db.projects();
   const project = projects.find(p => p && p.id === projectId);
   if (!project) throw new Error('المشروع غير موجود');
@@ -7118,6 +7127,10 @@ const finalizeCartPurchase = ({ buyerUserId, payerUserId, projectIds, couponCode
   if (ensureUserPaymentProfile({ user: buyer, users })) shouldSaveUsers = true;
   if (ensureUserPaymentProfile({ user: payer, users })) shouldSaveUsers = true;
 
+  if (payer.walletCardFrozen) {
+    throw new Error('البطاقة مجمدة. يمكن لصاحبها فقط فك التجميد من إعدادات البطاقة');
+  }
+
   const normalizedProjectIds = Array.isArray(projectIds) ? projectIds.filter(Boolean) : [];
   if (!normalizedProjectIds.length) throw new Error('لا توجد عناصر لإتمام الدفع');
 
@@ -7265,6 +7278,9 @@ app.post('/purchase/:id', requireAuth, async (req, res) => {
     const payer = findUserByWalletCardNumber({ users, walletCardNumber: enteredCardNumber });
     if (!payer) {
       return res.redirect(`/project/${project.id}?couponError=${encodeURIComponent('رقم بطاقة المحفظة غير صحيح')}`);
+    }
+    if (payer.walletCardFrozen) {
+      return res.redirect(`/project/${project.id}?couponError=${encodeURIComponent('البطاقة مجمدة. يمكن لصاحبها فقط فك التجميد من إعدادات البطاقة')}`);
     }
     if (ensureUserPaymentProfile({ user: payer, users })) {
       db.saveUsers(users);
@@ -7573,6 +7589,9 @@ app.post('/cart/checkout', requireAuth, async (req, res) => {
     if (!payer) {
       return res.redirect('/cart?error=' + encodeURIComponent('رقم بطاقة المحفظة غير صحيح'));
     }
+    if (payer.walletCardFrozen) {
+      return res.redirect('/cart?error=' + encodeURIComponent('البطاقة مجمدة. يمكن لصاحبها فقط فك التجميد من إعدادات البطاقة'));
+    }
     if (ensureUserPaymentProfile({ user: payer, users })) {
       db.saveUsers(users);
     }
@@ -7703,6 +7722,9 @@ app.post('/payment/verify/:attemptId', requireAuth, (req, res) => {
   if (!payer) {
     return res.redirect('/cart?error=' + encodeURIComponent('صاحب البطاقة غير موجود'));
   }
+  if (payer.walletCardFrozen) {
+    return res.redirect('/cart?error=' + encodeURIComponent('البطاقة مجمدة. يمكن لصاحبها فقط فك التجميد من إعدادات البطاقة'));
+  }
 
   if (Number(attempt.amount || 0) > HIGH_VALUE_PAYMENT_THRESHOLD) {
     const paymentPassword = String(req.body.paymentPassword || '');
@@ -7807,6 +7829,7 @@ app.get('/my-purchases', requireAuth, (req, res) => {
     walletCardSpendingLimit: currentUser ? sanitizeWalletCardSpendingLimit(currentUser.walletCardSpendingLimit) : null,
     walletCardNotifications: currentUser && Array.isArray(currentUser.walletCardNotifications) ? currentUser.walletCardNotifications.slice(0, 12) : [],
     walletCardUsageLog: currentUser && Array.isArray(currentUser.walletCardUsageLog) ? currentUser.walletCardUsageLog.slice(0, 20) : [],
+    walletCardFrozen: currentUser ? Boolean(currentUser.walletCardFrozen) : false,
     walletTopups,
     atlosEnabled: isAtlosConfigured(),
     incomingApprovals,
@@ -7979,6 +8002,10 @@ app.post('/custom-project/:id/pay', requireAuth, async (req, res) => {
     return res.redirect(`/custom-project/${requestItem.id}?error=${encodeURIComponent('رقم بطاقة المحفظة غير صحيح')}`);
   }
 
+  if (payer.walletCardFrozen) {
+    return res.redirect(`/custom-project/${requestItem.id}?error=${encodeURIComponent('البطاقة مجمدة. يمكن لصاحبها فقط فك التجميد من إعدادات البطاقة')}`);
+  }
+
   if (Number(payer.walletBalance || 0) < amount) {
     return res.redirect(`/custom-project/${requestItem.id}?error=${encodeURIComponent('رصيد البطاقة غير كافٍ')}`);
   }
@@ -8051,6 +8078,10 @@ app.post('/custom-project/:id/pay-wallet', requireAuth, (req, res) => {
   if (buyerIndex === -1) return res.redirect('/');
 
   const buyer = users[buyerIndex];
+  if (buyer.walletCardFrozen) {
+    return res.redirect(`/custom-project/${requestItem.id}?error=${encodeURIComponent('البطاقة مجمدة. يمكن لصاحبها فقط فك التجميد من إعدادات البطاقة')}`);
+  }
+
   const currentBalance = Number(buyer.walletBalance || 0);
   if (currentBalance < amount) {
     return res.redirect(`/custom-project/${requestItem.id}?error=${encodeURIComponent('رصيد المحفظة غير كافٍ')}`);
@@ -8349,6 +8380,24 @@ app.post('/wallet-card/password', requireAuth, (req, res) => {
   req.session.user = buildSessionUser(users[userIndex]);
 
   return res.redirect(`/my-purchases?walletCardSuccess=${encodeURIComponent('تم تحديث إعدادات البطاقة بنجاح')}`);
+});
+
+app.post('/wallet-card/freeze', requireAuth, (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
+
+  const users = db.users();
+  const userIndex = users.findIndex(u => u && u.id === req.session.user.id && u.role === 'user');
+  if (userIndex === -1) return res.status(404).send('User not found');
+
+  const nextFrozen = !users[userIndex].walletCardFrozen;
+  users[userIndex].walletCardFrozen = nextFrozen;
+  db.saveUsers(users);
+  req.session.user = buildSessionUser(users[userIndex]);
+
+  const message = nextFrozen
+    ? 'تم تجميد البطاقة بنجاح. لا يمكن لأحد استخدامها الآن.'
+    : 'تم فك تجميد البطاقة بنجاح. يمكن استخدامها الآن.';
+  return res.redirect(`/my-purchases?walletCardSuccess=${encodeURIComponent(message)}`);
 });
 
 // Protected download - only approved purchases can download
@@ -10686,6 +10735,9 @@ app.post('/codentra-presentations/subscribe/:planId', requireAuth, (req, res) =>
     if (!payer) {
       return res.redirect('/codentra-presentations?error=' + encodeURIComponent('رقم بطاقة المحفظة غير صحيح'));
     }
+    if (payer.walletCardFrozen) {
+      return res.redirect('/codentra-presentations?error=' + encodeURIComponent('البطاقة مجمدة. يمكن لصاحبها فقط فك التجميد من إعدادات البطاقة'));
+    }
 
     if (ensureUserPaymentProfile({ user: payer, users })) {
       shouldSaveUsers = true;
@@ -10785,6 +10837,9 @@ app.post('/codentra-presentations/payment/verify/:attemptId', requireAuth, (req,
   }
   if (ensureUserPaymentProfile({ user: payer, users })) {
     users[payerIndex] = payer;
+  }
+  if (payer.walletCardFrozen) {
+    return res.redirect('/codentra-presentations?error=' + encodeURIComponent('البطاقة مجمدة. يمكن لصاحبها فقط فك التجميد من إعدادات البطاقة'));
   }
 
   const plan = getPresentationPlanById({ planId: attempt.planId });
