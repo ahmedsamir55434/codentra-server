@@ -8181,17 +8181,24 @@ app.get('/wallet/topup/return', requireAuth, (req, res) => {
     return res.redirect('/my-purchases?paymentSuccess=' + encodeURIComponent('تم شحن الرصيد بنجاح'));
   }
 
+  const isCanceled = canceled === 'true' || canceled === '1' || canceled === 'yes' || canceled === 'y' || status === 'cancel' || status === 'canceled' || status === 'cancelled';
+
+  if (isCanceled) {
+    finalizeWalletTopup({ topupId: topup.id, gatewayTransactionId: transactionId, status: 'failed', failureReason: 'CANCELED_BY_USER' });
+    return res.redirect('/my-purchases?paymentError=' + encodeURIComponent('تم إلغاء عملية الدفع. لم يتم خصم أي مبلغ.'));
+  }
+
   if (status === 'pending' || pending === 'true') {
     return res.redirect('/my-purchases?paymentSuccess=' + encodeURIComponent('تم فتح صفحة الدفع، وسيتم تحديث الرصيد بعد تأكيد Atlos'));
   }
 
-  const failureReason = canceled === 'true' || status === 'cancel'
+  const failureReason = status === 'cancel' || status === 'canceled' || status === 'cancelled'
     ? 'CANCELED_BY_USER'
     : 'RETURN_MARKED_FAILED';
 
   finalizeWalletTopup({ topupId: topup.id, gatewayTransactionId: transactionId, status: 'failed', failureReason });
 
-  const message = canceled === 'true' || status === 'cancel'
+  const message = isCanceled
     ? 'تم إلغاء عملية الدفع. لم يتم خصم أي مبلغ.'
     : 'فشلت عملية الدفع. حالة العملية: عملية غير ناجحة.';
 
