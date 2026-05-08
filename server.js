@@ -1249,10 +1249,10 @@ const isAtlosConfigured = () => Boolean(ATLOS_API_URL && ATLOS_MERCHANT_ID && AT
 
 const normalizeWalletTopupUsdAmount = (value) => {
   const amount = roundCurrencyAmount(value);
-  if (!Number.isFinite(amount) || amount < 1) return null;
+  if (!Number.isFinite(amount) || amount <= 0) return null;
   if (amount > 10000) return null;
   const egpAmount = convertUsdToEgp(amount);
-  if (!Number.isFinite(egpAmount) || egpAmount < 10) return null;
+  if (!Number.isFinite(egpAmount) || egpAmount <= 0) return null;
   return amount;
 };
 
@@ -6652,7 +6652,7 @@ app.get('/api/wallet/topups', requireApiUserAuth, (req, res) => {
 app.post('/api/wallet/topup/start', requireApiUserAuth, async (req, res) => {
   const amountUsd = normalizeWalletTopupUsdAmount(req.body.amount);
   if (!amountUsd) {
-    return res.status(400).json({ error: 'مبلغ الشحن يجب أن يكون 1 دولار أو أكثر' });
+    return res.status(400).json({ error: 'مبلغ الشحن يجب أن يكون أكبر من صفر' });
   }
 
   const users = db.users();
@@ -8117,7 +8117,7 @@ app.post('/wallet/topup/start', requireAuth, async (req, res) => {
 
   const amountUsd = normalizeWalletTopupUsdAmount(req.body.amount);
   if (!amountUsd) {
-    return res.redirect('/my-purchases?paymentError=' + encodeURIComponent('مبلغ الشحن يجب أن يكون 1 دولار أو أكثر'));
+    return res.redirect('/my-purchases?paymentError=' + encodeURIComponent('مبلغ الشحن يجب أن يكون أكبر من صفر'));
   }
 
   const users = db.users();
