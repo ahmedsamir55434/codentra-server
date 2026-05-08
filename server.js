@@ -1309,7 +1309,8 @@ const createAtlosCheckout = async ({ topup, user }) => {
     UserEmail: user.email || null,
     Memo: `Codentra wallet top-up for ${user.email || user.id}`,
     SendEmail: false,
-    PostbackUrl: `${APP_BASE_URL}/webhooks/atlos?topupId=${encodeURIComponent(topup.id)}`
+    PostbackUrl: `${APP_BASE_URL}/webhooks/atlos?topupId=${encodeURIComponent(topup.id)}`,
+    ReturnUrl: `${APP_BASE_URL}/wallet/topup/return?reference=${encodeURIComponent(topup.reference)}`
   };
 
   const response = await fetch(`${ATLOS_API_URL}/Invoice/Create`, {
@@ -8159,17 +8160,24 @@ app.post('/wallet/topup/start', requireAuth, async (req, res) => {
 app.get('/wallet/topup/return', requireAuth, (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
 
-  const topupId = String(req.query.topupId || '').trim();
+  const reference = String(req.query.reference || req.query.OrderId || req.query.orderId || '').trim();
   const status = String(req.query.status || req.query.success || '').toLowerCase();
+  const canceled = String(req.query.cancel || req.query.canceled || req.query.cancelled || '').toLowerCase();
   const pending = String(req.query.pending || '').toLowerCase();
   const transactionId = String(req.query.id || req.query.transaction_id || req.query.payment_id || '').trim() || null;
 
-  if (!topupId) {
+  if (!reference) {
     return res.redirect('/my-purchases?paymentError=' + encodeURIComponent('تعذر تحديد عملية الشحن'));
   }
 
+  const topups = db.walletTopups();
+  const topup = topups.find((item) => item && item.reference === reference);
+  if (!topup) {
+    return res.redirect('/my-purchases?paymentError=' + encodeURIComponent('عملية الشحن غير موجودة'));
+  }
+
   if (status === 'success' || status === 'paid' || status === 'true' || req.query.success === true) {
-    finalizeWalletTopup({ topupId, gatewayTransactionId: transactionId, status: 'paid' });
+    finalizeWalletTopup({ topupId: topup.id, gatewayTransactionId: transactionId, status: 'paid' });
     return res.redirect('/my-purchases?paymentSuccess=' + encodeURIComponent('تم شحن الرصيد بنجاح'));
   }
 
@@ -8177,8 +8185,17 @@ app.get('/wallet/topup/return', requireAuth, (req, res) => {
     return res.redirect('/my-purchases?paymentSuccess=' + encodeURIComponent('تم فتح صفحة الدفع، وسيتم تحديث الرصيد بعد تأكيد Atlos'));
   }
 
-  finalizeWalletTopup({ topupId, gatewayTransactionId: transactionId, status: 'failed', failureReason: 'RETURN_MARKED_FAILED' });
-  return res.redirect('/my-purchases?paymentError=' + encodeURIComponent('لم تكتمل عملية شحن الرصيد'));
+  const failureReason = canceled === 'true' || status === 'cancel'
+    ? 'CANCELED_BY_USER'
+    : 'RETURN_MARKED_FAILED';
+
+  finalizeWalletTopup({ topupId: topup.id, gatewayTransactionId: transactionId, status: 'failed', failureReason });
+
+  const message = canceled === 'true' || status === 'cancel'
+    ? 'تم إلغاء عملية الدفع. لم يتم خصم أي مبلغ.'
+    : 'فشلت عملية الدفع. حالة العملية: عملية غير ناجحة.';
+
+  return res.redirect('/my-purchases?paymentError=' + encodeURIComponent(message));
 });
 
 app.post('/webhooks/atlos', (req, res) => {

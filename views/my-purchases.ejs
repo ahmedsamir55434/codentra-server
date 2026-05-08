@@ -85,12 +85,12 @@
                 <div class="wallet-activity-head">
                   <strong>شحن رصيد <%= formatUsdAmount(topup.amountUsd || convertEgpToUsd(topup.amount || 0)) %></strong>
                   <span class="status-badge <%= topup.status === 'paid' ? 'approved' : topup.status === 'failed' ? 'rejected' : 'pending' %>">
-                    <%= topup.status === 'paid' ? 'تم الدفع' : topup.status === 'failed' ? 'فشل الدفع' : 'بانتظار الدفع' %>
+                    <%= topup.status === 'paid' ? 'تم الدفع' : topup.status === 'failed' ? 'عملية غير ناجحة' : 'بانتظار الدفع' %>
                   </span>
                 </div>
                 <div class="wallet-activity-meta">
                   <span>المرجع: <strong><%= topup.reference %></strong></span>
-                  <span>الحالة: <strong><%= topup.status === 'paid' ? 'تم الدفع' : topup.status === 'failed' ? 'فشل الدفع' : 'بانتظار الدفع' %></strong></span>
+                  <span>الحالة: <strong><%= topup.status === 'paid' ? 'تم الدفع' : topup.status === 'failed' ? 'عملية غير ناجحة' : 'بانتظار الدفع' %></strong></span>
                   <span><%= new Date(topup.createdAt).toLocaleString('ar-EG') %></span>
                 </div>
                 <% if (topup.status !== 'paid' && topup.checkoutUrl) { %>
