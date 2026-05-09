@@ -8,7 +8,6 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
-const ejs = require('ejs');
 const crypto = require('crypto');
 const os = require('os');
 const { AsyncLocalStorage } = require('async_hooks');
@@ -43,134 +42,6 @@ const ATLOS_API_SECRET = String(process.env.ATLOS_API_SECRET || '').trim();
 const ATLOS_WEBHOOK_SECRET = String(process.env.ATLOS_WEBHOOK_SECRET || '').trim();
 const FX_API_BASE_URL = String(process.env.FX_API_BASE_URL || 'https://api.frankfurter.dev/v1').trim().replace(/\/+$/, '');
 const FALLBACK_EGP_TO_USD_RATE = Number(process.env.FALLBACK_EGP_TO_USD_RATE || 0.02);
-const DEEPL_API_KEY = String(process.env.DEEPL_API_KEY || '').trim();
-const DEEPL_API_URL = String(process.env.DEEPL_API_URL || 'https://api-free.deepl.com/v2/translate').trim().replace(/\/+$/, '');
-
-const DEFAULT_SITE_LANG = 'ar';
-const LANG_COOKIE_NAME = 'codentra_lang';
-
-const UI_TRANSLATIONS = {
-  ar: {
-    projects: 'المشاريع',
-    community: 'Community',
-    myPurchases: 'مشترياتي',
-    notifications: 'الإشعارات',
-    appointments: 'الجلسات',
-    more: 'المزيد',
-    theme: 'الوضع',
-    hello: 'مرحباً',
-    logout: 'خروج',
-    login: 'دخول',
-    register: 'حساب جديد',
-    market: 'السوق',
-    availableProjects: 'المشاريع المتاحة',
-    browseProjects: 'تصفح كل المشاريع الجاهزة واختر المشروع الأنسب لاحتياجك الحالي.',
-    continue: 'متابعة',
-    projectDescription: 'وصف المشروع',
-    technologiesUsed: 'التقنيات المستخدمة',
-    imagesGallery: 'معرض الصور',
-    reviewsAndComments: 'التقييمات والتعليقات',
-    languageArabic: 'عربي',
-    languageEnglish: 'English'
-  },
-  en: {
-    projects: 'Projects',
-    community: 'Community',
-    myPurchases: 'My purchases',
-    notifications: 'Notifications',
-    appointments: 'Sessions',
-    more: 'More',
-    theme: 'Theme',
-    hello: 'Hello',
-    logout: 'Logout',
-    login: 'Login',
-    register: 'Sign up',
-    market: 'Marketplace',
-    availableProjects: 'Available projects',
-    browseProjects: 'Browse ready-made projects and pick the best match for your needs.',
-    continue: 'View',
-    projectDescription: 'Project description',
-    technologiesUsed: 'Technologies used',
-    imagesGallery: 'Gallery',
-    reviewsAndComments: 'Reviews',
-    languageArabic: 'Arabic',
-    languageEnglish: 'English'
-  }
-};
-
-const normalizeSiteLang = (lang) => {
-  const normalized = String(lang || '').toLowerCase().trim();
-  if (normalized === 'en' || normalized === 'english') return 'en';
-  if (normalized === 'ar' || normalized === 'arabic') return 'ar';
-  return null;
-};
-
-const getSiteLangFromReq = (req) => {
-  const queryLang = normalizeSiteLang(req.query && req.query.lang);
-  if (queryLang) return queryLang;
-  const cookies = parseCookieHeader(req.headers.cookie);
-  const cookieLang = normalizeSiteLang(cookies[LANG_COOKIE_NAME]);
-  return cookieLang || DEFAULT_SITE_LANG;
-};
-
-const deeplTranslateTexts = async ({ texts, targetLang }) => {
-  if (!DEEPL_API_KEY) return null;
-  if (!Array.isArray(texts) || texts.length === 0) return [];
-
-  const body = new URLSearchParams();
-  texts.forEach((text) => {
-    body.append('text', String(text || ''));
-  });
-  body.append('target_lang', targetLang === 'en' ? 'EN' : 'AR');
-  body.append('preserve_formatting', '1');
-
-  const response = await fetch(DEEPL_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: body.toString()
-  });
-
-  const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(data && data.message ? data.message : `DEEPL_ERROR:${response.status}`);
-  }
-
-  const translations = data && Array.isArray(data.translations) ? data.translations : [];
-  return translations.map((item) => (item && item.text ? item.text : ''));
-};
-
-const ensureProjectDescriptionTranslation = async ({ project, targetLang }) => {
-  if (!project || !targetLang) return project;
-  if (targetLang !== 'en') return project;
-  if (!project.description) return project;
-
-  if (project.descriptionEn) {
-    return { ...project, descriptionDisplay: project.descriptionEn };
-  }
-
-  if (!DEEPL_API_KEY) {
-    return { ...project, descriptionDisplay: project.description };
-  }
-
-  try {
-    const translated = await deeplTranslateTexts({ texts: [project.description], targetLang: 'en' });
-    const text = translated && translated[0] ? translated[0] : project.description;
-
-    const projects = db.projects();
-    const index = projects.findIndex((item) => item && item.id === project.id);
-    if (index !== -1) {
-      projects[index] = { ...projects[index], descriptionEn: text };
-      db.saveProjects(projects);
-    }
-
-    return { ...project, descriptionDisplay: text };
-  } catch (error) {
-    return { ...project, descriptionDisplay: project.description };
-  }
-};
 
 // CORS middleware
 app.use((req, res, next) => {
@@ -1862,6 +1733,7 @@ const STORAGE_FILE_DEFINITIONS = {
   invoices: { fileName: 'invoices.json', createDefault: () => [] },
   appointments: { fileName: 'appointments.json', createDefault: createDefaultAppointmentsState },
   meetingRecordings: { fileName: 'meeting-recordings.json', createDefault: () => [] },
+  cartReminders: { fileName: 'cart-reminders.json', createDefault: () => [] },
   subscriptionPlans: { fileName: 'subscription-plans.json', createDefault: () => [] },
   subscriptions: { fileName: 'subscriptions.json', createDefault: () => [] },
   subscriptionPayments: { fileName: 'subscription-payments.json', createDefault: () => [] },
@@ -1898,6 +1770,7 @@ const STORAGE_READ_ACCESSORS = {
   invoices: 'invoices',
   appointments: 'appointments',
   meetingRecordings: 'meetingRecordings',
+  cartReminders: 'cartReminders',
   subscriptionPlans: 'subscriptionPlans',
   subscriptions: 'subscriptions',
   subscriptionPayments: 'subscriptionPayments',
@@ -1930,6 +1803,7 @@ const STORAGE_WRITE_ACCESSORS = {
   saveInvoices: 'invoices',
   saveAppointments: 'appointments',
   saveMeetingRecordings: 'meetingRecordings',
+  saveCartReminders: 'cartReminders',
   saveSubscriptionPlans: 'subscriptionPlans',
   saveSubscriptions: 'subscriptions',
   saveSubscriptionPayments: 'subscriptionPayments',
@@ -2501,11 +2375,106 @@ const getOrCreateCartForUser = ({ userId }) => {
   if (idx !== -1) {
     const cart = carts[idx];
     if (!cart.items || !Array.isArray(cart.items)) cart.items = [];
+    if (!cart.updatedAt) cart.updatedAt = new Date().toISOString();
     return { carts, cart, cartIndex: idx };
   }
   const cart = { userId, items: [], updatedAt: new Date().toISOString() };
   carts.push(cart);
   return { carts, cart, cartIndex: carts.length - 1 };
+};
+
+const parseEnvInt = (value, fallback) => {
+  const parsed = Number.parseInt(String(value || ''), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const startAbandonedCartRecoveryJob = () => {
+  // Note: Vercel serverless functions are not suitable for long-running intervals.
+  if (process.env.VERCEL) return;
+
+  const delayMinutes = parseEnvInt(process.env.ABANDONED_CART_DELAY_MINUTES, 60);
+  const cooldownHours = parseEnvInt(process.env.ABANDONED_CART_COOLDOWN_HOURS, 24);
+  const scanMinutes = parseEnvInt(process.env.ABANDONED_CART_SCAN_MINUTES, 10);
+
+  const delayMs = delayMinutes * 60 * 1000;
+  const cooldownMs = cooldownHours * 60 * 60 * 1000;
+  const scanMs = scanMinutes * 60 * 1000;
+
+  const scanOnce = () => {
+    try {
+      const carts = db.carts();
+      const users = db.users();
+      const reminders = db.cartReminders();
+
+      const usersById = new Map(users.filter(Boolean).map((u) => [u.id, u]));
+      const now = Date.now();
+      let remindersChanged = false;
+      let usersChanged = false;
+
+      carts.forEach((cart) => {
+        if (!cart || !cart.userId) return;
+        const items = Array.isArray(cart.items) ? cart.items : [];
+        if (items.length === 0) return;
+
+        const updatedAtMs = cart.updatedAt ? Date.parse(cart.updatedAt) : NaN;
+        if (!Number.isFinite(updatedAtMs)) return;
+        if (now - updatedAtMs < delayMs) return;
+
+        const user = usersById.get(cart.userId);
+        if (!user || user.role !== 'user') return;
+
+        const existing = reminders
+          .filter((r) => r && r.userId === cart.userId)
+          .sort((a, b) => Date.parse(String(b.sentAt || 0)) - Date.parse(String(a.sentAt || 0)))[0] || null;
+
+        if (existing) {
+          const lastSentMs = existing.sentAt ? Date.parse(existing.sentAt) : 0;
+          if (Number.isFinite(lastSentMs) && now - lastSentMs < cooldownMs) return;
+          // If we already reminded for the same cart version (same updatedAt), skip.
+          if (existing.cartUpdatedAt && existing.cartUpdatedAt === cart.updatedAt) return;
+        }
+
+        const count = items.length;
+        const title = 'سلتك ما زالت بانتظارك';
+        const message = `لديك ${count} ${count === 1 ? 'عنصر' : 'عناصر'} في السلة. أكمل الشراء الآن.`;
+
+        const entry = addUserNotificationEntry({
+          targetUser: user,
+          type: 'abandoned-cart',
+          title,
+          message,
+          metadata: {
+            url: '/cart',
+            itemCount: count
+          }
+        });
+
+        if (entry) {
+          usersChanged = true;
+          reminders.push({
+            id: uuidv4(),
+            userId: cart.userId,
+            cartUpdatedAt: cart.updatedAt,
+            itemCount: count,
+            sentAt: new Date().toISOString()
+          });
+          remindersChanged = true;
+        }
+      });
+
+      if (usersChanged) db.saveUsers(users);
+      if (remindersChanged) db.saveCartReminders(reminders);
+    } catch (error) {
+      console.error('Abandoned cart recovery scan failed:', error && error.message ? error.message : error);
+    }
+  };
+
+  // Initial scan shortly after boot, then periodically.
+  setTimeout(scanOnce, 15 * 1000);
+  setInterval(scanOnce, scanMs);
+  console.log(
+    `Abandoned cart recovery enabled (delay=${delayMinutes}m, cooldown=${cooldownHours}h, scan=${scanMinutes}m)`
+  );
 };
 
 const summarizeCart = ({ cart, couponCode, sessionUser }) => {
@@ -4257,45 +4226,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use((req, res, next) => {
-  const lang = getSiteLangFromReq(req);
-  const dir = lang === 'en' ? 'ltr' : 'rtl';
-
-  const uiRuntimeTranslationCache = global.__codentraUiTranslationCache || new Map();
-  global.__codentraUiTranslationCache = uiRuntimeTranslationCache;
-
-  req.siteLang = lang;
-  res.locals.lang = lang;
-  res.locals.dir = dir;
-  res.locals.siteLang = lang;
-  res.locals.siteDir = dir;
-  res.locals.t = (key) => {
-    const dict = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS[DEFAULT_SITE_LANG] || {};
-    const fallback = UI_TRANSLATIONS[DEFAULT_SITE_LANG] || {};
-    return dict[key] || fallback[key] || key;
-  };
-
-  res.locals.tr = async (text) => {
-    const raw = String(text || '');
-    if (!raw) return raw;
-    if (lang !== 'en') return raw;
-    if (!DEEPL_API_KEY) return raw;
-
-    if (uiRuntimeTranslationCache.has(raw)) return uiRuntimeTranslationCache.get(raw);
-    try {
-      const translated = await deeplTranslateTexts({ texts: [raw], targetLang: 'en' });
-      const value = translated && translated[0] ? translated[0] : raw;
-      uiRuntimeTranslationCache.set(raw, value);
-      return value;
-    } catch (error) {
-      uiRuntimeTranslationCache.set(raw, raw);
-      return raw;
-    }
-  };
-
-  next();
-});
-
 app.use(async (req, res, next) => {
   try {
     const currencyRate = await fetchEgpToUsdRate();
@@ -4389,9 +4319,6 @@ app.use((req, res, next) => {
 });
 
 // View engine
-app.engine('ejs', (filePath, data, callback) => {
-  return ejs.renderFile(filePath, data, { async: true }, callback);
-});
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -4612,83 +4539,13 @@ const requireAdminPermission = (permission) => {
 
 // Routes
 
-app.get('/lang/:lang', (req, res) => {
-  const nextLang = normalizeSiteLang(req.params.lang) || DEFAULT_SITE_LANG;
-  res.cookie(LANG_COOKIE_NAME, nextLang, {
-    maxAge: 1000 * 60 * 60 * 24 * 365,
-    sameSite: 'lax',
-    secure: IS_VERCEL,
-    path: '/'
-  });
-  const back = req.get('referer') || '/';
-  return res.redirect(back);
-});
-
 // Home - Projects listing
-app.get('/', async (req, res) => {
-  const siteLang = req.siteLang || DEFAULT_SITE_LANG;
-  const projectsRaw = db.projects()
+app.get('/', (req, res) => {
+  const projects = db.projects()
     .filter(p => isProjectVisibleToUser({ project: p, sessionUser: req.session.user }))
     .map(decorateProjectPricing);
-
-  let projects = projectsRaw;
-
-  if (siteLang === 'en') {
-    const toTranslate = [];
-    const translateIndexes = [];
-    projects.forEach((project, idx) => {
-      if (!project) return;
-      if (project.descriptionEn) return;
-      if (!project.description) return;
-      toTranslate.push(project.description);
-      translateIndexes.push(idx);
-    });
-
-    if (toTranslate.length && DEEPL_API_KEY) {
-      try {
-        const translated = await deeplTranslateTexts({ texts: toTranslate, targetLang: 'en' });
-        if (Array.isArray(translated) && translated.length === toTranslate.length) {
-          const storedProjects = db.projects();
-          translateIndexes.forEach((originalIndex, batchIndex) => {
-            const originalProject = projects[originalIndex];
-            const translatedText = translated[batchIndex] || originalProject.description;
-            projects[originalIndex] = { ...originalProject, descriptionDisplay: translatedText };
-
-            const storeIndex = storedProjects.findIndex((item) => item && originalProject && item.id === originalProject.id);
-            if (storeIndex !== -1) {
-              storedProjects[storeIndex] = { ...storedProjects[storeIndex], descriptionEn: translatedText };
-            }
-          });
-          db.saveProjects(storedProjects);
-        }
-      } catch (error) {
-        // ignore translation errors
-      }
-    }
-  }
-
-  projects = projects.map((project) => {
-    if (!project) return project;
-    return {
-      ...project,
-      descriptionDisplay: siteLang === 'en'
-        ? (project.descriptionDisplay || project.descriptionEn || project.description)
-        : project.description
-    };
-  });
-
   const recentProjects = getRecentlyViewedProjects({ req, availableProjects: projects })
-    .map(decorateProjectPricing)
-    .map((project) => {
-      if (!project) return project;
-      return {
-        ...project,
-        descriptionDisplay: siteLang === 'en'
-          ? (project.descriptionDisplay || project.descriptionEn || project.description)
-          : project.description
-      };
-    });
-
+    .map(decorateProjectPricing);
   res.render('index', { projects, recentProjects, user: req.session.user });
 });
 
@@ -7098,17 +6955,10 @@ app.get('/api/presentations/decks/:deckId/download.pptx', async (req, res, next)
 });
 
 // Project detail
-app.get('/project/:id', async (req, res) => {
+app.get('/project/:id', (req, res) => {
   const projects = db.projects();
-  let project = decorateProjectPricing(projects.find(p => p.id === req.params.id));
+  const project = decorateProjectPricing(projects.find(p => p.id === req.params.id));
   if (!project) return res.status(404).send('Project not found');
-
-  const siteLang = req.siteLang || DEFAULT_SITE_LANG;
-  if (siteLang === 'en') {
-    project = await ensureProjectDescriptionTranslation({ project, targetLang: 'en' });
-  } else {
-    project = { ...project, descriptionDisplay: project.description };
-  }
 
   if (!isProjectVisibleToUser({ project, sessionUser: req.session.user })) {
     return res.status(403).send('Not allowed');
@@ -7618,8 +7468,11 @@ app.get('/cart', requireAuth, (req, res) => {
   }
 
   const { carts, cart, cartIndex } = getOrCreateCartForUser({ userId: req.session.user.id });
-  carts[cartIndex] = { ...cart, updatedAt: new Date().toISOString() };
-  db.saveCarts(carts);
+  // Do NOT bump updatedAt on mere page view; updatedAt is used to detect abandoned carts.
+  if (!cart.updatedAt) {
+    carts[cartIndex] = { ...cart, updatedAt: new Date().toISOString() };
+    db.saveCarts(carts);
+  }
 
   const couponCode = (req.query.couponCode || '').toString();
   const summary = summarizeCart({ cart, couponCode, sessionUser: req.session.user });
@@ -11512,6 +11365,7 @@ io.on('connection', (socket) => {
 // Vercel auto-detects Express apps from supported entry files like server.js.
 // Keep the local port listener for normal development, but export the app for Vercel.
 if (!process.env.VERCEL) {
+  startAbandonedCartRecoveryJob();
   httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Codentra running on http://localhost:${PORT}`);
     console.log(`Network access: http://192.168.8.110:${PORT}`);
