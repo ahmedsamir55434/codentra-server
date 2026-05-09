@@ -8,6 +8,7 @@ const nodemailer = require('nodemailer');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
+const ejs = require('ejs');
 const crypto = require('crypto');
 const os = require('os');
 const { AsyncLocalStorage } = require('async_hooks');
@@ -4260,6 +4261,9 @@ app.use((req, res, next) => {
   const lang = getSiteLangFromReq(req);
   const dir = lang === 'en' ? 'ltr' : 'rtl';
 
+  const uiRuntimeTranslationCache = global.__codentraUiTranslationCache || new Map();
+  global.__codentraUiTranslationCache = uiRuntimeTranslationCache;
+
   req.siteLang = lang;
   res.locals.lang = lang;
   res.locals.dir = dir;
@@ -4269,6 +4273,24 @@ app.use((req, res, next) => {
     const dict = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS[DEFAULT_SITE_LANG] || {};
     const fallback = UI_TRANSLATIONS[DEFAULT_SITE_LANG] || {};
     return dict[key] || fallback[key] || key;
+  };
+
+  res.locals.tr = async (text) => {
+    const raw = String(text || '');
+    if (!raw) return raw;
+    if (lang !== 'en') return raw;
+    if (!DEEPL_API_KEY) return raw;
+
+    if (uiRuntimeTranslationCache.has(raw)) return uiRuntimeTranslationCache.get(raw);
+    try {
+      const translated = await deeplTranslateTexts({ texts: [raw], targetLang: 'en' });
+      const value = translated && translated[0] ? translated[0] : raw;
+      uiRuntimeTranslationCache.set(raw, value);
+      return value;
+    } catch (error) {
+      uiRuntimeTranslationCache.set(raw, raw);
+      return raw;
+    }
   };
 
   next();
@@ -4367,6 +4389,9 @@ app.use((req, res, next) => {
 });
 
 // View engine
+app.engine('ejs', (filePath, data, callback) => {
+  return ejs.renderFile(filePath, data, { async: true }, callback);
+});
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
