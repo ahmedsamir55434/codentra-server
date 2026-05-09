@@ -42,6 +42,134 @@ const ATLOS_API_SECRET = String(process.env.ATLOS_API_SECRET || '').trim();
 const ATLOS_WEBHOOK_SECRET = String(process.env.ATLOS_WEBHOOK_SECRET || '').trim();
 const FX_API_BASE_URL = String(process.env.FX_API_BASE_URL || 'https://api.frankfurter.dev/v1').trim().replace(/\/+$/, '');
 const FALLBACK_EGP_TO_USD_RATE = Number(process.env.FALLBACK_EGP_TO_USD_RATE || 0.02);
+const DEEPL_API_KEY = String(process.env.DEEPL_API_KEY || '').trim();
+const DEEPL_API_URL = String(process.env.DEEPL_API_URL || 'https://api-free.deepl.com/v2/translate').trim().replace(/\/+$/, '');
+
+const DEFAULT_SITE_LANG = 'ar';
+const LANG_COOKIE_NAME = 'codentra_lang';
+
+const UI_TRANSLATIONS = {
+  ar: {
+    projects: 'المشاريع',
+    community: 'Community',
+    myPurchases: 'مشترياتي',
+    notifications: 'الإشعارات',
+    appointments: 'الجلسات',
+    more: 'المزيد',
+    theme: 'الوضع',
+    hello: 'مرحباً',
+    logout: 'خروج',
+    login: 'دخول',
+    register: 'حساب جديد',
+    market: 'السوق',
+    availableProjects: 'المشاريع المتاحة',
+    browseProjects: 'تصفح كل المشاريع الجاهزة واختر المشروع الأنسب لاحتياجك الحالي.',
+    continue: 'متابعة',
+    projectDescription: 'وصف المشروع',
+    technologiesUsed: 'التقنيات المستخدمة',
+    imagesGallery: 'معرض الصور',
+    reviewsAndComments: 'التقييمات والتعليقات',
+    languageArabic: 'عربي',
+    languageEnglish: 'English'
+  },
+  en: {
+    projects: 'Projects',
+    community: 'Community',
+    myPurchases: 'My purchases',
+    notifications: 'Notifications',
+    appointments: 'Sessions',
+    more: 'More',
+    theme: 'Theme',
+    hello: 'Hello',
+    logout: 'Logout',
+    login: 'Login',
+    register: 'Sign up',
+    market: 'Marketplace',
+    availableProjects: 'Available projects',
+    browseProjects: 'Browse ready-made projects and pick the best match for your needs.',
+    continue: 'View',
+    projectDescription: 'Project description',
+    technologiesUsed: 'Technologies used',
+    imagesGallery: 'Gallery',
+    reviewsAndComments: 'Reviews',
+    languageArabic: 'Arabic',
+    languageEnglish: 'English'
+  }
+};
+
+const normalizeSiteLang = (lang) => {
+  const normalized = String(lang || '').toLowerCase().trim();
+  if (normalized === 'en' || normalized === 'english') return 'en';
+  if (normalized === 'ar' || normalized === 'arabic') return 'ar';
+  return null;
+};
+
+const getSiteLangFromReq = (req) => {
+  const queryLang = normalizeSiteLang(req.query && req.query.lang);
+  if (queryLang) return queryLang;
+  const cookies = parseCookieHeader(req.headers.cookie);
+  const cookieLang = normalizeSiteLang(cookies[LANG_COOKIE_NAME]);
+  return cookieLang || DEFAULT_SITE_LANG;
+};
+
+const deeplTranslateTexts = async ({ texts, targetLang }) => {
+  if (!DEEPL_API_KEY) return null;
+  if (!Array.isArray(texts) || texts.length === 0) return [];
+
+  const body = new URLSearchParams();
+  texts.forEach((text) => {
+    body.append('text', String(text || ''));
+  });
+  body.append('target_lang', targetLang === 'en' ? 'EN' : 'AR');
+  body.append('preserve_formatting', '1');
+
+  const response = await fetch(DEEPL_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: body.toString()
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data && data.message ? data.message : `DEEPL_ERROR:${response.status}`);
+  }
+
+  const translations = data && Array.isArray(data.translations) ? data.translations : [];
+  return translations.map((item) => (item && item.text ? item.text : ''));
+};
+
+const ensureProjectDescriptionTranslation = async ({ project, targetLang }) => {
+  if (!project || !targetLang) return project;
+  if (targetLang !== 'en') return project;
+  if (!project.description) return project;
+
+  if (project.descriptionEn) {
+    return { ...project, descriptionDisplay: project.descriptionEn };
+  }
+
+  if (!DEEPL_API_KEY) {
+    return { ...project, descriptionDisplay: project.description };
+  }
+
+  try {
+    const translated = await deeplTranslateTexts({ texts: [project.description], targetLang: 'en' });
+    const text = translated && translated[0] ? translated[0] : project.description;
+
+    const projects = db.projects();
+    const index = projects.findIndex((item) => item && item.id === project.id);
+    if (index !== -1) {
+      projects[index] = { ...projects[index], descriptionEn: text };
+      db.saveProjects(projects);
+    }
+
+    return { ...project, descriptionDisplay: text };
+  } catch (error) {
+    return { ...project, descriptionDisplay: project.description };
+  }
+};
 
 // CORS middleware
 app.use((req, res, next) => {
@@ -4128,61 +4256,22 @@ app.use((req, res, next) => {
   next();
 });
 
-const SUPPORTED_LANGUAGES = new Set(['ar', 'en']);
-const DEFAULT_LANGUAGE = 'ar';
-
-const UI_STRINGS = {
-  projects: { ar: 'المشاريع', en: 'Projects' },
-  community: { ar: 'المجتمع', en: 'Community' },
-  myPurchases: { ar: 'مشترياتي', en: 'My purchases' },
-  notifications: { ar: 'الإشعارات', en: 'Notifications' },
-  sessions: { ar: 'الجلسات', en: 'Sessions' },
-  requestProject: { ar: 'اطلب مشروعك', en: 'Request a project' },
-  messages: { ar: 'التواصل', en: 'Messages' },
-  cart: { ar: 'السلة', en: 'Cart' },
-  subscriptions: { ar: 'الاشتراكات', en: 'Subscriptions' },
-  loyalty: { ar: 'نقاطي', en: 'My points' },
-  myAppointments: { ar: 'مواعيدي', en: 'My appointments' },
-  adminDashboard: { ar: 'لوحة التحكم', en: 'Dashboard' },
-  adminAppointments: { ar: 'المواعيد', en: 'Appointments' },
-  team: { ar: 'الفريق', en: 'Team' },
-  more: { ar: 'المزيد', en: 'More' },
-  mode: { ar: 'الوضع', en: 'Mode' },
-  welcome: { ar: 'مرحباً', en: 'Hello' },
-  logout: { ar: 'خروج', en: 'Logout' },
-  login: { ar: 'دخول', en: 'Login' },
-  register: { ar: 'حساب جديد', en: 'Sign up' },
-  menu: { ar: 'القائمة', en: 'Menu' },
-  currentAccount: { ar: 'الحساب الحالي', en: 'Current account' },
-  toggleMode: { ar: 'تبديل الوضع', en: 'Toggle theme' },
-  language: { ar: 'English', en: 'العربية' }
-};
-
-const getRequestLanguage = (req) => {
-  const lang = String((req && req.session && req.session.lang) || '').trim().toLowerCase();
-  return SUPPORTED_LANGUAGES.has(lang) ? lang : DEFAULT_LANGUAGE;
-};
-
 app.use((req, res, next) => {
-  const lang = getRequestLanguage(req);
-  res.locals.lang = lang;
-  res.locals.dir = lang === 'ar' ? 'rtl' : 'ltr';
-  res.locals.t = (key) => {
-    const entry = UI_STRINGS[key];
-    if (!entry) return key;
-    return entry[lang] || entry[DEFAULT_LANGUAGE] || key;
-  };
-  next();
-});
+  const lang = getSiteLangFromReq(req);
+  const dir = lang === 'en' ? 'ltr' : 'rtl';
 
-app.get('/lang/:lang', (req, res) => {
-  const requested = String(req.params.lang || '').trim().toLowerCase();
-  const nextLang = SUPPORTED_LANGUAGES.has(requested) ? requested : DEFAULT_LANGUAGE;
-  if (req.session) {
-    req.session.lang = nextLang;
-  }
-  const redirectTo = req.get('referer') || '/';
-  return res.redirect(redirectTo);
+  req.siteLang = lang;
+  res.locals.lang = lang;
+  res.locals.dir = dir;
+  res.locals.siteLang = lang;
+  res.locals.siteDir = dir;
+  res.locals.t = (key) => {
+    const dict = UI_TRANSLATIONS[lang] || UI_TRANSLATIONS[DEFAULT_SITE_LANG] || {};
+    const fallback = UI_TRANSLATIONS[DEFAULT_SITE_LANG] || {};
+    return dict[key] || fallback[key] || key;
+  };
+
+  next();
 });
 
 app.use(async (req, res, next) => {
@@ -4206,61 +4295,6 @@ app.use(async (req, res, next) => {
   }
   next();
 });
-
-const LIBRETRANSLATE_URL = String(process.env.LIBRETRANSLATE_URL || 'https://libretranslate.com/translate');
-const LIBRETRANSLATE_API_KEY = String(process.env.LIBRETRANSLATE_API_KEY || '').trim() || null;
-
-const translateTextViaLibreTranslate = async ({ text, source = 'ar', target = 'en' }) => {
-  const safeText = String(text || '').trim();
-  if (!safeText) return '';
-
-  const payload = {
-    q: safeText,
-    source,
-    target,
-    format: 'text'
-  };
-  if (LIBRETRANSLATE_API_KEY) {
-    payload.api_key = LIBRETRANSLATE_API_KEY;
-  }
-
-  const response = await fetch(LIBRETRANSLATE_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-
-  const raw = await response.text();
-  let parsed = null;
-  try {
-    parsed = raw ? JSON.parse(raw) : null;
-  } catch (error) {
-    parsed = null;
-  }
-
-  if (!response.ok) {
-    throw new Error(parsed && (parsed.error || parsed.message) ? (parsed.error || parsed.message) : `LIBRETRANSLATE_FAILED:${response.status}`);
-  }
-
-  return String((parsed && (parsed.translatedText || parsed.translation)) || '').trim();
-};
-
-const ensureProjectDescriptionTranslation = async ({ projectId, targetLang }) => {
-  if (!projectId || targetLang !== 'en') return null;
-  const projects = db.projects();
-  const idx = projects.findIndex(p => p && p.id === projectId);
-  if (idx === -1) return null;
-
-  const project = projects[idx];
-  if (project.descriptionEn) return project.descriptionEn;
-  if (!project.description) return null;
-
-  const translated = await translateTextViaLibreTranslate({ text: project.description, source: 'ar', target: 'en' });
-  if (!translated) return null;
-  projects[idx] = { ...project, descriptionEn: translated };
-  db.saveProjects(projects);
-  return translated;
-};
 
 const isBlockedExpired = (u) => {
   if (!u) return false;
@@ -4553,13 +4587,83 @@ const requireAdminPermission = (permission) => {
 
 // Routes
 
+app.get('/lang/:lang', (req, res) => {
+  const nextLang = normalizeSiteLang(req.params.lang) || DEFAULT_SITE_LANG;
+  res.cookie(LANG_COOKIE_NAME, nextLang, {
+    maxAge: 1000 * 60 * 60 * 24 * 365,
+    sameSite: 'lax',
+    secure: IS_VERCEL,
+    path: '/'
+  });
+  const back = req.get('referer') || '/';
+  return res.redirect(back);
+});
+
 // Home - Projects listing
-app.get('/', (req, res) => {
-  const projects = db.projects()
+app.get('/', async (req, res) => {
+  const siteLang = req.siteLang || DEFAULT_SITE_LANG;
+  const projectsRaw = db.projects()
     .filter(p => isProjectVisibleToUser({ project: p, sessionUser: req.session.user }))
     .map(decorateProjectPricing);
+
+  let projects = projectsRaw;
+
+  if (siteLang === 'en') {
+    const toTranslate = [];
+    const translateIndexes = [];
+    projects.forEach((project, idx) => {
+      if (!project) return;
+      if (project.descriptionEn) return;
+      if (!project.description) return;
+      toTranslate.push(project.description);
+      translateIndexes.push(idx);
+    });
+
+    if (toTranslate.length && DEEPL_API_KEY) {
+      try {
+        const translated = await deeplTranslateTexts({ texts: toTranslate, targetLang: 'en' });
+        if (Array.isArray(translated) && translated.length === toTranslate.length) {
+          const storedProjects = db.projects();
+          translateIndexes.forEach((originalIndex, batchIndex) => {
+            const originalProject = projects[originalIndex];
+            const translatedText = translated[batchIndex] || originalProject.description;
+            projects[originalIndex] = { ...originalProject, descriptionDisplay: translatedText };
+
+            const storeIndex = storedProjects.findIndex((item) => item && originalProject && item.id === originalProject.id);
+            if (storeIndex !== -1) {
+              storedProjects[storeIndex] = { ...storedProjects[storeIndex], descriptionEn: translatedText };
+            }
+          });
+          db.saveProjects(storedProjects);
+        }
+      } catch (error) {
+        // ignore translation errors
+      }
+    }
+  }
+
+  projects = projects.map((project) => {
+    if (!project) return project;
+    return {
+      ...project,
+      descriptionDisplay: siteLang === 'en'
+        ? (project.descriptionDisplay || project.descriptionEn || project.description)
+        : project.description
+    };
+  });
+
   const recentProjects = getRecentlyViewedProjects({ req, availableProjects: projects })
-    .map(decorateProjectPricing);
+    .map(decorateProjectPricing)
+    .map((project) => {
+      if (!project) return project;
+      return {
+        ...project,
+        descriptionDisplay: siteLang === 'en'
+          ? (project.descriptionDisplay || project.descriptionEn || project.description)
+          : project.description
+      };
+    });
+
   res.render('index', { projects, recentProjects, user: req.session.user });
 });
 
@@ -6971,22 +7075,18 @@ app.get('/api/presentations/decks/:deckId/download.pptx', async (req, res, next)
 // Project detail
 app.get('/project/:id', async (req, res) => {
   const projects = db.projects();
-  const project = decorateProjectPricing(projects.find(p => p.id === req.params.id));
+  let project = decorateProjectPricing(projects.find(p => p.id === req.params.id));
   if (!project) return res.status(404).send('Project not found');
+
+  const siteLang = req.siteLang || DEFAULT_SITE_LANG;
+  if (siteLang === 'en') {
+    project = await ensureProjectDescriptionTranslation({ project, targetLang: 'en' });
+  } else {
+    project = { ...project, descriptionDisplay: project.description };
+  }
 
   if (!isProjectVisibleToUser({ project, sessionUser: req.session.user })) {
     return res.status(403).send('Not allowed');
-  }
-
-  try {
-    if (res.locals.lang === 'en') {
-      const translated = await ensureProjectDescriptionTranslation({ projectId: project.id, targetLang: 'en' });
-      if (translated) {
-        project.description = translated;
-      }
-    }
-  } catch (error) {
-    // keep original description on translation failures
   }
 
   recordRecentlyViewedProject({ req, projectId: project.id });

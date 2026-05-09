@@ -1,38 +1,38 @@
 <%
   const guestPrimaryLinks = [
-    { href: '/', label: (typeof t === 'function' ? t('projects') : 'المشاريع') },
-    { href: '/community', label: (typeof t === 'function' ? t('community') : 'Community') }
+    { href: '/', label: t('projects') },
+    { href: '/community', label: t('community') }
   ];
 
   const userPrimaryLinks = [
-    { href: '/', label: (typeof t === 'function' ? t('projects') : 'المشاريع') },
-    { href: '/community', label: (typeof t === 'function' ? t('community') : 'Community') },
-    { href: '/my-purchases', label: (typeof t === 'function' ? t('myPurchases') : 'مشترياتي') },
-    { href: '/notifications', label: (typeof t === 'function' ? t('notifications') : 'الإشعارات'), badge: user && user.unreadNotificationsCount ? user.unreadNotificationsCount : 0 },
-    { href: '/appointments', label: (typeof t === 'function' ? t('sessions') : 'الجلسات') }
+    { href: '/', label: t('projects') },
+    { href: '/community', label: t('community') },
+    { href: '/my-purchases', label: t('myPurchases') },
+    { href: '/notifications', label: t('notifications'), badge: user && user.unreadNotificationsCount ? user.unreadNotificationsCount : 0 },
+    { href: '/appointments', label: t('appointments') }
   ];
 
   const userSecondaryLinks = [
-    { href: '/custom-project', label: (typeof t === 'function' ? t('requestProject') : 'اطلب مشروعك') },
-    { href: '/messages', label: (typeof t === 'function' ? t('messages') : 'التواصل') },
-    { href: '/cart', label: (typeof t === 'function' ? t('cart') : 'السلة') },
-    { href: '/subscriptions', label: (typeof t === 'function' ? t('subscriptions') : 'الاشتراكات') },
-    { href: '/loyalty', label: (typeof t === 'function' ? t('loyalty') : 'نقاطي') },
-    { href: '/my-appointments', label: (typeof t === 'function' ? t('myAppointments') : 'مواعيدي') }
+    { href: '/custom-project', label: 'اطلب مشروعك' },
+    { href: '/messages', label: 'التواصل' },
+    { href: '/cart', label: 'السلة' },
+    { href: '/subscriptions', label: 'الاشتراكات' },
+    { href: '/loyalty', label: 'نقاطي' },
+    { href: '/my-appointments', label: 'مواعيدي' }
   ];
 
   const adminPrimaryLinks = [
-    { href: '/', label: (typeof t === 'function' ? t('projects') : 'المشاريع') },
-    { href: '/community', label: (typeof t === 'function' ? t('community') : 'Community') },
-    { href: '/admin', label: (typeof t === 'function' ? t('adminDashboard') : 'لوحة التحكم') }
+    { href: '/', label: t('projects') },
+    { href: '/community', label: t('community') },
+    { href: '/admin', label: 'لوحة التحكم' }
   ];
 
   const adminSecondaryLinks = [];
   if (user && user.role === 'admin') {
     if (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.appointments)) {
-      adminPrimaryLinks.push({ href: '/admin/appointments', label: (typeof t === 'function' ? t('adminAppointments') : 'المواعيد') });
+      adminPrimaryLinks.push({ href: '/admin/appointments', label: 'المواعيد' });
     }
-    adminSecondaryLinks.push({ href: '/admin/team', label: (typeof t === 'function' ? t('team') : 'الفريق') });
+    adminSecondaryLinks.push({ href: '/admin/team', label: 'الفريق' });
   }
 
   const primaryLinks = user
@@ -67,35 +67,45 @@
       </div>
 
       <div class="nav-actions">
-        <details class="nav-more-menu" style="display: none;">
+        <details class="nav-more-menu" id="navOverflowMenu" hidden>
           <summary class="nav-more-trigger" aria-label="روابط إضافية">
-            <span><%= typeof t === 'function' ? t('more') : 'المزيد' %></span>
+            <span><%= t('more') %></span>
             <span class="nav-more-icon">+</span>
           </summary>
-          <div class="nav-more-panel">
-            <% secondaryLinks.forEach(link => { %>
-              <a href="<%= link.href %>" class="nav-more-link"><%= link.label %></a>
-            <% }) %>
-          </div>
+          <div class="nav-more-panel" id="navOverflowPanel"></div>
         </details>
 
+        <% if (secondaryLinks.length > 0) { %>
+          <details class="nav-more-menu">
+            <summary class="nav-more-trigger" aria-label="روابط إضافية">
+              <span><%= t('more') %></span>
+              <span class="nav-more-icon">+</span>
+            </summary>
+            <div class="nav-more-panel">
+              <% secondaryLinks.forEach(link => { %>
+                <a href="<%= link.href %>" class="nav-more-link"><%= link.label %></a>
+              <% }) %>
+            </div>
+          </details>
+        <% } %>
+
         <button type="button" class="btn btn-secondary theme-toggle nav-compact-btn" id="themeToggle" aria-label="تبديل الوضع الليلي/النهاري">
-          <%= typeof t === 'function' ? t('mode') : 'الوضع' %>
+          <%= t('theme') %>
         </button>
 
-        <a href="/lang/<%= (lang === 'en' ? 'ar' : 'en') %>" class="btn btn-secondary nav-compact-btn">
-          <%= typeof t === 'function' ? t('language') : (lang === 'en' ? 'العربية' : 'English') %>
+        <a href="/lang/<%= lang === 'en' ? 'ar' : 'en' %>" class="btn btn-secondary nav-compact-btn">
+          <%= lang === 'en' ? t('languageArabic') : t('languageEnglish') %>
         </a>
 
         <% if (user) { %>
           <div class="nav-user-chip">
-            <span class="nav-user-label"><%= typeof t === 'function' ? t('welcome') : 'مرحباً' %></span>
+            <span class="nav-user-label"><%= t('hello') %></span>
             <strong><%= user.name %></strong>
           </div>
-          <a href="/logout" class="btn btn-secondary nav-compact-btn"><%= typeof t === 'function' ? t('logout') : 'خروج' %></a>
+          <a href="/logout" class="btn btn-secondary nav-compact-btn"><%= t('logout') %></a>
         <% } else { %>
-          <a href="/login" class="btn btn-secondary nav-compact-btn"><%= typeof t === 'function' ? t('login') : 'دخول' %></a>
-          <a href="/register" class="btn btn-primary nav-compact-btn"><%= typeof t === 'function' ? t('register') : 'حساب جديد' %></a>
+          <a href="/login" class="btn btn-secondary nav-compact-btn"><%= t('login') %></a>
+          <a href="/register" class="btn btn-primary nav-compact-btn"><%= t('register') %></a>
         <% } %>
 
         <button
@@ -122,7 +132,7 @@
           <img src="/logo.jpg" alt="Codentra" class="mobile-nav-brand-logo">
           <span class="mobile-nav-brand-copy">
             <span class="mobile-nav-kicker">Codentra</span>
-            <strong><%= typeof t === 'function' ? t('menu') : 'القائمة' %></strong>
+            <strong>القائمة</strong>
           </span>
         </a>
       </div>
@@ -142,25 +152,25 @@
         <div class="mobile-nav-footer">
           <% if (user) { %>
             <div class="mobile-nav-user">
-              <span class="mobile-nav-user-label"><%= typeof t === 'function' ? t('currentAccount') : 'الحساب الحالي' %></span>
+              <span class="mobile-nav-user-label">الحساب الحالي</span>
               <strong><%= user.name %></strong>
             </div>
           <% } %>
 
           <button type="button" class="btn btn-secondary mobile-theme-toggle" id="mobileThemeToggle">
-            <%= typeof t === 'function' ? t('toggleMode') : 'تبديل الوضع' %>
+            تبديل الوضع
           </button>
 
-          <a href="/lang/<%= (lang === 'en' ? 'ar' : 'en') %>" class="btn btn-secondary mobile-action-btn">
-            <%= typeof t === 'function' ? t('language') : (lang === 'en' ? 'العربية' : 'English') %>
+          <a href="/lang/<%= lang === 'en' ? 'ar' : 'en' %>" class="btn btn-secondary mobile-action-btn">
+            <%= lang === 'en' ? t('languageArabic') : t('languageEnglish') %>
           </a>
 
           <% if (user) { %>
-            <a href="/logout" class="btn btn-secondary mobile-action-btn"><%= typeof t === 'function' ? t('logout') : 'خروج' %></a>
+            <a href="/logout" class="btn btn-secondary mobile-action-btn">خروج</a>
           <% } else { %>
             <div class="mobile-nav-auth">
-              <a href="/login" class="btn btn-secondary mobile-action-btn"><%= typeof t === 'function' ? t('login') : 'تسجيل الدخول' %></a>
-              <a href="/register" class="btn btn-primary mobile-action-btn"><%= typeof t === 'function' ? t('register') : 'حساب جديد' %></a>
+              <a href="/login" class="btn btn-secondary mobile-action-btn">تسجيل الدخول</a>
+              <a href="/register" class="btn btn-primary mobile-action-btn">حساب جديد</a>
             </div>
           <% } %>
         </div>
@@ -168,3 +178,48 @@
     </div>
   </div>
 </header>
+
+<script>
+  (function () {
+    const primary = document.querySelector('.main-nav .nav-primary');
+    const overflowMenu = document.getElementById('navOverflowMenu');
+    const overflowPanel = document.getElementById('navOverflowPanel');
+    if (!primary || !overflowMenu || !overflowPanel) return;
+
+    const originalItems = Array.from(primary.querySelectorAll('.nav-pill'));
+
+    const rebuild = () => {
+      overflowPanel.innerHTML = '';
+      overflowMenu.hidden = true;
+
+      originalItems.forEach((item) => {
+        if (item.parentElement !== primary) primary.appendChild(item);
+      });
+
+      const availableWidth = primary.clientWidth;
+      let used = 0;
+      const items = Array.from(primary.querySelectorAll('.nav-pill'));
+
+      for (let i = 0; i < items.length; i++) {
+        const el = items[i];
+        used += el.offsetWidth;
+        if (used > availableWidth && items.length > 1) {
+          const moved = items.slice(i);
+          moved.forEach((linkEl) => {
+            const clone = linkEl.cloneNode(true);
+            clone.classList.remove('nav-pill');
+            clone.classList.add('nav-more-link');
+            overflowPanel.appendChild(clone);
+            linkEl.remove();
+          });
+          overflowMenu.hidden = false;
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('resize', rebuild);
+    window.addEventListener('load', rebuild);
+    rebuild();
+  })();
+</script>

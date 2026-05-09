@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="<%= lang === 'en' ? 'en' : 'ar' %>" dir="<%= dir || (lang === 'en' ? 'ltr' : 'rtl') %>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,13 +27,13 @@
     <div class="project-content">
       <!-- Description Section -->
       <section class="content-section">
-        <h2 class="section-title">وصف المشروع</h2>
-        <p class="project-description"><%= project.description %></p>
+        <h2 class="section-title"><%= t('projectDescription') %></h2>
+        <p class="project-description"><%= project.descriptionDisplay || project.description %></p>
       </section>
 
       <!-- Technologies Section -->
       <section class="content-section">
-        <h2 class="section-title">التقنيات المستخدمة</h2>
+        <h2 class="section-title"><%= t('technologiesUsed') %></h2>
         <div class="tech-list">
           <% project.technologies.forEach(tech => { %>
             <span class="tech-badge"><%= tech %></span>
@@ -44,7 +44,7 @@
       <!-- Images Section -->
       <% if (project.images && project.images.length > 0) { %>
         <section class="content-section project-images-section">
-          <h2 class="section-title">معرض الصور</h2>
+          <h2 class="section-title"><%= t('imagesGallery') %></h2>
           <div class="project-images-grid">
             <% project.images.forEach((image, index) => { %>
               <div class="project-image-item" onclick="openLightbox('<%= image %>')">
@@ -57,7 +57,7 @@
 
       <!-- Reviews Section -->
       <section class="content-section">
-        <h2 class="section-title">التقييمات والتعليقات</h2>
+        <h2 class="section-title"><%= t('reviewsAndComments') %></h2>
         <% 
           const _reviews = (typeof reviews !== 'undefined' && Array.isArray(reviews)) ? reviews : [];
           const _avgRating = (typeof avgRating !== 'undefined' && Number.isFinite(avgRating)) ? avgRating : 0;
