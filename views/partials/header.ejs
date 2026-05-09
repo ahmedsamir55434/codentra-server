@@ -67,19 +67,17 @@
       </div>
 
       <div class="nav-actions">
-        <% if (secondaryLinks.length > 0) { %>
-          <details class="nav-more-menu">
-            <summary class="nav-more-trigger" aria-label="روابط إضافية">
-              <span><%= typeof t === 'function' ? t('more') : 'المزيد' %></span>
-              <span class="nav-more-icon">+</span>
-            </summary>
-            <div class="nav-more-panel">
-              <% secondaryLinks.forEach(link => { %>
-                <a href="<%= link.href %>" class="nav-more-link"><%= link.label %></a>
-              <% }) %>
-            </div>
-          </details>
-        <% } %>
+        <details class="nav-more-menu" style="display: none;">
+          <summary class="nav-more-trigger" aria-label="روابط إضافية">
+            <span><%= typeof t === 'function' ? t('more') : 'المزيد' %></span>
+            <span class="nav-more-icon">+</span>
+          </summary>
+          <div class="nav-more-panel">
+            <% secondaryLinks.forEach(link => { %>
+              <a href="<%= link.href %>" class="nav-more-link"><%= link.label %></a>
+            <% }) %>
+          </div>
+        </details>
 
         <button type="button" class="btn btn-secondary theme-toggle nav-compact-btn" id="themeToggle" aria-label="تبديل الوضع الليلي/النهاري">
           <%= typeof t === 'function' ? t('mode') : 'الوضع' %>
