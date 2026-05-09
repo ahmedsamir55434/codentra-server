@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="<%= lang === 'en' ? 'en' : 'ar' %>" dir="<%= dir || (lang === 'en' ? 'ltr' : 'rtl') %>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Community - Codentra</title>
+  <title><%= lang === 'en' ? 'Community' : 'المجتمع' %> - Codentra</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/community.css">
   <link rel="stylesheet" href="/css/glass-v3.css">
