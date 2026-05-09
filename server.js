@@ -4128,6 +4128,63 @@ app.use((req, res, next) => {
   next();
 });
 
+const SUPPORTED_LANGUAGES = new Set(['ar', 'en']);
+const DEFAULT_LANGUAGE = 'ar';
+
+const UI_STRINGS = {
+  projects: { ar: 'المشاريع', en: 'Projects' },
+  community: { ar: 'المجتمع', en: 'Community' },
+  myPurchases: { ar: 'مشترياتي', en: 'My purchases' },
+  notifications: { ar: 'الإشعارات', en: 'Notifications' },
+  sessions: { ar: 'الجلسات', en: 'Sessions' },
+  requestProject: { ar: 'اطلب مشروعك', en: 'Request a project' },
+  messages: { ar: 'التواصل', en: 'Messages' },
+  cart: { ar: 'السلة', en: 'Cart' },
+  subscriptions: { ar: 'الاشتراكات', en: 'Subscriptions' },
+  loyalty: { ar: 'نقاطي', en: 'My points' },
+  myAppointments: { ar: 'مواعيدي', en: 'My appointments' },
+  adminDashboard: { ar: 'لوحة التحكم', en: 'Dashboard' },
+  adminAppointments: { ar: 'المواعيد', en: 'Appointments' },
+  team: { ar: 'الفريق', en: 'Team' },
+  more: { ar: 'المزيد', en: 'More' },
+  mode: { ar: 'الوضع', en: 'Mode' },
+  welcome: { ar: 'مرحباً', en: 'Hello' },
+  logout: { ar: 'خروج', en: 'Logout' },
+  login: { ar: 'دخول', en: 'Login' },
+  register: { ar: 'حساب جديد', en: 'Sign up' },
+  menu: { ar: 'القائمة', en: 'Menu' },
+  currentAccount: { ar: 'الحساب الحالي', en: 'Current account' },
+  toggleMode: { ar: 'تبديل الوضع', en: 'Toggle theme' },
+  language: { ar: 'English', en: 'العربية' }
+};
+
+const getRequestLanguage = (req) => {
+  const lang = String((req && req.session && req.session.lang) || '').trim().toLowerCase();
+  return SUPPORTED_LANGUAGES.has(lang) ? lang : DEFAULT_LANGUAGE;
+};
+
+app.use((req, res, next) => {
+  const lang = getRequestLanguage(req);
+  res.locals.lang = lang;
+  res.locals.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  res.locals.t = (key) => {
+    const entry = UI_STRINGS[key];
+    if (!entry) return key;
+    return entry[lang] || entry[DEFAULT_LANGUAGE] || key;
+  };
+  next();
+});
+
+app.get('/lang/:lang', (req, res) => {
+  const requested = String(req.params.lang || '').trim().toLowerCase();
+  const nextLang = SUPPORTED_LANGUAGES.has(requested) ? requested : DEFAULT_LANGUAGE;
+  if (req.session) {
+    req.session.lang = nextLang;
+  }
+  const redirectTo = req.get('referer') || '/';
+  return res.redirect(redirectTo);
+});
+
 app.use(async (req, res, next) => {
   try {
     const currencyRate = await fetchEgpToUsdRate();
@@ -4149,6 +4206,61 @@ app.use(async (req, res, next) => {
   }
   next();
 });
+
+const LIBRETRANSLATE_URL = String(process.env.LIBRETRANSLATE_URL || 'https://libretranslate.com/translate');
+const LIBRETRANSLATE_API_KEY = String(process.env.LIBRETRANSLATE_API_KEY || '').trim() || null;
+
+const translateTextViaLibreTranslate = async ({ text, source = 'ar', target = 'en' }) => {
+  const safeText = String(text || '').trim();
+  if (!safeText) return '';
+
+  const payload = {
+    q: safeText,
+    source,
+    target,
+    format: 'text'
+  };
+  if (LIBRETRANSLATE_API_KEY) {
+    payload.api_key = LIBRETRANSLATE_API_KEY;
+  }
+
+  const response = await fetch(LIBRETRANSLATE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  const raw = await response.text();
+  let parsed = null;
+  try {
+    parsed = raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    parsed = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(parsed && (parsed.error || parsed.message) ? (parsed.error || parsed.message) : `LIBRETRANSLATE_FAILED:${response.status}`);
+  }
+
+  return String((parsed && (parsed.translatedText || parsed.translation)) || '').trim();
+};
+
+const ensureProjectDescriptionTranslation = async ({ projectId, targetLang }) => {
+  if (!projectId || targetLang !== 'en') return null;
+  const projects = db.projects();
+  const idx = projects.findIndex(p => p && p.id === projectId);
+  if (idx === -1) return null;
+
+  const project = projects[idx];
+  if (project.descriptionEn) return project.descriptionEn;
+  if (!project.description) return null;
+
+  const translated = await translateTextViaLibreTranslate({ text: project.description, source: 'ar', target: 'en' });
+  if (!translated) return null;
+  projects[idx] = { ...project, descriptionEn: translated };
+  db.saveProjects(projects);
+  return translated;
+};
 
 const isBlockedExpired = (u) => {
   if (!u) return false;
@@ -6857,13 +6969,24 @@ app.get('/api/presentations/decks/:deckId/download.pptx', async (req, res, next)
 });
 
 // Project detail
-app.get('/project/:id', (req, res) => {
+app.get('/project/:id', async (req, res) => {
   const projects = db.projects();
   const project = decorateProjectPricing(projects.find(p => p.id === req.params.id));
   if (!project) return res.status(404).send('Project not found');
 
   if (!isProjectVisibleToUser({ project, sessionUser: req.session.user })) {
     return res.status(403).send('Not allowed');
+  }
+
+  try {
+    if (res.locals.lang === 'en') {
+      const translated = await ensureProjectDescriptionTranslation({ projectId: project.id, targetLang: 'en' });
+      if (translated) {
+        project.description = translated;
+      }
+    }
+  } catch (error) {
+    // keep original description on translation failures
   }
 
   recordRecentlyViewedProject({ req, projectId: project.id });
