@@ -268,6 +268,139 @@
   backdrop-filter: blur(6px);
 }
 
+.reviews-headline {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.reviews-score {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.reviews-count,
+.review-entry-meta {
+  color: var(--text-secondary);
+}
+
+.review-entry {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.review-entry-title {
+  margin: 0 0 10px 0;
+  color: var(--text-primary);
+}
+
+.review-entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.review-entry-user,
+.review-entry-comment {
+  color: var(--text-primary);
+}
+
+.review-entry-comment {
+  margin: 0;
+}
+
+.review-form-layout {
+  margin-bottom: 30px;
+}
+
+.review-field {
+  margin-bottom: 15px;
+}
+
+.review-label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-primary);
+}
+
+.review-select {
+  width: 200px !important;
+}
+
+.review-select,
+.review-textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  resize: vertical;
+}
+
+.reviews-empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 40px;
+}
+
+.reviews-list-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.reviews-list-layout .review-entry {
+  margin: 0;
+}
+
+.goto-purchases-btn {
+  width: 100%;
+  font-weight: 700;
+}
+
+html[data-theme="light"] .review-entry,
+html[data-theme="light"] .review-select,
+html[data-theme="light"] .review-textarea,
+html[data-theme="light"] .goto-purchases-btn {
+  border-color: rgba(0, 0, 0, 0.18);
+}
+
+html[data-theme="light"] .review-entry {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+html[data-theme="light"] .review-select,
+html[data-theme="light"] .review-textarea {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+html[data-theme="light"] .project-header h1 {
+  color: #000 !important;
+}
+
+html[data-theme="light"] .goto-purchases-btn {
+  color: #000 !important;
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(17, 24, 39, 0.25);
+}
+
+html[data-theme="light"] .goto-purchases-btn * {
+  color: #000 !important;
+}
+
+html[data-theme="light"] .goto-purchases-btn:hover {
+  color: #0b1220 !important;
+  background: #ffffff;
+  border-color: rgba(17, 24, 39, 0.4);
+}
+
 @media (max-width: 768px) {
   .project-content {
     grid-template-columns: 1fr;

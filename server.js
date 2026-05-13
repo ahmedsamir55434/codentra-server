@@ -1734,6 +1734,10 @@ const STORAGE_FILE_DEFINITIONS = {
   appointments: { fileName: 'appointments.json', createDefault: createDefaultAppointmentsState },
   meetingRecordings: { fileName: 'meeting-recordings.json', createDefault: () => [] },
   cartReminders: { fileName: 'cart-reminders.json', createDefault: () => [] },
+  downloadEvents: { fileName: 'download-events.json', createDefault: () => [] },
+  projectViewEvents: { fileName: 'project-view-events.json', createDefault: () => [] },
+  fileHealthReports: { fileName: 'file-health-reports.json', createDefault: () => [] },
+  adminAuditLog: { fileName: 'admin-audit-log.json', createDefault: () => [] },
   subscriptionPlans: { fileName: 'subscription-plans.json', createDefault: () => [] },
   subscriptions: { fileName: 'subscriptions.json', createDefault: () => [] },
   subscriptionPayments: { fileName: 'subscription-payments.json', createDefault: () => [] },
@@ -1771,6 +1775,10 @@ const STORAGE_READ_ACCESSORS = {
   appointments: 'appointments',
   meetingRecordings: 'meetingRecordings',
   cartReminders: 'cartReminders',
+  downloadEvents: 'downloadEvents',
+  projectViewEvents: 'projectViewEvents',
+  fileHealthReports: 'fileHealthReports',
+  adminAuditLog: 'adminAuditLog',
   subscriptionPlans: 'subscriptionPlans',
   subscriptions: 'subscriptions',
   subscriptionPayments: 'subscriptionPayments',
@@ -1804,6 +1812,10 @@ const STORAGE_WRITE_ACCESSORS = {
   saveAppointments: 'appointments',
   saveMeetingRecordings: 'meetingRecordings',
   saveCartReminders: 'cartReminders',
+  saveDownloadEvents: 'downloadEvents',
+  saveProjectViewEvents: 'projectViewEvents',
+  saveFileHealthReports: 'fileHealthReports',
+  saveAdminAuditLog: 'adminAuditLog',
   saveSubscriptionPlans: 'subscriptionPlans',
   saveSubscriptions: 'subscriptions',
   saveSubscriptionPayments: 'subscriptionPayments',
@@ -2383,6 +2395,143 @@ const getOrCreateCartForUser = ({ userId }) => {
   return { carts, cart, cartIndex: carts.length - 1 };
 };
 
+const MAX_DOWNLOAD_EVENTS = 50000;
+const MAX_ADMIN_AUDIT_LOG = 100000;
+const MAX_LIVE_FEED_EVENTS = 500;
+
+let liveIo = null;
+
+const emitLiveAdminEvent = (event) => {
+  try {
+    if (!liveIo) return;
+    liveIo.to('admin-team').emit('live-event', event);
+  } catch (_) {
+    // ignore
+  }
+};
+
+const addAdminAuditLogEntry = ({ req, action, entity, entityId = null, before = null, after = null, meta = {} }) => {
+  try {
+    const admin = req && req.session && req.session.user && req.session.user.role === 'admin' ? req.session.user : null;
+    if (!admin) return null;
+
+    const entry = {
+      id: uuidv4(),
+      action: String(action || 'unknown'),
+      entity: String(entity || 'unknown'),
+      entityId: entityId ? String(entityId) : null,
+      adminId: admin.id || null,
+      adminEmail: admin.email || null,
+      adminName: admin.name || null,
+      ip: getRequestIp(req),
+      userAgent: normalizeUserAgent(req),
+      before,
+      after,
+      meta,
+      createdAt: new Date().toISOString()
+    };
+
+    const current = db.adminAuditLog();
+    const next = [entry, ...(Array.isArray(current) ? current : [])].slice(0, MAX_ADMIN_AUDIT_LOG);
+    db.saveAdminAuditLog(next);
+
+    emitLiveAdminEvent({
+      type: 'admin-audit',
+      title: 'تعديل إداري',
+      message: `${entry.action} (${entry.entity})`,
+      severity: 'info',
+      data: { entryId: entry.id, action: entry.action, entity: entry.entity, entityId: entry.entityId, adminEmail: entry.adminEmail },
+      createdAt: entry.createdAt
+    });
+
+    return entry;
+  } catch (_) {
+    return null;
+  }
+};
+
+const getRequestIp = (req) => {
+  const xf = req && req.headers ? req.headers['x-forwarded-for'] : null;
+  if (typeof xf === 'string' && xf.trim()) {
+    return xf.split(',')[0].trim();
+  }
+  if (Array.isArray(xf) && xf.length > 0) return String(xf[0] || '').trim();
+  const ra = req && req.socket ? req.socket.remoteAddress : null;
+  return ra ? String(ra) : '';
+};
+
+const normalizeUserAgent = (req) => {
+  const ua = req && req.headers ? req.headers['user-agent'] : null;
+  return ua ? String(ua).slice(0, 300) : '';
+};
+
+const getSimpleDeviceLabel = (ua) => {
+  const s = String(ua || '').toLowerCase();
+  if (!s) return 'unknown';
+  if (s.includes('iphone') || s.includes('ipad') || s.includes('ios')) return 'ios';
+  if (s.includes('android')) return 'android';
+  if (s.includes('mac os') || s.includes('macintosh')) return 'mac';
+  if (s.includes('windows')) return 'windows';
+  if (s.includes('linux')) return 'linux';
+  return 'other';
+};
+
+const recordDownloadEvent = ({ req, kind, userId, purchaseId = null, projectId = null, meta = {} }) => {
+  try {
+    const events = db.downloadEvents();
+    const ua = normalizeUserAgent(req);
+    const entry = {
+      id: uuidv4(),
+      kind,
+      userId,
+      purchaseId,
+      projectId,
+      ip: getRequestIp(req),
+      userAgent: ua,
+      device: getSimpleDeviceLabel(ua),
+      meta,
+      createdAt: new Date().toISOString()
+    };
+    const next = [entry, ...(Array.isArray(events) ? events : [])].slice(0, MAX_DOWNLOAD_EVENTS);
+    db.saveDownloadEvents(next);
+
+    emitLiveAdminEvent({
+      type: 'download',
+      title: 'تحميل',
+      message: `تم تحميل ملف (${kind})`,
+      severity: 'info',
+      data: { userId, purchaseId, projectId, ip: entry.ip, device: entry.device },
+      createdAt: entry.createdAt
+    });
+    return entry;
+  } catch (e) {
+    return null;
+  }
+};
+
+const MAX_PROJECT_VIEW_EVENTS = 200000;
+const recordProjectViewEvent = ({ req, projectId, sessionUser }) => {
+  try {
+    const userId = sessionUser && sessionUser.role === 'user' ? sessionUser.id : null;
+    const events = db.projectViewEvents();
+    const ua = normalizeUserAgent(req);
+    const entry = {
+      id: uuidv4(),
+      projectId,
+      userId,
+      ip: getRequestIp(req),
+      userAgent: ua,
+      device: getSimpleDeviceLabel(ua),
+      createdAt: new Date().toISOString()
+    };
+    const next = [entry, ...(Array.isArray(events) ? events : [])].slice(0, MAX_PROJECT_VIEW_EVENTS);
+    db.saveProjectViewEvents(next);
+    return entry;
+  } catch (e) {
+    return null;
+  }
+};
+
 const parseEnvInt = (value, fallback) => {
   const parsed = Number.parseInt(String(value || ''), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -2475,6 +2624,109 @@ const startAbandonedCartRecoveryJob = () => {
   console.log(
     `Abandoned cart recovery enabled (delay=${delayMinutes}m, cooldown=${cooldownHours}h, scan=${scanMinutes}m)`
   );
+};
+
+const normalizeStoredUploadPath = (value) => {
+  const normalized = normalizeStoredPath(value);
+  if (!normalized) return null;
+  if (normalized.startsWith('uploads/') || normalized.startsWith('private_uploads/')) return normalized;
+  return null;
+};
+
+const buildFileHealthIssues = () => {
+  const issues = [];
+
+  const pushIssue = ({ kind, refId, label, pathValue }) => {
+    const storedPath = normalizeStoredUploadPath(pathValue);
+    if (!storedPath) return;
+    const absolutePath = toAbsolutePath(storedPath);
+    if (!absolutePath) return;
+    if (!fs.existsSync(absolutePath)) {
+      issues.push({
+        id: uuidv4(),
+        kind,
+        refId,
+        label,
+        storedPath,
+        createdAt: new Date().toISOString()
+      });
+    }
+  };
+
+  const projects = db.projects();
+  projects.forEach((p) => {
+    if (!p) return;
+    if (p.filePath) pushIssue({ kind: 'project-file', refId: p.id, label: p.title || p.id, pathValue: p.filePath });
+    const images = Array.isArray(p.images) ? p.images : [];
+    images.forEach((img) => pushIssue({ kind: 'project-image', refId: p.id, label: p.title || p.id, pathValue: img }));
+  });
+
+  const purchases = db.purchases();
+  purchases.forEach((p) => {
+    if (!p) return;
+    if (p.filePath) pushIssue({ kind: 'purchase-file', refId: p.id, label: p.projectTitle || p.projectId || p.id, pathValue: p.filePath });
+  });
+
+  const requests = db.customProjectRequests();
+  requests.forEach((r) => {
+    if (!r) return;
+    if (r.filePath) pushIssue({ kind: 'custom-project-file', refId: r.id, label: r.title || r.id, pathValue: r.filePath });
+  });
+
+  const recordings = db.meetingRecordings();
+  recordings.forEach((rec) => {
+    if (!rec) return;
+    if (rec.filePath) pushIssue({ kind: 'meeting-recording', refId: rec.id, label: rec.title || rec.id, pathValue: rec.filePath });
+  });
+
+  const adminTeamMessages = db.adminTeamMessages();
+  adminTeamMessages.forEach((m) => {
+    if (!m) return;
+    if (m.filePath) pushIssue({ kind: 'admin-team-upload', refId: m.id, label: m.fileName || m.id, pathValue: m.filePath });
+  });
+
+  const communityPosts = db.communityPosts();
+  communityPosts.forEach((post) => {
+    if (!post) return;
+    if (post.mediaPath) pushIssue({ kind: 'community-media', refId: post.id, label: post.authorName || post.id, pathValue: post.mediaPath });
+  });
+
+  const applications = db.communityJobApplications();
+  applications.forEach((app) => {
+    if (!app) return;
+    if (app.cvPath) pushIssue({ kind: 'community-cv', refId: app.id, label: app.userName || app.id, pathValue: app.cvPath });
+  });
+
+  return issues;
+};
+
+const runFileHealthCheck = () => {
+  try {
+    const issues = buildFileHealthIssues();
+    const reports = db.fileHealthReports();
+    const report = {
+      id: uuidv4(),
+      issueCount: issues.length,
+      issues,
+      createdAt: new Date().toISOString()
+    };
+    const limit = parseEnvInt(process.env.FILE_HEALTH_REPORTS_LIMIT, 30);
+    const next = [report, ...(Array.isArray(reports) ? reports : [])].slice(0, limit);
+    db.saveFileHealthReports(next);
+    return report;
+  } catch (e) {
+    console.error('File health check failed:', e && e.message ? e.message : e);
+    return null;
+  }
+};
+
+const startFileHealthMonitorJob = () => {
+  if (process.env.VERCEL) return;
+  const intervalHours = parseEnvInt(process.env.FILE_HEALTH_INTERVAL_HOURS, 6);
+  const intervalMs = intervalHours * 60 * 60 * 1000;
+  setTimeout(() => runFileHealthCheck(), 20 * 1000);
+  setInterval(() => runFileHealthCheck(), intervalMs);
+  console.log(`File health monitor enabled (interval=${intervalHours}h)`);
 };
 
 const summarizeCart = ({ cart, couponCode, sessionUser }) => {
@@ -2570,6 +2822,13 @@ const getProjectSaleState = (project) => {
     durationDays: normalizeOptionalDurationDays(project && project.saleDurationDays),
     durationLabel: describeCouponDuration({ durationDays: project && project.saleDurationDays, expiresAt: hasExpiry ? expiresAt.toISOString() : null })
   };
+};
+
+const isProjectDownloadsLocked = (project) => Boolean(project && project.downloadsLocked);
+
+const getProjectDownloadsLockReason = (project) => {
+  const reason = project && typeof project.downloadsLockReason === 'string' ? project.downloadsLockReason.trim() : '';
+  return reason || null;
 };
 
 const decorateProjectPricing = (project) => {
@@ -4546,7 +4805,41 @@ app.get('/', (req, res) => {
     .map(decorateProjectPricing);
   const recentProjects = getRecentlyViewedProjects({ req, availableProjects: projects })
     .map(decorateProjectPricing);
-  res.render('index', { projects, recentProjects, user: req.session.user });
+  let wishlistProjectIds = [];
+  if (req.session.user && req.session.user.role === 'user') {
+    const currentUser = db.users().find((u) => u && u.id === req.session.user.id && u.role === 'user');
+    wishlistProjectIds = currentUser && Array.isArray(currentUser.wishlistProjectIds) ? currentUser.wishlistProjectIds : [];
+  }
+  res.render('index', { projects, recentProjects, user: req.session.user, wishlistProjectIds });
+});
+
+app.get('/wishlist', requireAuth, (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
+  const users = db.users();
+  const currentUser = users.find((u) => u && u.id === req.session.user.id && u.role === 'user');
+  const wishlistIds = currentUser && Array.isArray(currentUser.wishlistProjectIds) ? currentUser.wishlistProjectIds : [];
+  const projects = db.projects()
+    .filter((p) => wishlistIds.includes(p.id))
+    .filter((p) => isProjectVisibleToUser({ project: p, sessionUser: req.session.user }))
+    .map(decorateProjectPricing);
+  res.render('wishlist', { user: req.session.user, projects, wishlistProjectIds: wishlistIds });
+});
+
+app.post('/wishlist/toggle', requireAuth, (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/login');
+  const projectId = String(req.body.projectId || '').trim();
+  if (!projectId) return res.redirect(req.get('referer') || '/');
+
+  const users = db.users();
+  const userIndex = users.findIndex((u) => u && u.id === req.session.user.id && u.role === 'user');
+  if (userIndex === -1) return res.redirect(req.get('referer') || '/');
+
+  const wishlist = Array.isArray(users[userIndex].wishlistProjectIds) ? users[userIndex].wishlistProjectIds : [];
+  const exists = wishlist.includes(projectId);
+  users[userIndex].wishlistProjectIds = exists ? wishlist.filter((id) => id !== projectId) : [...wishlist, projectId];
+  db.saveUsers(users);
+  req.session.user = buildSessionUser(users[userIndex]);
+  return res.redirect(req.get('referer') || '/');
 });
 
 app.get('/community', (req, res) => {
@@ -5691,6 +5984,10 @@ app.post('/api/cart/checkout', requireApiUserAuth, (req, res) => {
     purchases.push({
       id: uuidv4(),
       orderId,
+      fingerprintCode: uuidv4(),
+      downloadLocked: false,
+      downloadLockReason: null,
+      downloadLockedAt: null,
       userId: req.apiUser.id,
       projectId: project.id,
       projectTitle: project.title,
@@ -5947,6 +6244,16 @@ app.get('/api/purchases/:id/download-url', requireApiUserAuth, (req, res) => {
   const purchase = db.purchases().find((item) => item && item.id === req.params.id && item.userId === req.apiUser.id);
   if (!purchase) return res.status(404).json({ error: 'Purchase not found' });
   if (purchase.status !== 'approved') return res.status(400).json({ error: 'الملف غير متاح للتحميل بعد' });
+  if (purchase.downloadLocked) {
+    return res.status(403).json({ error: purchase.downloadLockReason || 'تم قفل هذه النسخة من المشروع بواسطة الأدمن' });
+  }
+
+  if (purchase.projectId) {
+    const project = db.projects().find((p) => p && p.id === purchase.projectId);
+    if (project && isProjectDownloadsLocked(project)) {
+      return res.status(403).json({ error: getProjectDownloadsLockReason(project) || 'تم قفل تنزيلات هذا المشروع مؤقتاً' });
+    }
+  }
 
   return res.json({
     url: `/api/download/${purchase.id}`,
@@ -5964,11 +6271,30 @@ app.get('/api/download/:purchaseId', (req, res) => {
   const purchase = db.purchases().find((item) => item && item.id === req.params.purchaseId && item.userId === decoded.id);
   if (!purchase) return res.status(404).json({ error: 'Purchase not found' });
   if (purchase.status !== 'approved') return res.status(400).json({ error: 'File not available' });
+  if (purchase.downloadLocked) {
+    return res.status(403).json({ error: purchase.downloadLockReason || 'Download locked' });
+  }
+
+  if (purchase.projectId) {
+    const project = db.projects().find((p) => p && p.id === purchase.projectId);
+    if (project && isProjectDownloadsLocked(project)) {
+      return res.status(403).json({ error: getProjectDownloadsLockReason(project) || 'Project downloads are locked' });
+    }
+  }
 
   const absoluteFilePath = path.resolve(__dirname, purchase.filePath);
   if (!fs.existsSync(absoluteFilePath)) {
     return res.status(404).json({ error: 'File not found' });
   }
+
+  recordDownloadEvent({
+    req,
+    kind: 'purchase',
+    userId: decoded.id,
+    purchaseId: purchase.id,
+    projectId: purchase.projectId || null,
+    meta: { via: 'api-token' }
+  });
 
   return res.download(absoluteFilePath, getDownloadFileName(purchase));
 });
@@ -6555,6 +6881,15 @@ app.get('/api/custom-projects/:id/download', (req, res) => {
   const absolutePath = path.resolve(__dirname, requestItem.filePath);
   if (!fs.existsSync(absolutePath)) return res.status(404).json({ error: 'File not found' });
 
+  recordDownloadEvent({
+    req,
+    kind: 'custom-project',
+    userId: decoded.id,
+    purchaseId: requestItem.id,
+    projectId: null,
+    meta: { via: 'api-token' }
+  });
+
   return res.download(absolutePath, requestItem.originalFileName || path.basename(absolutePath));
 });
 
@@ -6964,6 +7299,9 @@ app.get('/project/:id', (req, res) => {
     return res.status(403).send('Not allowed');
   }
 
+  // Used by admin "AI Pricing" to estimate view-to-purchase conversion.
+  recordProjectViewEvent({ req, projectId: project.id, sessionUser: req.session.user });
+
   recordRecentlyViewedProject({ req, projectId: project.id });
   
   let hasPurchased = false;
@@ -7188,6 +7526,10 @@ const finalizeSingleProjectPurchase = ({ buyerUserId, payerUserId, projectId, co
 
   purchases.push({
     id: uuidv4(),
+    fingerprintCode: uuidv4(),
+    downloadLocked: false,
+    downloadLockReason: null,
+    downloadLockedAt: null,
     userId: buyer.id,
     payerUserId: payer.id,
     payerCardLast4: normalizeWalletCardNumber(payer.walletCardNumber).slice(-4),
@@ -7300,6 +7642,10 @@ const finalizeCartPurchase = ({ buyerUserId, payerUserId, projectIds, couponCode
     purchases.push({
       id: uuidv4(),
       orderId,
+      fingerprintCode: uuidv4(),
+      downloadLocked: false,
+      downloadLockReason: null,
+      downloadLockedAt: null,
       userId: buyer.id,
       payerUserId: payer.id,
       payerCardLast4: normalizeWalletCardNumber(payer.walletCardNumber).slice(-4),
@@ -8533,6 +8879,17 @@ app.get('/download/:purchaseId', requireAuth, (req, res) => {
   if (!purchase || !purchase.filePath) {
     return res.status(403).send('Access denied or file not available');
   }
+
+  if (purchase.downloadLocked) {
+    return res.status(403).send(purchase.downloadLockReason || 'تم قفل هذه النسخة من المشروع بواسطة الأدمن');
+  }
+
+  if (purchase.projectId) {
+    const project = db.projects().find((p) => p && p.id === purchase.projectId);
+    if (project && isProjectDownloadsLocked(project)) {
+      return res.status(403).send(getProjectDownloadsLockReason(project) || 'تم قفل تنزيلات هذا المشروع مؤقتاً');
+    }
+  }
   
   if (purchase.status !== 'approved') {
     return res.status(403).send('Purchase not approved yet. Please wait for admin approval.');
@@ -8544,6 +8901,14 @@ app.get('/download/:purchaseId', requireAuth, (req, res) => {
   }
   
   const downloadFileName = getDownloadFileName(purchase);
+  recordDownloadEvent({
+    req,
+    kind: 'purchase',
+    userId: req.session.user.id,
+    purchaseId: purchase.id,
+    projectId: purchase.projectId || null,
+    meta: { via: 'session-download' }
+  });
   res.download(absoluteFilePath, downloadFileName);
 });
 
@@ -8647,6 +9012,393 @@ app.get('/admin', requireAdmin, (req, res) => {
     .slice(0, 10);
 
   res.render('admin/dashboard', { users, projects, purchases, topProjects, reports, user: req.session.user });
+});
+
+// Admin Net Profit
+app.get('/admin/net-profit', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
+  const purchases = db.purchases();
+
+  const now = new Date();
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const period = String(req.query.period || 'month');
+  const getStart = () => {
+    if (period === 'day') return startOfDay;
+    if (period === 'week') {
+      const d = new Date(startOfDay);
+      d.setDate(d.getDate() - 6);
+      return d;
+    }
+    if (period === 'year') {
+      const d = new Date(startOfDay);
+      d.setMonth(0, 1);
+      return d;
+    }
+    // month (default)
+    const d = new Date(startOfDay);
+    d.setDate(1);
+    return d;
+  };
+
+  const rangeStart = getStart();
+  const rangeEnd = now;
+
+  const approvedPurchases = purchases
+    .filter((p) => p && p.status === 'approved')
+    .filter((p) => {
+      const d = p.approvedAt || p.purchasedAt || p.createdAt;
+      const t = d ? Date.parse(d) : NaN;
+      return Number.isFinite(t) && t >= rangeStart.getTime() && t <= rangeEnd.getTime();
+    });
+
+  const sum = (arr, selector) => arr.reduce((acc, item) => acc + Number(selector(item) || 0), 0);
+
+  // NOTE: purchases are stored in EGP, but displayMoney() renders in the site display currency (USD).
+  const grossSales = Math.round(sum(approvedPurchases, (p) => p.price) * 100) / 100;
+  const grossBefore = Math.round(sum(approvedPurchases, (p) => p.priceBefore) * 100) / 100;
+  const discounts = Math.round(sum(approvedPurchases, (p) => p.discountAmount) * 100) / 100;
+
+  const refundedPurchases = approvedPurchases.filter((p) => p && p.walletRefundedAt);
+  const refunds = Math.round(sum(refundedPurchases, (p) => p.walletDebitAmount || p.price || 0) * 100) / 100;
+
+  const feePercent = Number(process.env.PAYMENT_FEE_PERCENT || 0);
+  const feeFixedEgp = Number(process.env.PAYMENT_FEE_FIXED_EGP || 0);
+  const feePercentSafe = Number.isFinite(feePercent) && feePercent >= 0 ? feePercent : 0;
+  const feeFixedSafe = Number.isFinite(feeFixedEgp) && feeFixedEgp >= 0 ? feeFixedEgp : 0;
+
+  // Estimate gateway fees only for purchases that were not paid by wallet.
+  const estimatedFees = Math.round(
+    approvedPurchases.reduce((acc, p) => {
+      const paidByWallet = Number(p.walletDebitAmount || 0) > 0;
+      if (paidByWallet) return acc;
+      const amount = Number(p.price || 0);
+      const percentFee = amount * (feePercentSafe / 100);
+      return acc + percentFee + feeFixedSafe;
+    }, 0) * 100
+  ) / 100;
+
+  const netProfit = Math.round((grossSales - refunds - estimatedFees) * 100) / 100;
+
+  // Daily breakdown (last N days in the period)
+  const byDay = new Map();
+  const dayKey = (iso) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString().slice(0, 10);
+  };
+
+  for (const p of approvedPurchases) {
+    const t = p.approvedAt || p.purchasedAt || p.createdAt;
+    const key = t ? dayKey(t) : null;
+    if (!key) continue;
+    if (!byDay.has(key)) byDay.set(key, { day: key, count: 0, gross: 0, refunds: 0, fees: 0, net: 0 });
+    const row = byDay.get(key);
+    row.count += 1;
+    row.gross += Number(p.price || 0);
+    if (p.walletRefundedAt) row.refunds += Number(p.walletDebitAmount || p.price || 0);
+    const paidByWallet = Number(p.walletDebitAmount || 0) > 0;
+    if (!paidByWallet) {
+      row.fees += Number(p.price || 0) * (feePercentSafe / 100) + feeFixedSafe;
+    }
+  }
+  const dailyRows = Array.from(byDay.values())
+    .map((r) => {
+      const gross = Math.round(r.gross * 100) / 100;
+      const refunds = Math.round(r.refunds * 100) / 100;
+      const fees = Math.round(r.fees * 100) / 100;
+      const net = Math.round((gross - refunds - fees) * 100) / 100;
+      return { ...r, gross, refunds, fees, net };
+    })
+    .sort((a, b) => (a.day < b.day ? 1 : -1));
+
+  res.render('admin/net-profit', {
+    user: req.session.user,
+    period,
+    rangeStart: rangeStart.toISOString(),
+    rangeEnd: rangeEnd.toISOString(),
+    metrics: {
+      grossSales,
+      grossBefore,
+      discounts,
+      refunds,
+      estimatedFees,
+      netProfit
+    },
+    feeConfig: {
+      feePercent: feePercentSafe,
+      feeFixedEgp: feeFixedSafe
+    },
+    dailyRows
+  });
+});
+
+// Admin Leak Radar (download anomaly detection)
+app.get('/admin/leak-radar', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
+  const users = db.users();
+  const projects = db.projects();
+  const purchases = db.purchases();
+  const events = db.downloadEvents();
+
+  const windowHours = parseEnvInt(process.env.LEAK_RADAR_WINDOW_HOURS, 24);
+  const mediumDownloadThreshold = parseEnvInt(process.env.LEAK_RADAR_MEDIUM_DOWNLOADS, 5);
+  const highDownloadThreshold = parseEnvInt(process.env.LEAK_RADAR_HIGH_DOWNLOADS, 10);
+  const windowMs = windowHours * 60 * 60 * 1000;
+  const since = Date.now() - windowMs;
+
+  const userLabelById = new Map(
+    users.filter(Boolean).map((u) => [u.id, u.email || u.name || u.id])
+  );
+  const projectTitleById = new Map(
+    projects.filter(Boolean).map((p) => [p.id, p.title || p.id])
+  );
+
+  const approvedPurchaseById = new Map(
+    purchases
+      .filter((p) => p && p.status === 'approved')
+      .map((p) => [p.id, p])
+  );
+
+  const recent = (Array.isArray(events) ? events : []).filter((e) => {
+    const t = e && e.createdAt ? Date.parse(e.createdAt) : NaN;
+    if (!Number.isFinite(t) || t < since) return false;
+    return e && e.userId;
+  });
+
+  const keyFor = (e) => `${e.userId}::${e.projectId || ''}`;
+  const groups = new Map();
+  for (const e of recent) {
+    const p = e.purchaseId ? approvedPurchaseById.get(e.purchaseId) : null;
+    // Ignore malformed events that don't map to a purchase for "purchase" kind.
+    if (e.kind === 'purchase' && !p) continue;
+    const key = keyFor(e);
+    if (!groups.has(key)) {
+      groups.set(key, { userId: e.userId, projectId: e.projectId || null, ips: new Set(), devices: new Set(), count: 0, lastAt: e.createdAt });
+    }
+    const g = groups.get(key);
+    g.count += 1;
+    if (e.ip) g.ips.add(e.ip);
+    if (e.device) g.devices.add(e.device);
+    if (e.createdAt && (!g.lastAt || Date.parse(e.createdAt) > Date.parse(g.lastAt))) g.lastAt = e.createdAt;
+  }
+
+  const alerts = [];
+  for (const g of groups.values()) {
+    const ipCount = g.ips.size;
+    const deviceCount = g.devices.size;
+    const downloadCount = g.count;
+
+    let severity = null;
+    if (ipCount >= 3 || deviceCount >= 3 || downloadCount >= highDownloadThreshold) severity = 'high';
+    else if (ipCount >= 2 || deviceCount >= 2 || downloadCount >= mediumDownloadThreshold) severity = 'medium';
+    if (!severity) continue;
+
+    alerts.push({
+      severity,
+      userId: g.userId,
+      userLabel: userLabelById.get(g.userId) || g.userId,
+      projectId: g.projectId,
+      projectTitle: projectTitleById.get(g.projectId) || (g.projectId || 'غير معروف'),
+      downloadCount,
+      ipList: Array.from(g.ips).slice(0, 6),
+      deviceList: Array.from(g.devices).slice(0, 6),
+      lastAt: g.lastAt
+    });
+  }
+
+  alerts.sort((a, b) => {
+    const sev = (s) => (s === 'high' ? 2 : 1);
+    return (sev(b.severity) - sev(a.severity)) || (Date.parse(b.lastAt) - Date.parse(a.lastAt));
+  });
+
+  res.render('admin/leak-radar', {
+    user: req.session.user,
+    alerts: alerts.slice(0, 200),
+    windowHours,
+    mediumDownloadThreshold,
+    highDownloadThreshold
+  });
+});
+
+// Admin AI Pricing (internal heuristic recommendations)
+app.get('/admin/ai-pricing', requireAdminPermission(ADMIN_PERMISSIONS.projects), (req, res) => {
+  const projects = db.projects().filter(Boolean);
+  const purchases = db.purchases().filter((p) => p && p.status === 'approved');
+  const views = db.projectViewEvents();
+
+  const windowDays = parseEnvInt(process.env.AI_PRICING_WINDOW_DAYS, 30);
+  const since = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+
+  const recentViews = (Array.isArray(views) ? views : []).filter((v) => {
+    const t = v && v.createdAt ? Date.parse(v.createdAt) : NaN;
+    return Number.isFinite(t) && t >= since && v.projectId;
+  });
+  const recentPurchases = purchases.filter((p) => {
+    const d = p.approvedAt || p.purchasedAt || p.createdAt;
+    const t = d ? Date.parse(d) : NaN;
+    return Number.isFinite(t) && t >= since;
+  });
+
+  const viewCountByProject = new Map();
+  for (const v of recentViews) {
+    viewCountByProject.set(v.projectId, (viewCountByProject.get(v.projectId) || 0) + 1);
+  }
+  const purchaseCountByProject = new Map();
+  const revenueByProject = new Map();
+  for (const p of recentPurchases) {
+    const id = p.projectId;
+    if (!id) continue;
+    purchaseCountByProject.set(id, (purchaseCountByProject.get(id) || 0) + 1);
+    revenueByProject.set(id, (revenueByProject.get(id) || 0) + Number(p.price || 0));
+  }
+
+  const recommend = ({ viewsCount, purchasesCount, conversion }) => {
+    // Heuristics tuned for software products:
+    // - If lots of views with weak conversion => price probably high or page not convincing.
+    // - If conversion strong and purchases decent => can increase slightly.
+    if (viewsCount < 50 && purchasesCount < 2) {
+      return { action: 'hold', label: 'ثبّت السعر', reason: 'بيانات قليلة خلال الفترة الحالية.' };
+    }
+    if (viewsCount >= 200 && conversion < 1.2) {
+      return { action: 'decrease', label: 'خفض 10% - 20%', reason: 'Views عالية وتحويل ضعيف: جرّب خفض بسيط لرفع التحويل.' };
+    }
+    if (viewsCount >= 100 && conversion < 2.0) {
+      return { action: 'decrease', label: 'خفض 5% - 10%', reason: 'تحويل أقل من المتوقع مقابل عدد Views جيد.' };
+    }
+    if (conversion >= 4.0 && purchasesCount >= 5) {
+      return { action: 'increase', label: 'رفع 5% - 10%', reason: 'تحويل قوي ومبيعات جيدة: يمكن رفع السعر تدريجياً.' };
+    }
+    if (conversion >= 3.0 && purchasesCount >= 3) {
+      return { action: 'increase', label: 'رفع 3% - 5%', reason: 'تحويل جيد جدًا: جرّب رفع بسيط مع مراقبة التحويل.' };
+    }
+    return { action: 'hold', label: 'ثبّت السعر', reason: 'الأداء متوازن خلال الفترة الحالية.' };
+  };
+
+  const rows = projects
+    .filter((p) => p && p.id)
+    .map((p) => {
+      const viewsCount = Number(viewCountByProject.get(p.id) || 0);
+      const purchasesCount = Number(purchaseCountByProject.get(p.id) || 0);
+      const conversion = viewsCount > 0 ? (purchasesCount / viewsCount) * 100 : 0;
+      const revenueEgp = Math.round(Number(revenueByProject.get(p.id) || 0) * 100) / 100;
+      const priceEgp = Math.round(Number(p.price || 0) * 100) / 100;
+      return {
+        projectId: p.id,
+        title: p.title || p.id,
+        views: viewsCount,
+        purchases: purchasesCount,
+        conversionPercent: conversion,
+        revenueEgp,
+        priceEgp,
+        recommendation: recommend({ viewsCount, purchasesCount, conversion })
+      };
+    })
+    .sort((a, b) => (b.revenueEgp - a.revenueEgp) || (b.purchases - a.purchases) || (b.views - a.views));
+
+  res.render('admin/ai-pricing', {
+    user: req.session.user,
+    windowDays,
+    rows
+  });
+});
+
+// Admin File Health (missing files / broken refs)
+app.get('/admin/file-health', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
+  const reports = db.fileHealthReports();
+  const latestReport = Array.isArray(reports) && reports.length ? reports[0] : null;
+  res.render('admin/file-health', {
+    user: req.session.user,
+    reports: Array.isArray(reports) ? reports : [],
+    latestReport
+  });
+});
+
+app.post('/admin/file-health/run', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
+  runFileHealthCheck();
+  res.redirect('/admin/file-health');
+});
+
+app.get('/admin/live-feed', requireAdmin, (req, res) => {
+  const audit = db.adminAuditLog();
+  const seedEvents = (Array.isArray(audit) ? audit : [])
+    .slice(0, 50)
+    .map((entry) => ({
+      type: 'admin-audit',
+      title: 'تعديل إداري',
+      message: `${entry.action} (${entry.entity})`,
+      data: {
+        adminEmail: entry.adminEmail || null,
+        entityId: entry.entityId || null,
+        meta: entry.meta || null
+      },
+      createdAt: entry.createdAt
+    }));
+  res.render('admin/live-feed', { user: req.session.user, seedEvents, maxEvents: MAX_LIVE_FEED_EVENTS });
+});
+
+// Admin Payments Inbox (failures / disputes / refunds)
+app.get('/admin/payments-inbox', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
+  const users = db.users();
+  const purchases = db.purchases();
+  const topups = db.walletTopups();
+
+  const userLabelById = new Map(users.filter(Boolean).map((u) => [u.id, u.email || u.name || u.id]));
+
+  const rejectedPurchases = purchases
+    .filter((p) => p && p.status === 'rejected')
+    .slice()
+    .sort((a, b) => Date.parse(b.walletRefundedAt || b.purchasedAt || 0) - Date.parse(a.walletRefundedAt || a.purchasedAt || 0))
+    .slice(0, 200)
+    .map((p) => ({
+      id: p.id,
+      orderId: p.orderId || p.id,
+      userId: p.userId,
+      userLabel: userLabelById.get(p.userId) || p.userId,
+      projectTitle: p.projectTitle || p.projectId || '-',
+      amount: Number(p.price || 0),
+      refunded: Boolean(p.walletRefundedAt),
+      at: p.walletRefundedAt || p.purchasedAt || null
+    }));
+
+  const refundRows = purchases
+    .filter((p) => p && p.walletRefundedAt)
+    .slice()
+    .sort((a, b) => Date.parse(b.walletRefundedAt || 0) - Date.parse(a.walletRefundedAt || 0))
+    .slice(0, 200)
+    .map((p) => ({
+      id: p.id,
+      orderId: p.orderId || p.id,
+      userId: p.userId,
+      userLabel: userLabelById.get(p.userId) || p.userId,
+      projectTitle: p.projectTitle || p.projectId || '-',
+      amount: Number(p.walletRefundAmount || p.walletDebitAmount || p.price || 0),
+      at: p.walletRefundedAt
+    }));
+
+  const failedTopups = (Array.isArray(topups) ? topups : [])
+    .filter((t) => t && t.status === 'failed')
+    .slice()
+    .sort((a, b) => Date.parse(b.updatedAt || b.createdAt || 0) - Date.parse(a.updatedAt || a.createdAt || 0))
+    .slice(0, 200)
+    .map((t) => ({
+      id: t.id,
+      reference: t.reference || null,
+      userId: t.userId,
+      userLabel: userLabelById.get(t.userId) || t.userId,
+      amount: Number(t.amount || 0),
+      currency: t.currency || null,
+      gateway: t.gateway || null,
+      failureReason: t.failureReason || null,
+      updatedAt: t.updatedAt || t.createdAt || null
+    }));
+
+  res.render('admin/payments-inbox', {
+    user: req.session.user,
+    refundRows,
+    failedTopups,
+    rejectedPurchases
+  });
 });
 
 app.get('/admin/community/jobs', requireSuperAdmin, (req, res) => {
@@ -9512,6 +10264,9 @@ app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), 
       category,
       technologies: technologies ? technologies.split(',').map(t => t.trim()) : [],
       visibility: (visibility === 'basic' || visibility === 'premium') ? visibility : 'public',
+      downloadsLocked: Boolean(req.body.downloadsLocked),
+      downloadsLockReason: normalizeOptionalText(req.body.downloadsLockReason) || null,
+      downloadsLockedAt: Boolean(req.body.downloadsLocked) ? new Date().toISOString() : null,
       saleActive,
       saleType: saleActive ? saleType : null,
       saleValue: saleActive ? saleValue : 0,
@@ -9526,6 +10281,23 @@ app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), 
     
     projects.push(newProject);
     db.saveProjects(projects);
+
+    addAdminAuditLogEntry({
+      req,
+      action: 'create_project',
+      entity: 'project',
+      entityId: newProject.id,
+      before: null,
+      after: { title: newProject.title, price: newProject.price, visibility: newProject.visibility || 'public' }
+    });
+    emitLiveAdminEvent({
+      type: 'project-create',
+      title: 'إضافة مشروع',
+      message: `تمت إضافة مشروع: ${newProject.title}`,
+      severity: 'success',
+      data: { projectId: newProject.id },
+      createdAt: new Date().toISOString()
+    });
     
     res.redirect('/admin');
   } catch (error) {
@@ -9594,6 +10366,17 @@ app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.project
       });
     }
     
+    const before = {
+      title: projects[index].title,
+      price: projects[index].price,
+      visibility: projects[index].visibility || 'public',
+      saleActive: Boolean(projects[index].saleActive),
+      saleType: projects[index].saleType || null,
+      saleValue: Number(projects[index].saleValue || 0),
+      downloadsLocked: Boolean(projects[index].downloadsLocked),
+      downloadsLockReason: projects[index].downloadsLockReason || null
+    };
+
     projects[index] = {
       ...projects[index],
       title,
@@ -9604,6 +10387,9 @@ app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.project
       visibility: (((req.body.visibility || projects[index].visibility || 'public').trim() === 'basic' || (req.body.visibility || projects[index].visibility || 'public').trim() === 'premium')
         ? (req.body.visibility || projects[index].visibility || 'public').trim()
         : 'public'),
+      downloadsLocked: Boolean(req.body.downloadsLocked),
+      downloadsLockReason: normalizeOptionalText(req.body.downloadsLockReason) || null,
+      downloadsLockedAt: Boolean(req.body.downloadsLocked) ? (projects[index].downloadsLockedAt || new Date().toISOString()) : null,
       saleActive,
       saleType: saleActive ? saleType : null,
       saleValue: saleActive ? saleValue : 0,
@@ -9616,6 +10402,33 @@ app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.project
     };
     
     db.saveProjects(projects);
+
+    addAdminAuditLogEntry({
+      req,
+      action: 'update_project',
+      entity: 'project',
+      entityId: projects[index].id,
+      before,
+      after: {
+        title: projects[index].title,
+        price: projects[index].price,
+        visibility: projects[index].visibility || 'public',
+        saleActive: Boolean(projects[index].saleActive),
+        saleType: projects[index].saleType || null,
+        saleValue: Number(projects[index].saleValue || 0),
+        downloadsLocked: Boolean(projects[index].downloadsLocked),
+        downloadsLockReason: projects[index].downloadsLockReason || null
+      }
+    });
+
+    emitLiveAdminEvent({
+      type: 'project-update',
+      title: 'تعديل مشروع',
+      message: `تم تحديث المشروع: ${projects[index].title}`,
+      severity: 'info',
+      data: { projectId: projects[index].id },
+      createdAt: new Date().toISOString()
+    });
     res.redirect('/admin');
   } catch (error) {
     console.error('Error updating project:', error);
@@ -9653,6 +10466,23 @@ app.post('/admin/projects/:id/delete', requireAdminPermission(ADMIN_PERMISSIONS.
   }
   
   db.saveProjects(projects.filter(p => p.id !== req.params.id));
+
+  addAdminAuditLogEntry({
+    req,
+    action: 'delete_project',
+    entity: 'project',
+    entityId: req.params.id,
+    before: project ? { title: project.title, price: project.price } : null,
+    after: null
+  });
+  emitLiveAdminEvent({
+    type: 'project-delete',
+    title: 'حذف مشروع',
+    message: `تم حذف مشروع: ${project ? project.title : req.params.id}`,
+    severity: 'warning',
+    data: { projectId: req.params.id },
+    createdAt: new Date().toISOString()
+  });
   res.redirect('/admin');
 });
 
@@ -9663,6 +10493,63 @@ app.get('/admin/purchases', requireAdminPermission(ADMIN_PERMISSIONS.purchases),
   const projects = db.projects();
   const invoices = db.invoices();
   res.render('admin/purchases', { purchases, users, projects, invoices, user: req.session.user });
+});
+
+app.post('/admin/projects/:id/lock-downloads', requireAdminPermission(ADMIN_PERMISSIONS.projects), (req, res) => {
+  const projects = db.projects();
+  const idx = projects.findIndex((p) => p && p.id === req.params.id);
+  if (idx === -1) return res.status(404).send('Project not found');
+  const before = { downloadsLocked: Boolean(projects[idx].downloadsLocked), downloadsLockReason: projects[idx].downloadsLockReason || null };
+  const reason = normalizeOptionalText(req.body.reason) || 'تم قفل تنزيلات هذا المشروع بواسطة الأدمن';
+  projects[idx].downloadsLocked = true;
+  projects[idx].downloadsLockReason = reason;
+  projects[idx].downloadsLockedAt = new Date().toISOString();
+  db.saveProjects(projects);
+  addAdminAuditLogEntry({
+    req,
+    action: 'lock_project_downloads',
+    entity: 'project',
+    entityId: projects[idx].id,
+    before,
+    after: { downloadsLocked: true, downloadsLockReason: projects[idx].downloadsLockReason, downloadsLockedAt: projects[idx].downloadsLockedAt }
+  });
+  emitLiveAdminEvent({
+    type: 'project-lock',
+    title: 'قفل مشروع',
+    message: `تم قفل تنزيلات المشروع: ${projects[idx].title || projects[idx].id}`,
+    severity: 'warning',
+    data: { projectId: projects[idx].id },
+    createdAt: new Date().toISOString()
+  });
+  res.redirect('/admin');
+});
+
+app.post('/admin/projects/:id/unlock-downloads', requireAdminPermission(ADMIN_PERMISSIONS.projects), (req, res) => {
+  const projects = db.projects();
+  const idx = projects.findIndex((p) => p && p.id === req.params.id);
+  if (idx === -1) return res.status(404).send('Project not found');
+  const before = { downloadsLocked: Boolean(projects[idx].downloadsLocked), downloadsLockReason: projects[idx].downloadsLockReason || null };
+  projects[idx].downloadsLocked = false;
+  projects[idx].downloadsLockReason = null;
+  projects[idx].downloadsLockedAt = null;
+  db.saveProjects(projects);
+  addAdminAuditLogEntry({
+    req,
+    action: 'unlock_project_downloads',
+    entity: 'project',
+    entityId: projects[idx].id,
+    before,
+    after: { downloadsLocked: false }
+  });
+  emitLiveAdminEvent({
+    type: 'project-unlock',
+    title: 'فك قفل مشروع',
+    message: `تم فك قفل تنزيلات المشروع: ${projects[idx].title || projects[idx].id}`,
+    severity: 'success',
+    data: { projectId: projects[idx].id },
+    createdAt: new Date().toISOString()
+  });
+  res.redirect('/admin');
 });
 
 app.get('/admin/custom-projects', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
@@ -10292,9 +11179,27 @@ app.post('/admin/purchases/:id/approve', requireAdmin, (req, res) => {
   const index = purchases.findIndex(p => p.id === req.params.id);
   if (index === -1) return res.status(404).send('Purchase not found');
   
+  const before = { status: purchases[index].status, approvedAt: purchases[index].approvedAt || null };
   purchases[index].status = 'approved';
   purchases[index].approvedAt = new Date().toISOString();
   db.savePurchases(purchases);
+  addAdminAuditLogEntry({
+    req,
+    action: 'approve_purchase',
+    entity: 'purchase',
+    entityId: purchases[index].id,
+    before,
+    after: { status: purchases[index].status, approvedAt: purchases[index].approvedAt },
+    meta: { projectId: purchases[index].projectId || null, userId: purchases[index].userId || null }
+  });
+  emitLiveAdminEvent({
+    type: 'purchase-approve',
+    title: 'موافقة شراء',
+    message: `تمت الموافقة على شراء: ${purchases[index].projectTitle || purchases[index].projectId || purchases[index].id}`,
+    severity: 'success',
+    data: { purchaseId: purchases[index].id, projectId: purchases[index].projectId || null, userId: purchases[index].userId || null },
+    createdAt: new Date().toISOString()
+  });
 
   const approvedPurchase = purchases[index];
   // Create invoice after approval (only once per order)
@@ -10439,6 +11344,69 @@ app.post('/admin/purchases/:id/upload', requireAdminPermission(ADMIN_PERMISSIONS
   res.redirect('/admin/purchases');
 });
 
+app.post('/admin/purchases/:id/lock-download', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
+  const purchases = db.purchases();
+  const idx = purchases.findIndex((p) => p && p.id === req.params.id);
+  if (idx === -1) return res.status(404).send('Purchase not found');
+
+  const before = { downloadLocked: Boolean(purchases[idx].downloadLocked), downloadLockReason: purchases[idx].downloadLockReason || null };
+  const reason = (req.body.reason || '').toString().trim();
+  purchases[idx].downloadLocked = true;
+  purchases[idx].downloadLockReason = reason || 'تم قفل هذه النسخة بواسطة الأدمن';
+  purchases[idx].downloadLockedAt = new Date().toISOString();
+  db.savePurchases(purchases);
+
+  addAdminAuditLogEntry({
+    req,
+    action: 'lock_download',
+    entity: 'purchase',
+    entityId: purchases[idx].id,
+    before,
+    after: { downloadLocked: true, downloadLockReason: purchases[idx].downloadLockReason, downloadLockedAt: purchases[idx].downloadLockedAt },
+    meta: { projectId: purchases[idx].projectId || null, userId: purchases[idx].userId || null }
+  });
+  emitLiveAdminEvent({
+    type: 'lock',
+    title: 'قفل نسخة',
+    message: `تم قفل نسخة شراء (${purchases[idx].projectTitle || purchases[idx].projectId || purchases[idx].id})`,
+    severity: 'warning',
+    data: { purchaseId: purchases[idx].id, projectId: purchases[idx].projectId || null, userId: purchases[idx].userId || null },
+    createdAt: new Date().toISOString()
+  });
+  res.redirect('/admin/purchases');
+});
+
+app.post('/admin/purchases/:id/unlock-download', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
+  const purchases = db.purchases();
+  const idx = purchases.findIndex((p) => p && p.id === req.params.id);
+  if (idx === -1) return res.status(404).send('Purchase not found');
+
+  const before = { downloadLocked: Boolean(purchases[idx].downloadLocked), downloadLockReason: purchases[idx].downloadLockReason || null };
+  purchases[idx].downloadLocked = false;
+  purchases[idx].downloadLockReason = null;
+  purchases[idx].downloadLockedAt = null;
+  db.savePurchases(purchases);
+
+  addAdminAuditLogEntry({
+    req,
+    action: 'unlock_download',
+    entity: 'purchase',
+    entityId: purchases[idx].id,
+    before,
+    after: { downloadLocked: false },
+    meta: { projectId: purchases[idx].projectId || null, userId: purchases[idx].userId || null }
+  });
+  emitLiveAdminEvent({
+    type: 'unlock',
+    title: 'فك قفل نسخة',
+    message: `تم فك قفل نسخة شراء (${purchases[idx].projectTitle || purchases[idx].projectId || purchases[idx].id})`,
+    severity: 'success',
+    data: { purchaseId: purchases[idx].id, projectId: purchases[idx].projectId || null, userId: purchases[idx].userId || null },
+    createdAt: new Date().toISOString()
+  });
+  res.redirect('/admin/purchases');
+});
+
 // Invoice PDF (available after approval)
 app.get('/invoice/:orderId.pdf', requireAuth, (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
@@ -10471,6 +11439,7 @@ app.post('/admin/purchases/:id/reject', requireAdmin, (req, res) => {
   const index = purchases.findIndex(p => p.id === req.params.id);
   if (index === -1) return res.status(404).send('Purchase not found');
 
+  const before = { status: purchases[index].status, walletRefundedAt: purchases[index].walletRefundedAt || null, walletRefundAmount: purchases[index].walletRefundAmount || null };
   const purchase = purchases[index];
   if (purchase.status !== 'rejected') {
     const refundAmount = calculateRefundForRejectedItem({ rejectedPurchase: purchase, allPurchases: purchases });
@@ -10489,6 +11458,24 @@ app.post('/admin/purchases/:id/reject', requireAdmin, (req, res) => {
 
   purchases[index].status = 'rejected';
   db.savePurchases(purchases);
+
+  addAdminAuditLogEntry({
+    req,
+    action: 'reject_purchase',
+    entity: 'purchase',
+    entityId: purchases[index].id,
+    before,
+    after: { status: purchases[index].status, walletRefundedAt: purchases[index].walletRefundedAt || null, walletRefundAmount: purchases[index].walletRefundAmount || null },
+    meta: { projectId: purchases[index].projectId || null, userId: purchases[index].userId || null }
+  });
+  emitLiveAdminEvent({
+    type: 'purchase-reject',
+    title: 'رفض شراء',
+    message: `تم رفض شراء: ${purchases[index].projectTitle || purchases[index].projectId || purchases[index].id}`,
+    severity: 'warning',
+    data: { purchaseId: purchases[index].id, projectId: purchases[index].projectId || null, userId: purchases[index].userId || null },
+    createdAt: new Date().toISOString()
+  });
   res.redirect('/admin/purchases');
 });
 
@@ -11320,6 +12307,9 @@ const io = new Server(httpServer, {
   }
 });
 
+// Used by Live Admin Feed + Audit Log broadcasting.
+liveIo = io;
+
 io.on('connection', (socket) => {
   socket.on('join-room', (roomId) => {
     if (!roomId) return;
@@ -11366,6 +12356,7 @@ io.on('connection', (socket) => {
 // Keep the local port listener for normal development, but export the app for Vercel.
 if (!process.env.VERCEL) {
   startAbandonedCartRecoveryJob();
+  startFileHealthMonitorJob();
   httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Codentra running on http://localhost:${PORT}`);
     console.log(`Network access: http://192.168.8.110:${PORT}`);

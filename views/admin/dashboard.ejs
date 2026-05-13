@@ -22,6 +22,14 @@
         <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.purchases))) { %>
           <a href="/admin/purchases">المشتريات</a>
           <a href="/admin/custom-projects">طلبات المشاريع المخصصة</a>
+          <a href="/admin/payments-inbox">Payments Inbox</a>
+          <a href="/admin/net-profit">صافي الأرباح</a>
+          <a href="/admin/leak-radar">Leak Radar</a>
+          <a href="/admin/file-health">سلامة الملفات</a>
+        <% } %>
+        <a href="/admin/live-feed">الأحداث المباشرة</a>
+        <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.projects))) { %>
+          <a href="/admin/ai-pricing">التسعير الذكي</a>
         <% } %>
         <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.modifications))) { %>
           <a href="/admin/modifications">طلبات التعديل</a>

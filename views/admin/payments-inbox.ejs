@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payments Inbox - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/payments-inbox" class="active">Payments Inbox</a>
+        <a href="/admin/net-profit">صافي الأرباح</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>Payments Inbox</h1>
+      <div class="glass-card" style="padding:14px; margin-bottom:14px; opacity:0.9; line-height:1.7;">
+        كل فشل/Refund/عمليات تحتاج متابعة في مكان واحد مع أسباب وتوصيات سريعة.
+      </div>
+
+      <div class="stats-grid" style="margin-bottom:16px;">
+        <div class="stat-card">
+          <div class="stat-value"><%= refundRows.length %></div>
+          <div class="stat-label">Refunds</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= failedTopups.length %></div>
+          <div class="stat-label">شحن فاشل</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= rejectedPurchases.length %></div>
+          <div class="stat-label">طلبات مرفوضة</div>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding:16px; margin-bottom:16px;">
+        <h2 style="margin:0 0 12px 0;">Refunds (عمليات مسترجعة)</h2>
+        <% if (!refundRows.length) { %>
+          <div style="opacity:0.8;">لا توجد Refunds.</div>
+        <% } else { %>
+          <div style="overflow:auto;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>الطلب</th>
+                  <th>المستخدم</th>
+                  <th>المشروع</th>
+                  <th>المبلغ</th>
+                  <th>تاريخ</th>
+                  <th>سبب/توصية</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% refundRows.forEach(r => { %>
+                  <tr>
+                    <td class="ltr"><%= r.orderId %></td>
+                    <td><%= r.userLabel %></td>
+                    <td><%= r.projectTitle %></td>
+                    <td><%= displayMoney(r.amount) %></td>
+                    <td><%= new Date(r.at).toLocaleString('ar') %></td>
+                    <td style="max-width:360px; line-height:1.7; opacity:0.9;">
+                      <div>Refund تم تلقائيًا عند الرفض أو الإلغاء.</div>
+                      <div style="opacity:0.75;font-size:12px;">توصية: راجع سبب الرفض في محادثة الطلب.</div>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="glass-card" style="padding:16px; margin-bottom:16px;">
+        <h2 style="margin:0 0 12px 0;">شحن رصيد فاشل</h2>
+        <% if (!failedTopups.length) { %>
+          <div style="opacity:0.8;">لا توجد عمليات شحن فاشلة.</div>
+        <% } else { %>
+          <div style="overflow:auto;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Reference</th>
+                  <th>المستخدم</th>
+                  <th>المبلغ</th>
+                  <th>البوابة</th>
+                  <th>السبب</th>
+                  <th>توصية</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% failedTopups.forEach(t => { %>
+                  <tr>
+                    <td class="ltr"><%= t.reference || t.id %></td>
+                    <td><%= t.userLabel %></td>
+                    <td><%= displayMoney(t.amount) %></td>
+                    <td><%= t.gateway || '-' %></td>
+                    <td class="ltr" style="max-width:240px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><%= t.failureReason || '-' %></td>
+                    <td style="max-width:340px; line-height:1.7; opacity:0.9;">
+                      <% if ((t.failureReason || '').includes('CONFIG')) { %>
+                        راجع إعدادات البوابة (Keys/Webhook/URLs).
+                      <% } else if ((t.failureReason || '').includes('WEBHOOK')) { %>
+                        تأكد أن Webhook يوصل للسيرفر وأن Secret صحيح.
+                      <% } else { %>
+                        اطلب من العميل إعادة المحاولة أو جرّب بوابة/طريقة دفع أخرى.
+                      <% } %>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="glass-card" style="padding:16px;">
+        <h2 style="margin:0 0 12px 0;">طلبات شراء مرفوضة</h2>
+        <% if (!rejectedPurchases.length) { %>
+          <div style="opacity:0.8;">لا توجد طلبات مرفوضة.</div>
+        <% } else { %>
+          <div style="overflow:auto;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>الطلب</th>
+                  <th>المستخدم</th>
+                  <th>المشروع</th>
+                  <th>المبلغ</th>
+                  <th>Refund</th>
+                  <th>توصية</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% rejectedPurchases.forEach(p => { %>
+                  <tr>
+                    <td class="ltr"><%= p.orderId %></td>
+                    <td><%= p.userLabel %></td>
+                    <td><%= p.projectTitle %></td>
+                    <td><%= displayMoney(p.amount) %></td>
+                    <td><%= p.refunded ? 'نعم' : 'لا' %></td>
+                    <td style="max-width:320px; line-height:1.7; opacity:0.9;">
+                      توصية: راجع “المشتريات” والمحادثة لتوثيق سبب الرفض، وتأكد من ملف المشروع.
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
+

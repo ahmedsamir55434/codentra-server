@@ -1,18 +1,19 @@
 <%
   const guestPrimaryLinks = [
-    { href: '/', label: t('projects') },
-    { href: '/community', label: t('community') }
+    { href: '/', label: 'المشاريع' },
+    { href: '/community', label: 'Community' }
   ];
 
   const userPrimaryLinks = [
-    { href: '/', label: t('projects') },
-    { href: '/community', label: t('community') },
-    { href: '/my-purchases', label: t('myPurchases') },
-    { href: '/notifications', label: t('notifications'), badge: user && user.unreadNotificationsCount ? user.unreadNotificationsCount : 0 },
-    { href: '/appointments', label: t('appointments') }
+    { href: '/', label: 'المشاريع' },
+    { href: '/community', label: 'Community' },
+    { href: '/wishlist', label: 'المفضلة' },
+    { href: '/my-purchases', label: 'مشترياتي' },
+    { href: '/notifications', label: 'الإشعارات', badge: user && user.unreadNotificationsCount ? user.unreadNotificationsCount : 0 }
   ];
 
   const userSecondaryLinks = [
+    { href: '/appointments', label: 'الجلسات' },
     { href: '/custom-project', label: 'اطلب مشروعك' },
     { href: '/messages', label: 'التواصل' },
     { href: '/cart', label: 'السلة' },
@@ -22,8 +23,8 @@
   ];
 
   const adminPrimaryLinks = [
-    { href: '/', label: t('projects') },
-    { href: '/community', label: t('community') },
+    { href: '/', label: 'المشاريع' },
+    { href: '/community', label: 'Community' },
     { href: '/admin', label: 'لوحة التحكم' }
   ];
 
@@ -67,18 +68,10 @@
       </div>
 
       <div class="nav-actions">
-        <details class="nav-more-menu" id="navOverflowMenu" hidden>
-          <summary class="nav-more-trigger" aria-label="روابط إضافية">
-            <span><%= t('more') %></span>
-            <span class="nav-more-icon">+</span>
-          </summary>
-          <div class="nav-more-panel" id="navOverflowPanel"></div>
-        </details>
-
         <% if (secondaryLinks.length > 0) { %>
           <details class="nav-more-menu">
             <summary class="nav-more-trigger" aria-label="روابط إضافية">
-              <span><%= t('more') %></span>
+              <span>المزيد</span>
               <span class="nav-more-icon">+</span>
             </summary>
             <div class="nav-more-panel">
@@ -90,22 +83,18 @@
         <% } %>
 
         <button type="button" class="btn btn-secondary theme-toggle nav-compact-btn" id="themeToggle" aria-label="تبديل الوضع الليلي/النهاري">
-          <%= t('theme') %>
+          الوضع
         </button>
-
-        <a href="/lang/<%= lang === 'en' ? 'ar' : 'en' %>" class="btn btn-secondary nav-compact-btn">
-          <%= lang === 'en' ? t('languageArabic') : t('languageEnglish') %>
-        </a>
 
         <% if (user) { %>
           <div class="nav-user-chip">
-            <span class="nav-user-label"><%= t('hello') %></span>
+            <span class="nav-user-label">مرحباً</span>
             <strong><%= user.name %></strong>
           </div>
-          <a href="/logout" class="btn btn-secondary nav-compact-btn"><%= t('logout') %></a>
+          <a href="/logout" class="btn btn-secondary nav-compact-btn">خروج</a>
         <% } else { %>
-          <a href="/login" class="btn btn-secondary nav-compact-btn"><%= t('login') %></a>
-          <a href="/register" class="btn btn-primary nav-compact-btn"><%= t('register') %></a>
+          <a href="/login" class="btn btn-secondary nav-compact-btn">دخول</a>
+          <a href="/register" class="btn btn-primary nav-compact-btn">حساب جديد</a>
         <% } %>
 
         <button
@@ -161,10 +150,6 @@
             تبديل الوضع
           </button>
 
-          <a href="/lang/<%= lang === 'en' ? 'ar' : 'en' %>" class="btn btn-secondary mobile-action-btn">
-            <%= lang === 'en' ? t('languageArabic') : t('languageEnglish') %>
-          </a>
-
           <% if (user) { %>
             <a href="/logout" class="btn btn-secondary mobile-action-btn">خروج</a>
           <% } else { %>
@@ -178,48 +163,3 @@
     </div>
   </div>
 </header>
-
-<script>
-  (function () {
-    const primary = document.querySelector('.main-nav .nav-primary');
-    const overflowMenu = document.getElementById('navOverflowMenu');
-    const overflowPanel = document.getElementById('navOverflowPanel');
-    if (!primary || !overflowMenu || !overflowPanel) return;
-
-    const originalItems = Array.from(primary.querySelectorAll('.nav-pill'));
-
-    const rebuild = () => {
-      overflowPanel.innerHTML = '';
-      overflowMenu.hidden = true;
-
-      originalItems.forEach((item) => {
-        if (item.parentElement !== primary) primary.appendChild(item);
-      });
-
-      const availableWidth = primary.clientWidth;
-      let used = 0;
-      const items = Array.from(primary.querySelectorAll('.nav-pill'));
-
-      for (let i = 0; i < items.length; i++) {
-        const el = items[i];
-        used += el.offsetWidth;
-        if (used > availableWidth && items.length > 1) {
-          const moved = items.slice(i);
-          moved.forEach((linkEl) => {
-            const clone = linkEl.cloneNode(true);
-            clone.classList.remove('nav-pill');
-            clone.classList.add('nav-more-link');
-            overflowPanel.appendChild(clone);
-            linkEl.remove();
-          });
-          overflowMenu.hidden = false;
-          break;
-        }
-      }
-    };
-
-    window.addEventListener('resize', rebuild);
-    window.addEventListener('load', rebuild);
-    rebuild();
-  })();
-</script>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leak Radar - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/leak-radar" class="active">Leak Radar</a>
+        <a href="/admin/net-profit">صافي الأرباح</a>
+        <a href="/admin/ai-pricing">التسعير الذكي</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>Leak Radar</h1>
+      <div class="glass-card" style="padding:14px; margin-bottom:16px; opacity:0.9; line-height:1.7;">
+        يرصد تنزيلات غير طبيعية (اختلاف IP/Device أو تكرار عالي) خلال آخر <strong><%= windowHours %></strong> ساعة.
+        هذا “مؤشر خطر” وليس دليلًا قاطعًا.
+      </div>
+
+      <div class="glass-card" style="padding:16px;">
+        <h2 style="margin:0 0 12px 0;">تنبيهات</h2>
+        <% if (!alerts || alerts.length === 0) { %>
+          <div style="opacity:0.8;">لا توجد تنبيهات حالياً.</div>
+        <% } else { %>
+          <div style="overflow:auto;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>الخطورة</th>
+                  <th>المستخدم</th>
+                  <th>المشروع</th>
+                  <th>عدد التنزيلات</th>
+                  <th>IP</th>
+                  <th>Devices</th>
+                  <th>آخر تنزيل</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% alerts.forEach(a => { %>
+                  <tr>
+                    <td>
+                      <span class="glass-badge" style="<%= a.severity === 'high' ? 'background:rgba(255,80,80,0.18);border-color:rgba(255,80,80,0.35);' : 'background:rgba(255,190,80,0.18);border-color:rgba(255,190,80,0.35);' %>">
+                        <%= a.severity === 'high' ? 'عالي' : 'متوسط' %>
+                      </span>
+                    </td>
+                    <td>
+                      <div><strong><%= a.userLabel %></strong></div>
+                      <div style="opacity:0.7;font-size:12px;"><%= a.userId %></div>
+                    </td>
+                    <td>
+                      <div><strong><%= a.projectTitle %></strong></div>
+                      <div style="opacity:0.7;font-size:12px;"><%= a.projectId || '' %></div>
+                    </td>
+                    <td><%= a.downloadCount %></td>
+                    <td style="max-width:260px;">
+                      <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        <%= a.ipList.join(', ') %>
+                      </div>
+                    </td>
+                    <td><%= a.deviceList.join(', ') %></td>
+                    <td><%= new Date(a.lastAt).toLocaleString('ar') %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="glass-card" style="padding:16px; margin-top:16px;">
+        <h2 style="margin:0 0 10px 0;">قواعد الرصد</h2>
+        <div style="opacity:0.85; line-height:1.9;">
+          <div>High: IPs &gt;= 3 أو Devices &gt;= 3 أو Downloads &gt;= <%= highDownloadThreshold %> خلال نافذة الرصد.</div>
+          <div>Medium: IPs &gt;= 2 أو Devices &gt;= 2 أو Downloads &gt;= <%= mediumDownloadThreshold %>.</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
+

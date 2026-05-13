@@ -1,0 +1,30 @@
+[
+  {
+    "id": "bcac19ec-a11c-4ff8-82c9-2d516df1624d",
+    "userId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "cartUpdatedAt": "2026-05-09T17:06:23.317Z",
+    "itemCount": 1,
+    "sentAt": "2026-05-09T17:10:25.024Z"
+  },
+  {
+    "id": "29ea8fd5-ec1a-4e55-96bd-10d550d4a9d8",
+    "userId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "cartUpdatedAt": "2026-05-03T16:25:12.628Z",
+    "itemCount": 1,
+    "sentAt": "2026-05-09T17:10:25.024Z"
+  },
+  {
+    "id": "b6602557-d888-45c0-83f1-44efd4aeacae",
+    "userId": "098f2217-54cf-4d6d-9838-2ba657b533bd",
+    "cartUpdatedAt": "2026-05-04T08:52:23.308Z",
+    "itemCount": 1,
+    "sentAt": "2026-05-09T17:10:25.025Z"
+  },
+  {
+    "id": "2a5410c0-24dd-45d5-88c9-32a68f83a54f",
+    "userId": "2324abb2-fc85-459e-b20a-c01220fae4e8",
+    "cartUpdatedAt": "2026-05-13T15:32:40.971Z",
+    "itemCount": 1,
+    "sentAt": "2026-05-13T15:35:43.062Z"
+  }
+]

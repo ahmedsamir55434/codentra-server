@@ -191,9 +191,26 @@
                           <input type="file" name="modifiedFile" accept=".zip" class="file-input">
                           <button type="submit" class="btn btn-sm btn-primary">📤 <%= p.projectTitle %></button>
                         </form>
+                        <div style="margin-top: 6px; display:flex; gap:8px; flex-wrap:wrap;">
+                          <% if (p.downloadLocked) { %>
+                            <form action="/admin/purchases/<%= p.id %>/unlock-download" method="POST" class="inline-form">
+                              <button type="submit" class="btn btn-sm btn-success">🔓 فك قفل النسخة</button>
+                            </form>
+                          <% } else { %>
+                            <form action="/admin/purchases/<%= p.id %>/lock-download" method="POST" class="inline-form">
+                              <input type="hidden" name="reason" value="تم قفل النسخة بسبب الاشتباه في تسريب">
+                              <button type="submit" class="btn btn-sm btn-danger">🔒 قفل النسخة</button>
+                            </form>
+                          <% } %>
+                        </div>
                         <div style="margin-top: 6px;">
                           <a href="/admin/purchases/<%= p.id %>/messages" class="btn btn-sm btn-secondary">💬 محادثة الطلب</a>
                         </div>
+                        <% if (p.fingerprintCode) { %>
+                          <div style="margin-top: 8px; font-size: 0.8rem; opacity: 0.75;">
+                            بصمة النسخة: <strong><%= p.fingerprintCode %></strong>
+                          </div>
+                        <% } %>
                       <% }) %>
                       <% if (invoice) { %>
                         <div style="margin-top: 8px;">

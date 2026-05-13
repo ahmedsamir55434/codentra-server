@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>التسعير الذكي - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/leak-radar">Leak Radar</a>
+        <a href="/admin/net-profit">صافي الأرباح</a>
+        <a href="/admin/ai-pricing" class="active">التسعير الذكي</a>
+        <a href="/admin/projects/new">إضافة مشروع</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>التسعير الذكي</h1>
+      <div class="glass-card" style="padding:14px; margin-bottom:16px; opacity:0.9; line-height:1.7;">
+        اقتراحات مبنية على بيانات داخلية: Views + Purchases خلال آخر <strong><%= windowDays %></strong> يوم.
+        الهدف: تحسين التحويل أو زيادة الربح بدون كسر السوق.
+      </div>
+
+      <div class="glass-card" style="padding:16px;">
+        <h2 style="margin:0 0 12px 0;">اقتراحات المنتجات</h2>
+        <% if (!rows || rows.length === 0) { %>
+          <div style="opacity:0.8;">لا توجد بيانات كافية حالياً.</div>
+        <% } else { %>
+          <div style="overflow:auto;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>المنتج</th>
+                  <th>السعر الحالي</th>
+                  <th>Views</th>
+                  <th>Purchases</th>
+                  <th>Conversion</th>
+                  <th>Revenue</th>
+                  <th>التوصية</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% rows.forEach(r => { %>
+                  <tr>
+                    <td>
+                      <div><strong><%= r.title %></strong></div>
+                      <div style="opacity:0.7;font-size:12px;"><%= r.projectId %></div>
+                    </td>
+                    <td><%= displayMoney(r.priceEgp) %></td>
+                    <td><%= r.views %></td>
+                    <td><%= r.purchases %></td>
+                    <td><%= r.conversionPercent.toFixed(1) %>%</td>
+                    <td><%= displayMoney(r.revenueEgp) %></td>
+                    <td>
+                      <span class="glass-badge" style="<%= r.recommendation.action === 'increase' ? 'background:rgba(80,220,140,0.18);border-color:rgba(80,220,140,0.35);' : r.recommendation.action === 'decrease' ? 'background:rgba(255,190,80,0.18);border-color:rgba(255,190,80,0.35);' : 'opacity:0.85;' %>">
+                        <%= r.recommendation.label %>
+                      </span>
+                      <div style="opacity:0.75;font-size:12px; margin-top:6px; line-height:1.6;">
+                        <%= r.recommendation.reason %>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="glass-card" style="padding:16px; margin-top:16px;">
+        <h2 style="margin:0 0 10px 0;">منطق الاقتراح (مختصر)</h2>
+        <div style="opacity:0.85; line-height:1.9;">
+          <div>- Views عالية + Conversion ضعيف = اقتراح خفض بسيط.</div>
+          <div>- Conversion قوي مع مبيعات جيدة = اقتراح رفع بسيط.</div>
+          <div>- بيانات قليلة = “ثبّت السعر”.</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
+

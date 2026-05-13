@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="<%= lang === 'en' ? 'en' : 'ar' %>" dir="<%= dir || (lang === 'en' ? 'ltr' : 'rtl') %>">
+<html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -268,6 +268,7 @@
     }
 
     @media print {
+      @page { margin: 12mm; }
       body { background: #fff; padding: 0; }
       .toolbar { display: none; }
       .invoice-card {
@@ -277,8 +278,12 @@
       }
       .section {
         background: #fff;
-        break-inside: avoid;
+        /* Avoid pushing whole sections to the next page and leaving big blank space. */
+        break-inside: auto;
+        page-break-inside: auto;
       }
+      .items-table tr { break-inside: avoid; page-break-inside: avoid; }
+      .summary { break-inside: avoid; page-break-inside: avoid; }
     }
   </style>
 </head>

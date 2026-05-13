@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سلامة الملفات - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/file-health" class="active">سلامة الملفات</a>
+        <a href="/admin/leak-radar">Leak Radar</a>
+        <a href="/admin/net-profit">صافي الأرباح</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>سلامة الملفات</h1>
+
+      <div class="glass-card" style="padding:16px; margin-bottom:16px;">
+        <form method="POST" action="/admin/file-health/run" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <button class="btn btn-primary" type="submit">تشغيل فحص الآن</button>
+          <div style="opacity:0.75; font-size:14px; line-height:1.7;">
+            يفحص وجود الملفات المشار لها داخل البيانات (مشاريع/صور/مشتريات/طلبات مخصصة…).
+          </div>
+        </form>
+      </div>
+
+      <% if (!latestReport) { %>
+        <div class="glass-card" style="padding:16px; opacity:0.85;">لا يوجد تقارير بعد.</div>
+      <% } else { %>
+        <div class="stats-grid" style="margin-bottom:16px;">
+          <div class="stat-card">
+            <div class="stat-value"><%= latestReport.issueCount %></div>
+            <div class="stat-label">مشاكل</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value"><%= new Date(latestReport.createdAt).toLocaleString('ar') %></div>
+            <div class="stat-label">آخر فحص</div>
+          </div>
+        </div>
+
+        <div class="glass-card" style="padding:16px;">
+          <h2 style="margin:0 0 12px 0;">نتائج آخر فحص</h2>
+          <% if (!latestReport.issues || latestReport.issues.length === 0) { %>
+            <div style="opacity:0.85;">كل الملفات سليمة.</div>
+          <% } else { %>
+            <div style="overflow:auto;">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>النوع</th>
+                    <th>المرجع</th>
+                    <th>الملف</th>
+                    <th>التاريخ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% latestReport.issues.forEach(it => { %>
+                    <tr>
+                      <td><%= it.kind %></td>
+                      <td>
+                        <div><strong><%= it.label %></strong></div>
+                        <div style="opacity:0.7;font-size:12px;"><%= it.refId %></div>
+                      </td>
+                      <td style="max-width:520px;">
+                        <code style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block;"><%= it.storedPath %></code>
+                      </td>
+                      <td><%= new Date(it.createdAt).toLocaleString('ar') %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+
+        <% if (reports && reports.length > 1) { %>
+          <div class="glass-card" style="padding:16px; margin-top:16px;">
+            <h2 style="margin:0 0 12px 0;">تقارير سابقة</h2>
+            <div style="overflow:auto;">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>التاريخ</th>
+                    <th>عدد المشاكل</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% reports.slice(1, 12).forEach(r => { %>
+                    <tr>
+                      <td><%= new Date(r.createdAt).toLocaleString('ar') %></td>
+                      <td><%= r.issueCount %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        <% } %>
+      <% } %>
+    </main>
+  </div>
+</body>
+</html>
+

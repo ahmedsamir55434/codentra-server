@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الأحداث المباشرة - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/live-feed" class="active">الأحداث المباشرة</a>
+        <a href="/admin/file-health">سلامة الملفات</a>
+        <a href="/admin/leak-radar">Leak Radar</a>
+        <a href="/admin/net-profit">صافي الأرباح</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>الأحداث المباشرة</h1>
+      <div class="glass-card" style="padding:14px; margin-bottom:14px; opacity:0.9; line-height:1.7;">
+        تحديث لحظي لآخر الأحداث: تحميلات، أقفال، خصومات، وتعديلات الأدمن.
+      </div>
+
+      <div class="glass-card" style="padding:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+          <h2 style="margin:0;">آخر الأحداث</h2>
+          <button class="btn btn-sm btn-secondary" type="button" id="clearFeedBtn">مسح</button>
+        </div>
+        <div id="liveFeed" style="margin-top:12px; display:flex; flex-direction:column; gap:10px;">
+          <% (seedEvents || []).forEach(ev => { %>
+            <div class="glass-card" style="padding:12px; border-radius:16px;">
+              <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+                <div>
+                  <div style="font-weight:800;"><%= ev.title %></div>
+                  <div style="opacity:0.85; margin-top:4px;"><%= ev.message %></div>
+                </div>
+                <div style="opacity:0.7; font-size:12px; white-space:nowrap;"><%= new Date(ev.createdAt).toLocaleString('ar') %></div>
+              </div>
+              <% if (ev.data && Object.keys(ev.data).length) { %>
+                <pre style="margin:10px 0 0 0; opacity:0.8; font-size:12px; overflow:auto;"><%= JSON.stringify(ev.data, null, 2) %></pre>
+              <% } %>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <script>
+        const feed = document.getElementById('liveFeed');
+        const clearBtn = document.getElementById('clearFeedBtn');
+
+        const renderEvent = (ev) => {
+          const card = document.createElement('div');
+          card.className = 'glass-card';
+          card.style.padding = '12px';
+          card.style.borderRadius = '16px';
+
+          const title = (ev && ev.title) ? String(ev.title) : 'حدث';
+          const message = (ev && ev.message) ? String(ev.message) : '';
+          const createdAt = (ev && ev.createdAt) ? new Date(ev.createdAt) : new Date();
+
+          const data = (ev && ev.data && typeof ev.data === 'object') ? ev.data : null;
+          const dataText = data ? JSON.stringify(data, null, 2) : '';
+
+          card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; gap:10px; align-items:flex-start;">
+              <div>
+                <div style="font-weight:800;">${title}</div>
+                <div style="opacity:0.85; margin-top:4px;">${message}</div>
+              </div>
+              <div style="opacity:0.7; font-size:12px; white-space:nowrap;">${createdAt.toLocaleString('ar')}</div>
+            </div>
+            ${dataText ? `<pre style="margin:10px 0 0 0; opacity:0.8; font-size:12px; overflow:auto;">${dataText}</pre>` : ''}
+          `;
+
+          feed.prepend(card);
+
+          // cap size
+          const max = <%= maxEvents || 300 %>;
+          while (feed.children.length > max) {
+            feed.removeChild(feed.lastElementChild);
+          }
+        };
+
+        clearBtn.addEventListener('click', () => {
+          feed.innerHTML = '';
+        });
+
+        try {
+          const socket = io();
+          socket.emit('join-admin-team');
+          socket.on('live-event', (ev) => renderEvent(ev));
+        } catch (e) {
+          // ignore
+        }
+      </script>
+    </main>
+  </div>
+</body>
+</html>
+

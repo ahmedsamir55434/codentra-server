@@ -358,6 +358,92 @@ html[data-theme="light"] .price-tag .currency {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.sale-card {
+  margin-top: 12px;
+  padding: 14px;
+  background: rgba(125, 242, 184, 0.1);
+  border: 1px solid rgba(125, 242, 184, 0.35);
+  border-radius: 10px;
+  text-align: start;
+}
+
+.sale-head,
+.sale-prices {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.sale-label {
+  background: #7df2b8;
+  color: #0d3b2e;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sale-occasion,
+.sale-new-price {
+  color: #7df2b8;
+}
+
+.sale-old-price {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.sale-copy { font-size: 13px; color: #b9c3cf; }
+.purchase-state { margin: 20px 0; }
+.purchase-success { margin-bottom: 15px; }
+.cta-buy-btn, .goto-purchases-btn, .login-buy-btn { width: 100%; }
+.purchase-hint { color: #b0b0b0; font-size: 0.9rem; margin-top: 10px; }
+
+.project-meta-list {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.project-meta-row {
+  color: #b0b0b0;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.meta-label { color: #8d98a8; }
+.meta-value { color: #c3cfde; }
+
+html[data-theme="light"] .project-header h1 {
+  background: none !important;
+  -webkit-text-fill-color: #000 !important;
+  color: #000 !important;
+  text-shadow: none !important;
+}
+
+html[data-theme="light"] .project-main-content .btn-secondary.goto-purchases-btn {
+  color: #000 !important;
+  border-color: rgba(0,0,0,0.24);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+html[data-theme="light"] .project-main-content .btn-secondary.goto-purchases-btn * {
+  color: #000 !important;
+}
+
+html[data-theme="light"] .content-section {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+html[data-theme="light"] .section-title {
+  color: #111827;
+}
+
 .project-main-content .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);

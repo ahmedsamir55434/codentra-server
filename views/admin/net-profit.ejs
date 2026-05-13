@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>صافي الأرباح - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/net-profit" class="active">صافي الأرباح</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/admin/custom-projects">طلبات المشاريع المخصصة</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>صافي الأرباح</h1>
+
+      <div class="glass-card" style="padding:16px; margin-bottom:16px;">
+        <form method="GET" action="/admin/net-profit" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:8px;">
+            <span style="opacity:0.8;">الفترة:</span>
+            <select name="period" class="input" style="min-width:180px;">
+              <option value="day" <%= period === 'day' ? 'selected' : '' %>>اليوم</option>
+              <option value="week" <%= period === 'week' ? 'selected' : '' %>>آخر 7 أيام</option>
+              <option value="month" <%= (!period || period === 'month') ? 'selected' : '' %>>هذا الشهر</option>
+              <option value="year" <%= period === 'year' ? 'selected' : '' %>>هذا العام</option>
+            </select>
+          </label>
+          <button class="btn btn-primary" type="submit">تحديث</button>
+          <div style="opacity:0.75; font-size:14px;">
+            من <%= new Date(rangeStart).toLocaleString('ar') %> إلى <%= new Date(rangeEnd).toLocaleString('ar') %>
+          </div>
+        </form>
+      </div>
+
+      <div class="stats-grid" style="margin-bottom:18px;">
+        <div class="stat-card">
+          <div class="stat-value"><%= displayMoney(metrics.grossSales) %></div>
+          <div class="stat-label">إجمالي المبيعات (بعد الخصم)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= displayMoney(metrics.discounts) %></div>
+          <div class="stat-label">إجمالي الخصومات</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= displayMoney(metrics.refunds) %></div>
+          <div class="stat-label">إجمالي المبالغ المسترجعة</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= displayMoney(metrics.estimatedFees) %></div>
+          <div class="stat-label">رسوم الدفع (تقديري)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><%= displayMoney(metrics.netProfit) %></div>
+          <div class="stat-label">صافي الربح (تقديري)</div>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding:16px; margin-bottom:18px;">
+        <h2 style="margin:0 0 10px 0;">إعداد رسوم الدفع</h2>
+        <div style="opacity:0.8; font-size:14px; line-height:1.8;">
+          هذا التقرير يحسب الرسوم بشكل تقديري على عمليات الدفع غير المدفوعة من المحفظة فقط.
+          اضبط القيم عبر متغيرات البيئة:
+          <code>PAYMENT_FEE_PERCENT</code> و <code>PAYMENT_FEE_FIXED_EGP</code>.
+        </div>
+        <div style="margin-top:10px; display:flex; gap:14px; flex-wrap:wrap;">
+          <div class="glass-badge">النسبة: <strong><%= feeConfig.feePercent %>%</strong></div>
+          <div class="glass-badge">الثابت (EGP): <strong><%= feeConfig.feeFixedEgp %></strong></div>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding:16px;">
+        <h2 style="margin:0 0 12px 0;">تفصيل يومي</h2>
+        <% if (!dailyRows || dailyRows.length === 0) { %>
+          <div style="opacity:0.8;">لا توجد بيانات في هذه الفترة.</div>
+        <% } else { %>
+          <div style="overflow:auto;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>اليوم</th>
+                  <th>عدد العمليات</th>
+                  <th>إجمالي</th>
+                  <th>مسترجع</th>
+                  <th>رسوم</th>
+                  <th>صافي</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% dailyRows.forEach(row => { %>
+                  <tr>
+                    <td><%= row.day %></td>
+                    <td><%= row.count %></td>
+                    <td><%= displayMoney(row.gross) %></td>
+                    <td><%= displayMoney(row.refunds) %></td>
+                    <td><%= displayMoney(row.fees) %></td>
+                    <td><%= displayMoney(row.net) %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
+

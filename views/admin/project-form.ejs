@@ -123,6 +123,23 @@
               </div>
             </div>
           </div>
+
+          <div class="admin-section" style="margin: 18px 0; padding: 18px; border: 1px solid rgba(255,255,255,.08); border-radius: 18px;">
+            <h3 style="margin-top:0;">قفل تنزيلات المشروع (Kill Switch)</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" name="downloadsLocked" value="1" <%= project && project.downloadsLocked ? 'checked' : '' %>>
+                  قفل تنزيلات هذا المشروع لكل المشترين
+                </label>
+                <small class="form-help">يقفل كل روابط التحميل الحالية والجديدة لهذا المشروع.</small>
+              </div>
+              <div class="form-group">
+                <label for="downloadsLockReason">سبب القفل (اختياري)</label>
+                <input type="text" id="downloadsLockReason" name="downloadsLockReason" value="<%= project && project.downloadsLockReason ? project.downloadsLockReason : '' %>" placeholder="مثال: توقف مؤقت بسبب تسريب">
+              </div>
+            </div>
+          </div>
           
           <div class="form-group">
             <label for="description">وصف المشروع *</label>
