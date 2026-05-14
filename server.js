@@ -4803,6 +4803,45 @@ app.get('/', (req, res) => {
   const projects = db.projects()
     .filter(p => isProjectVisibleToUser({ project: p, sessionUser: req.session.user }))
     .map(decorateProjectPricing);
+  const approvedPurchases = db.purchases().filter((p) => p && p.status === 'approved' && p.projectId);
+  const salesCountByProjectId = new Map();
+  const latestPurchaseAtByProjectId = new Map();
+  approvedPurchases.forEach((purchase) => {
+    const projectId = purchase.projectId;
+    salesCountByProjectId.set(projectId, (salesCountByProjectId.get(projectId) || 0) + 1);
+    const ts = new Date(purchase.purchasedAt || purchase.createdAt || 0).getTime();
+    if (!Number.isNaN(ts) && ts > 0) {
+      const prev = latestPurchaseAtByProjectId.get(projectId) || 0;
+      if (ts > prev) latestPurchaseAtByProjectId.set(projectId, ts);
+    }
+  });
+  const maxSales = Math.max(0, ...Array.from(salesCountByProjectId.values()));
+  const topSellerProjectIds = maxSales > 0
+    ? Array.from(salesCountByProjectId.entries()).filter(([, count]) => count === maxSales).map(([projectId]) => projectId)
+    : [];
+
+  const nowMs = Date.now();
+  const formatSince = (diffMs) => {
+    const minutes = Math.max(1, Math.floor(diffMs / 60000));
+    if (minutes < 60) return `آخر شراء منذ ${minutes} دقيقة`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `آخر شراء منذ ${hours} ساعة`;
+    const days = Math.floor(hours / 24);
+    return `آخر شراء منذ ${days} يوم`;
+  };
+
+  const projectsWithTrustSignals = projects.map((project) => {
+    const latestPurchaseAt = latestPurchaseAtByProjectId.get(project.id) || null;
+    return {
+      ...project,
+      trustSignals: {
+        isTopSeller: topSellerProjectIds.includes(project.id),
+        salesCount: salesCountByProjectId.get(project.id) || 0,
+        lastPurchaseText: latestPurchaseAt ? formatSince(Math.max(0, nowMs - latestPurchaseAt)) : null
+      }
+    };
+  });
+
   const recentProjects = getRecentlyViewedProjects({ req, availableProjects: projects })
     .map(decorateProjectPricing);
   let wishlistProjectIds = [];
@@ -4810,7 +4849,7 @@ app.get('/', (req, res) => {
     const currentUser = db.users().find((u) => u && u.id === req.session.user.id && u.role === 'user');
     wishlistProjectIds = currentUser && Array.isArray(currentUser.wishlistProjectIds) ? currentUser.wishlistProjectIds : [];
   }
-  res.render('index', { projects, recentProjects, user: req.session.user, wishlistProjectIds });
+  res.render('index', { projects: projectsWithTrustSignals, recentProjects, user: req.session.user, wishlistProjectIds });
 });
 
 app.get('/wishlist', requireAuth, (req, res) => {
@@ -4840,6 +4879,27 @@ app.post('/wishlist/toggle', requireAuth, (req, res) => {
   db.saveUsers(users);
   req.session.user = buildSessionUser(users[userIndex]);
   return res.redirect(req.get('referer') || '/');
+});
+
+app.get('/compare', (req, res) => {
+  const raw = String(req.query.ids || '');
+  const ids = raw.split(',').map((id) => id.trim()).filter(Boolean).slice(0, 3);
+  const allProjects = db.projects()
+    .filter((p) => isProjectVisibleToUser({ project: p, sessionUser: req.session.user }))
+    .map(decorateProjectPricing);
+  const projects = ids.map((id) => allProjects.find((p) => p.id === id)).filter(Boolean);
+
+  const ratingsByProjectId = new Map();
+  const reviews = db.reviews();
+  projects.forEach((project) => {
+    const projectReviews = reviews.filter((r) => r && r.projectId === project.id);
+    const avgRating = projectReviews.length
+      ? (projectReviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / projectReviews.length)
+      : 0;
+    ratingsByProjectId.set(project.id, { avgRating, count: projectReviews.length });
+  });
+
+  res.render('compare', { user: req.session.user, projects, ratingsByProjectId });
 });
 
 app.get('/community', (req, res) => {

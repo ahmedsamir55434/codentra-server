@@ -475,6 +475,47 @@ html[data-theme="light"] .wishlist-btn {
   margin-bottom: 12px;
 }
 
+.trust-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.trust-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.trust-badge-top {
+  background: rgba(255, 196, 0, 0.18);
+  border-color: rgba(255, 196, 0, 0.4);
+  color: #ffd76a;
+}
+
+.trust-badge-last {
+  background: rgba(96, 165, 250, 0.16);
+  border-color: rgba(96, 165, 250, 0.36);
+  color: #b9dbff;
+}
+
+html[data-theme="light"] .trust-badge-top {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #92400e;
+}
+
+html[data-theme="light"] .trust-badge-last {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #1e40af;
+}
+
 .project-tech {
   display: flex;
   flex-wrap: wrap;
@@ -496,6 +537,100 @@ html[data-theme="light"] .wishlist-btn {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+}
+
+.compare-toggle-btn {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.compare-toggle-btn.is-active {
+  border-color: rgba(45, 212, 191, 0.45);
+  color: #7ef7e6;
+}
+
+.compare-tray {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 88px;
+  z-index: 1500;
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 12px;
+  background: rgba(10, 14, 24, 0.88);
+  backdrop-filter: blur(14px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.compare-tray[hidden] {
+  display: none !important;
+}
+
+.compare-fab[hidden] {
+  display: none !important;
+}
+
+.compare-fab {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 1501;
+  width: 58px;
+  height: 58px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: rgba(10, 14, 24, 0.92);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+
+.compare-fab span {
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.compare-tray-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.compare-tray-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.compare-card {
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.compare-line {
+  margin: 8px 0;
+}
+
+.compare-tech-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 14px;
 }
 
 .price {
@@ -722,8 +857,8 @@ html[data-theme="light"] .wishlist-btn {
   }
   
   .projects-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
 
   .projects-section {
@@ -733,6 +868,87 @@ html[data-theme="light"] .wishlist-btn {
   .project-card {
     box-shadow: var(--shadow);
     border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .project-image {
+    height: 190px;
+  }
+
+  .project-info {
+    padding: 14px;
+  }
+
+  .project-info h3 {
+    font-size: 1.02rem;
+    line-height: 1.45;
+    margin-bottom: 6px;
+    padding-left: 42px;
+  }
+
+  .project-desc {
+    font-size: 0.86rem;
+    line-height: 1.65;
+    margin-bottom: 10px;
+  }
+
+  .project-tech {
+    gap: 5px;
+    margin-bottom: 12px;
+  }
+
+  .tech-tag {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+  }
+
+  .project-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .project-footer .btn {
+    width: 100%;
+    min-height: 42px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    box-sizing: border-box;
+  }
+
+  .price {
+    font-size: 1.32rem;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+  }
+
+  .sale-price {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .trust-signals {
+    margin-bottom: 8px;
+    gap: 6px;
+  }
+
+  .trust-badge {
+    font-size: 0.68rem;
+    padding: 4px 8px;
+  }
+
+  .wishlist-form {
+    top: 10px;
+    left: 10px;
+  }
+
+  .wishlist-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
   }
 
   .project-footer {
@@ -780,6 +996,26 @@ html[data-theme="light"] .wishlist-btn {
   .main-nav a {
     font-size: 0.8rem;
     padding: 5px 8px;
+  }
+
+  .project-image {
+    height: 174px;
+  }
+
+  .project-info {
+    padding: 12px;
+  }
+
+  .project-info h3 {
+    font-size: 0.96rem;
+  }
+
+  .project-desc {
+    font-size: 0.82rem;
+  }
+
+  .price {
+    font-size: 1.2rem;
   }
 }
 

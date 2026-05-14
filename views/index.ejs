@@ -150,6 +150,16 @@
                 </form>
               <% } %>
               <h3><%= project.title %></h3>
+              <% if (project.trustSignals && (project.trustSignals.isTopSeller || project.trustSignals.lastPurchaseText)) { %>
+                <div class="trust-signals">
+                  <% if (project.trustSignals.isTopSeller) { %>
+                    <span class="trust-badge trust-badge-top">الأكثر مبيعًا</span>
+                  <% } %>
+                  <% if (project.trustSignals.lastPurchaseText) { %>
+                    <span class="trust-badge trust-badge-last"><%= project.trustSignals.lastPurchaseText %></span>
+                  <% } %>
+                </div>
+              <% } %>
               <p class="project-desc"><%= project.description.substring(0, 100) %><%= project.description.length > 100 ? '...' : '' %></p>
               <div class="project-tech">
                 <% project.technologies.slice(0, 3).forEach(tech => { %>
@@ -176,6 +186,7 @@
                 <% } %>
                 <a href="/project/<%= project.id %>" class="btn btn-primary">تفاصيل</a>
               </div>
+              <button type="button" class="btn btn-secondary compare-toggle-btn" data-project-id="<%= project.id %>">أضف للمقارنة</button>
             </div>
           </div>
         <% }) %>
@@ -190,6 +201,18 @@
   </section>
 
   <%- include('partials/footer') %>
+  <button type="button" id="compareFab" class="compare-fab" hidden>⚖️ <span id="compareFabCount">0</span></button>
+  <div id="compareTray" class="compare-tray" hidden>
+    <div class="compare-tray-copy">
+      <strong>المقارنة الذكية</strong>
+      <span id="compareTrayCount">0/3</span>
+    </div>
+    <div class="compare-tray-actions">
+      <button type="button" class="btn btn-secondary" id="clearCompareBtn">مسح</button>
+      <button type="button" class="btn btn-secondary" id="closeCompareTrayBtn">إغلاق</button>
+      <a href="/compare" class="btn btn-primary" id="goCompareBtn">قارن الآن</a>
+    </div>
+  </div>
   <script>
     (() => {
       const banner = document.querySelector('.release-banner');
@@ -232,6 +255,84 @@
       updateBannerScrollFx();
       window.addEventListener('scroll', queueUpdate, { passive: true });
       window.addEventListener('resize', queueUpdate, { passive: true });
+    })();
+  </script>
+  <script>
+    (() => {
+      const KEY = 'compare_projects';
+      const MAX = 3;
+      const tray = document.getElementById('compareTray');
+      const fab = document.getElementById('compareFab');
+      const fabCount = document.getElementById('compareFabCount');
+      const countNode = document.getElementById('compareTrayCount');
+      const clearBtn = document.getElementById('clearCompareBtn');
+      const closeTrayBtn = document.getElementById('closeCompareTrayBtn');
+      const goBtn = document.getElementById('goCompareBtn');
+      const toggles = Array.from(document.querySelectorAll('.compare-toggle-btn'));
+      if (!tray || !countNode || !goBtn || !fab || !fabCount) return;
+
+      const getIds = () => {
+        try {
+          const arr = JSON.parse(localStorage.getItem(KEY) || '[]');
+          return Array.isArray(arr) ? arr.filter(Boolean).slice(0, MAX) : [];
+        } catch (_) { return []; }
+      };
+      const setIds = (ids) => localStorage.setItem(KEY, JSON.stringify(ids.slice(0, MAX)));
+
+      const render = () => {
+        const ids = getIds();
+        fab.hidden = false;
+        if (ids.length === 0) {
+          tray.hidden = true;
+          tray.classList.remove('is-open');
+        }
+        countNode.textContent = `${ids.length}/3`;
+        fabCount.textContent = String(ids.length);
+        goBtn.href = `/compare?ids=${encodeURIComponent(ids.join(','))}`;
+        toggles.forEach((btn) => {
+          const id = btn.getAttribute('data-project-id');
+          const active = ids.includes(id);
+          btn.textContent = active ? 'إزالة من المقارنة' : 'أضف للمقارنة';
+          btn.classList.toggle('is-active', active);
+        });
+      };
+
+      toggles.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-project-id');
+          let ids = getIds();
+          if (ids.includes(id)) {
+            ids = ids.filter((x) => x !== id);
+          } else {
+            if (ids.length >= MAX) ids.shift();
+            ids.push(id);
+          }
+          setIds(ids);
+          render();
+        });
+      });
+
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          setIds([]);
+          render();
+        });
+      }
+      if (closeTrayBtn) {
+        closeTrayBtn.addEventListener('click', () => {
+          tray.hidden = true;
+          tray.classList.remove('is-open');
+        });
+      }
+      fab.addEventListener('click', () => {
+        const willOpen = tray.hidden;
+        tray.hidden = !willOpen;
+        tray.classList.toggle('is-open', willOpen);
+      });
+
+      tray.hidden = true;
+      tray.classList.remove('is-open');
+      render();
     })();
   </script>
 </body>
