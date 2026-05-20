@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Command Center - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/command-center" class="active">Command Center</a>
+        <a href="/admin/live-feed">الأحداث المباشرة</a>
+        <a href="/admin/leak-radar">Leak Radar</a>
+        <a href="/admin/payments-inbox">Payments Inbox</a>
+        <a href="/admin/purchases">المشتريات</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>Command Center</h1>
+      <div class="stats-grid" style="margin-bottom:14px;">
+        <div class="stat-card"><div class="stat-value"><%= kpis.salesToday %></div><div class="stat-label">مبيعات اليوم</div></div>
+        <div class="stat-card"><div class="stat-value"><%= kpis.pendingOrders %></div><div class="stat-label">طلبات معلقة</div></div>
+        <div class="stat-card"><div class="stat-value"><%= kpis.failedPayments %></div><div class="stat-label">مدفوعات فاشلة (24س)</div></div>
+        <div class="stat-card"><div class="stat-value"><%= kpis.criticalAlerts %></div><div class="stat-label">إنذارات حرجة</div></div>
+      </div>
+
+      <div class="glass-card" style="padding:14px; margin-bottom:14px;">
+        <h3 style="margin:0 0 10px;">Quick Actions</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <a class="btn btn-sm btn-warning" href="/admin/leak-ai">مراجعة AI Leak</a>
+          <a class="btn btn-sm btn-secondary" href="/admin/sales">إيقاف خصم</a>
+          <a class="btn btn-sm btn-secondary" href="/admin/wallet-balances">تعديل رصيد محفظة</a>
+          <a class="btn btn-sm btn-secondary" href="/notifications">الإشعارات</a>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding:14px; margin-bottom:14px;">
+        <h3 style="margin:0 0 10px;">Alerts</h3>
+        <% if (!alerts.length) { %>
+          <div style="opacity:.8;">لا توجد إنذارات مهمة حالياً.</div>
+        <% } %>
+        <% alerts.forEach(a => { %>
+          <div style="padding:10px 12px;border:1px solid rgba(255,255,255,.1);border-radius:12px;margin-bottom:8px;">
+            <strong><%= a.title %></strong>
+            <div style="opacity:.85;"><%= a.message %></div>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="glass-card" style="padding:14px;">
+        <h3 style="margin:0 0 10px;">Live Feed</h3>
+        <% if (!feed.length) { %>
+          <div style="opacity:.8;">لا توجد أحداث الآن.</div>
+        <% } %>
+        <% feed.forEach(ev => { %>
+          <div style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08);">
+            <strong><%= ev.title %></strong> - <span><%= ev.message %></span>
+            <div style="opacity:.7;font-size:12px;"><%= ev.createdAt ? new Date(ev.createdAt).toLocaleString('ar-EG') : '' %></div>
+          </div>
+        <% }) %>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

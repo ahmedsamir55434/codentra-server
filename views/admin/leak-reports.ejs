@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>بلاغات التسريب - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/leak-reports" class="active">بلاغات التسريب</a>
+        <a href="/admin/leak-radar">Leak Radar</a>
+        <a href="/admin/leak-ai">AI كشف التسريب</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>بلاغات التسريب</h1>
+      <div class="glass-card" style="padding:14px; margin-bottom:14px; opacity:0.9; line-height:1.7;">
+        البلاغات يتم استخراجها تلقائيًا من سلوك التحميلات خلال آخر <strong><%= windowHours %></strong> ساعة.
+      </div>
+
+      <% if (!reports || reports.length === 0) { %>
+        <div class="glass-card" style="padding:16px; opacity:0.85;">لا توجد بلاغات نشطة حالياً.</div>
+      <% } else { %>
+        <div class="glass-card" style="padding:16px;">
+          <div style="overflow:auto;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>الحالة</th>
+                  <th>درجة الخطر</th>
+                  <th>المستخدم</th>
+                  <th>المشروع</th>
+                  <th>Downloads</th>
+                  <th>IP/Devices</th>
+                  <th>آخر نشاط</th>
+                  <th>الإجراء</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% reports.forEach(r => { %>
+                  <tr>
+                    <td>
+                      <span class="glass-badge" style="<%= r.status === 'critical' ? 'background:rgba(255,80,80,0.18);border-color:rgba(255,80,80,0.35);' : r.status === 'high' ? 'background:rgba(255,140,80,0.18);border-color:rgba(255,140,80,0.35);' : 'background:rgba(255,190,80,0.18);border-color:rgba(255,190,80,0.35);' %>">
+                        <%= r.status === 'critical' ? 'حرج' : r.status === 'high' ? 'عالي' : 'متوسط' %>
+                      </span>
+                    </td>
+                    <td><strong><%= r.score %>/100</strong></td>
+                    <td>
+                      <div><strong><%= r.userLabel %></strong></div>
+                      <div class="ltr" style="opacity:0.7;font-size:12px;"><%= r.userId %></div>
+                    </td>
+                    <td>
+                      <div><strong><%= r.projectTitle %></strong></div>
+                      <div class="ltr" style="opacity:0.7;font-size:12px;"><%= r.projectId || '-' %></div>
+                    </td>
+                    <td><%= r.downloadCount %></td>
+                    <td><%= r.ipCount %> IP / <%= r.deviceCount %> Device</td>
+                    <td><%= r.lastAt ? new Date(r.lastAt).toLocaleString('ar-EG') : '-' %></td>
+                    <td style="max-width:350px; line-height:1.7;">
+                      <div style="opacity:0.9;"><%= r.recommendation.message %></div>
+                      <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <% if (r.purchaseId) { %>
+                          <form action="/admin/purchases/<%= r.purchaseId %>/lock-download" method="POST" class="inline-form">
+                            <input type="hidden" name="reason" value="Leak report: قفل النسخة بسبب بلاغ تسريب">
+                            <button class="btn btn-sm btn-danger" type="submit">🔒 قفل النسخة</button>
+                          </form>
+                        <% } %>
+                        <% if (r.projectId) { %>
+                          <form action="/admin/projects/<%= r.projectId %>/lock-downloads" method="POST" class="inline-form">
+                            <input type="hidden" name="reason" value="Leak report: قفل تنزيلات المشروع للتحقق">
+                            <button class="btn btn-sm btn-warning" type="submit">⛔ قفل المشروع</button>
+                          </form>
+                        <% } %>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      <% } %>
+    </main>
+  </div>
+</body>
+</html>

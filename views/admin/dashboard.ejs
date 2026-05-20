@@ -15,6 +15,7 @@
     <aside class="admin-sidebar">
       <nav class="admin-nav">
         <a href="/admin" class="active">الرئيسية</a>
+        <a href="/admin/command-center">Command Center</a>
         <a href="/admin/team">جروب الفريق</a>
         <% if (user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions.projects))) { %>
           <a href="/admin/projects/new">إضافة مشروع</a>
@@ -25,6 +26,8 @@
           <a href="/admin/payments-inbox">Payments Inbox</a>
           <a href="/admin/net-profit">صافي الأرباح</a>
           <a href="/admin/leak-radar">Leak Radar</a>
+          <a href="/admin/leak-ai">AI كشف التسريب</a>
+          <a href="/admin/leak-reports">بلاغات التسريب</a>
           <a href="/admin/file-health">سلامة الملفات</a>
         <% } %>
         <a href="/admin/live-feed">الأحداث المباشرة</a>

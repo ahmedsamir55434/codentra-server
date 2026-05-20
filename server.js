@@ -926,6 +926,142 @@ const queueNotificationEmail = async ({ user, subject, title, message }) => {
   }
 };
 
+const ADMIN_REPORT_EMAIL = 'ahmedsamirsabry2100@gmail.com';
+const ADMIN_REPORT_STATE_FILE = toAbsolutePath('data/admin-report-state.json');
+
+const readAdminReportState = () => {
+  try {
+    if (!fs.existsSync(ADMIN_REPORT_STATE_FILE)) {
+      return { lastDailyDate: null, lastWeeklyDate: null };
+    }
+    const raw = fs.readFileSync(ADMIN_REPORT_STATE_FILE, 'utf8');
+    const parsed = JSON.parse(raw || '{}');
+    return {
+      lastDailyDate: parsed && typeof parsed.lastDailyDate === 'string' ? parsed.lastDailyDate : null,
+      lastWeeklyDate: parsed && typeof parsed.lastWeeklyDate === 'string' ? parsed.lastWeeklyDate : null
+    };
+  } catch (_) {
+    return { lastDailyDate: null, lastWeeklyDate: null };
+  }
+};
+
+const writeAdminReportState = (state) => {
+  try {
+    fs.writeFileSync(ADMIN_REPORT_STATE_FILE, JSON.stringify({
+      lastDailyDate: state.lastDailyDate || null,
+      lastWeeklyDate: state.lastWeeklyDate || null
+    }, null, 2));
+  } catch (error) {
+    console.error('Failed to persist admin report state:', error.message);
+  }
+};
+
+const buildAdminReportSnapshot = ({ days }) => {
+  const now = new Date();
+  const since = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+  const users = db.users().filter((u) => u && u.role === 'user');
+  const purchases = db.purchases().filter((p) => p && p.status === 'approved');
+  const recentPurchases = purchases.filter((p) => new Date(p.purchasedAt || p.createdAt || 0).getTime() >= since.getTime());
+  const recentUsers = users.filter((u) => new Date(u.createdAt || 0).getTime() >= since.getTime());
+  const revenue = recentPurchases.reduce((sum, p) => sum + Number(p.price || 0), 0);
+  const salesByProject = new Map();
+  recentPurchases.forEach((p) => {
+    if (!p.projectId) return;
+    salesByProject.set(p.projectId, (salesByProject.get(p.projectId) || 0) + 1);
+  });
+  const projects = db.projects();
+  const topProjects = Array.from(salesByProject.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([projectId, count]) => {
+      const project = projects.find((item) => item && item.id === projectId);
+      return `${project ? project.title : projectId} (${count})`;
+    });
+
+  return {
+    totalUsers: users.length,
+    totalApprovedPurchases: purchases.length,
+    periodPurchases: recentPurchases.length,
+    periodRevenue: revenue,
+    periodNewUsers: recentUsers.length,
+    topProjects
+  };
+};
+
+const sendAdminAutoReport = async ({ type, days }) => {
+  if (!isMailConfigured()) return { success: false, error: 'Mail not configured' };
+  const snapshot = buildAdminReportSnapshot({ days });
+  const periodLabel = type === 'weekly' ? 'الأسبوع' : 'اليوم';
+  const subject = `Codentra ${type === 'weekly' ? 'Weekly' : 'Daily'} Admin Report`;
+  const title = `تقرير ${periodLabel} - Codentra`;
+  const topProjectsText = snapshot.topProjects.length ? snapshot.topProjects.join('\n') : 'لا توجد مبيعات في الفترة';
+  const message = [
+    `إجمالي المستخدمين: ${snapshot.totalUsers}`,
+    `إجمالي المشتريات المعتمدة: ${snapshot.totalApprovedPurchases}`,
+    `مشتريات ${periodLabel}: ${snapshot.periodPurchases}`,
+    `إيراد ${periodLabel}: ${formatMoney(snapshot.periodRevenue)} EGP`,
+    `مستخدمون جدد خلال ${periodLabel}: ${snapshot.periodNewUsers}`,
+    '',
+    'أفضل المشاريع مبيعًا في الفترة:',
+    topProjectsText
+  ].join('\n');
+
+  try {
+    if (process.env.RESEND_API_KEY) {
+      const html = `
+        <div style="font-family:Arial,sans-serif;direction:rtl;text-align:right;max-width:680px;margin:0 auto;padding:20px;border:1px solid #e0e0e0;border-radius:8px;">
+          <h2>${title}</h2>
+          <p style="line-height:1.8;white-space:pre-line;">${String(message).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+        </div>
+      `;
+      const result = await sendEmailViaResend({ to: ADMIN_REPORT_EMAIL, subject, text: message, html });
+      return { success: true, provider: 'resend', id: result.id };
+    }
+    if (process.env.SMTP_HOST) {
+      const { transporter, from } = getMailTransporter();
+      const result = await transporter.sendMail({ from, to: ADMIN_REPORT_EMAIL, subject, text: message });
+      return { success: true, provider: 'smtp', id: result.messageId };
+    }
+    return { success: false, error: 'No provider configured' };
+  } catch (error) {
+    console.error('Auto admin report failed:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+const startAdminAutoReports = () => {
+  const run = async () => {
+    try {
+      const state = readAdminReportState();
+      const now = new Date();
+      const dateKey = now.toISOString().slice(0, 10);
+      const isDailyWindow = now.getHours() >= 9;
+      const isWeeklyDay = now.getDay() === 1; // Monday
+
+      if (isDailyWindow && state.lastDailyDate !== dateKey) {
+        const daily = await sendAdminAutoReport({ type: 'daily', days: 1 });
+        if (daily.success) {
+          state.lastDailyDate = dateKey;
+          writeAdminReportState(state);
+        }
+      }
+
+      if (isDailyWindow && isWeeklyDay && state.lastWeeklyDate !== dateKey) {
+        const weekly = await sendAdminAutoReport({ type: 'weekly', days: 7 });
+        if (weekly.success) {
+          state.lastWeeklyDate = dateKey;
+          writeAdminReportState(state);
+        }
+      }
+    } catch (error) {
+      console.error('Admin auto report scheduler error:', error.message);
+    }
+  };
+
+  setInterval(run, 60 * 60 * 1000);
+  run();
+};
+
 const sendPaymentVerificationCode = async ({ payerUser, buyerUser, code, amount, maskedCardNumber }) => {
   const subject = 'Codentra payment verification code';
   const text = [
@@ -3482,6 +3618,249 @@ const parseGeminiJsonResponse = (responseText) => {
   return JSON.parse(jsonText);
 };
 
+const getProductSummarySchema = () => ({
+  type: 'object',
+  properties: {
+    shortSummary: { type: 'string' },
+    longSummary: { type: 'string' },
+    strengths: { type: 'array', items: { type: 'string' } },
+    weaknesses: { type: 'array', items: { type: 'string' } }
+  },
+  required: ['shortSummary', 'longSummary', 'strengths', 'weaknesses']
+});
+
+const buildProductSummaryPromptText = ({ project }) => ([
+  'أنت مساعد متخصص في تلخيص منتجات برمجية بشكل عملي وواضح.',
+  'المطلوب: تلخيص وصف المنتج إلى ملخص قصير وملخص تفصيلي، ثم نقاط قوة/نقاط ضعف.',
+  'اكتب بالعربية الواضحة.',
+  'لا تذكر أي معلومات غير موجودة في الوصف.',
+  'أعد JSON فقط بدون markdown.',
+  '',
+  `عنوان المنتج: ${project && project.title ? project.title : ''}`,
+  'وصف المنتج:',
+  String(project && project.description ? project.description : '').slice(0, 18000),
+  '',
+  'استخدم هذا الشكل حرفيًا:',
+  '{"shortSummary":"...","longSummary":"...","strengths":["..."],"weaknesses":["..."]}'
+].join('\n'));
+
+const requestGeminiProductSummary = async ({ project }) => {
+  if (!GEMINI_API_KEY) {
+    throw new Error('gemini_unavailable');
+  }
+
+  const generationConfig = {
+    temperature: 0.2,
+    responseMimeType: 'application/json',
+    responseJsonSchema: getProductSummarySchema()
+  };
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': GEMINI_API_KEY
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: buildProductSummaryPromptText({ project }) }]
+        }
+      ],
+      generationConfig
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`gemini_http_${response.status}:${errorText}`);
+  }
+
+  const payload = await response.json();
+  const responseText = extractGeminiTextResponse(payload);
+  if (!responseText) throw new Error('gemini_empty_response');
+  return parseGeminiJsonResponse(responseText);
+};
+
+const getProductFitSummarySchema = () => ({
+  type: 'object',
+  properties: {
+    shortSummary: { type: 'string' },
+    longSummary: { type: 'string' },
+    strengths: { type: 'array', items: { type: 'string' } },
+    weaknesses: { type: 'array', items: { type: 'string' } },
+    fitVerdict: { type: 'string', enum: ['fit', 'maybe', 'not_fit'] },
+    fitReason: { type: 'string' },
+    fitChecklist: { type: 'array', items: { type: 'string' } }
+  },
+  required: ['shortSummary', 'longSummary', 'strengths', 'weaknesses', 'fitVerdict', 'fitReason', 'fitChecklist']
+});
+
+const buildProductFitPromptText = ({ project, userInput }) => ([
+  'أنت مساعد يساعد المستخدم على فهم منتج برمجي وهل يناسب احتياجه.',
+  'المطلوب: ملخص قصير + ملخص تفصيلي + نقاط قوة/ضعف + حكم هل يناسب المستخدم.',
+  'اكتب بالعربية الواضحة.',
+  'لا تذكر أي معلومات غير موجودة في وصف المنتج.',
+  'أعد JSON فقط بدون markdown.',
+  '',
+  `عنوان المنتج: ${project && project.title ? project.title : ''}`,
+  'وصف المنتج:',
+  String(project && project.description ? project.description : '').slice(0, 18000),
+  '',
+  'بيانات المستخدم:',
+  `الهدف: ${String(userInput && userInput.goal ? userInput.goal : '').slice(0, 400)}`,
+  `خبرة المستخدم: ${String(userInput && userInput.level ? userInput.level : '').slice(0, 120)}`,
+  `التقنيات/البيئة: ${String(userInput && userInput.stack ? userInput.stack : '').slice(0, 400)}`,
+  '',
+  'استخدم هذا الشكل حرفيًا:',
+  '{"shortSummary":"...","longSummary":"...","strengths":["..."],"weaknesses":["..."],"fitVerdict":"fit|maybe|not_fit","fitReason":"...","fitChecklist":["..."]}'
+].join('\n'));
+
+const requestGeminiProductFitSummary = async ({ project, userInput }) => {
+  if (!GEMINI_API_KEY) throw new Error('gemini_unavailable');
+
+  const generationConfig = {
+    temperature: 0.2,
+    responseMimeType: 'application/json',
+    responseJsonSchema: getProductFitSummarySchema()
+  };
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': GEMINI_API_KEY
+    },
+    body: JSON.stringify({
+      contents: [
+        { role: 'user', parts: [{ text: buildProductFitPromptText({ project, userInput }) }] }
+      ],
+      generationConfig
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`gemini_http_${response.status}:${errorText}`);
+  }
+
+  const payload = await response.json();
+  const responseText = extractGeminiTextResponse(payload);
+  if (!responseText) throw new Error('gemini_empty_response');
+  return parseGeminiJsonResponse(responseText);
+};
+
+const buildProductChatPromptText = ({ project, question }) => ([
+  'أنت مساعد خدمة عملاء لمنتج رقمي داخل Codentra.',
+  'مهمتك الرد فقط على أسئلة تخص هذا المنتج (المزايا، التقنيات، طريقة الاستخدام، مناسب لمن).',
+  'لا تخترع معلومات غير موجودة.',
+  'لو السؤال خارج نطاق المنتج قل بوضوح أنه خارج نطاق تفاصيل المنتج.',
+  'اكتب الرد بالعربية بشكل مختصر وواضح.',
+  '',
+  `عنوان المنتج: ${project && project.title ? project.title : ''}`,
+  `التصنيف: ${project && project.category ? project.category : ''}`,
+  `التقنيات: ${Array.isArray(project && project.technologies) ? project.technologies.join(', ') : ''}`,
+  'وصف المنتج:',
+  String(project && project.description ? project.description : '').slice(0, 18000),
+  '',
+  `سؤال العميل: ${String(question || '').slice(0, 2000)}`
+].join('\n'));
+
+const requestGeminiProductChatAnswer = async ({ project, question }) => {
+  if (!GEMINI_API_KEY) throw new Error('gemini_unavailable');
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': GEMINI_API_KEY
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: buildProductChatPromptText({ project, question }) }]
+        }
+      ],
+      generationConfig: { temperature: 0.25 }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`gemini_http_${response.status}:${errorText}`);
+  }
+
+  const payload = await response.json();
+  const responseText = extractGeminiTextResponse(payload);
+  if (!responseText) throw new Error('gemini_empty_response');
+  return String(responseText).trim();
+};
+
+const buildAiAdvisorPromptText = ({ projects, userInput }) => {
+  const compactProjects = (Array.isArray(projects) ? projects : []).slice(0, 60).map((p) => ({
+    id: p.id,
+    title: p.title,
+    category: p.category || '',
+    technologies: Array.isArray(p.technologies) ? p.technologies : [],
+    price: Number(p.finalPrice || p.price || 0),
+    description: String(p.description || '').slice(0, 800)
+  }));
+
+  return [
+    'أنت مستشار شراء تقني داخل Codentra.',
+    'اختر أفضل مشروع أو مشروعين فقط من القائمة المتاحة، بناءً على هدف العميل.',
+    'ثم اكتب خطة تنفيذ عملية من خطوات واضحة.',
+    'يجب أن تكون الترشيحات من نفس المشاريع المرسلة فقط.',
+    'أعد JSON فقط بدون markdown.',
+    '',
+    `هدف العميل: ${String(userInput.goal || '').slice(0, 400)}`,
+    `الميزانية (بالدولار): ${String(userInput.budget || '')}`,
+    `مستوى الخبرة: ${String(userInput.level || '').slice(0, 120)}`,
+    `التقنيات/البيئة: ${String(userInput.stack || '').slice(0, 400)}`,
+    '',
+    'المشاريع المتاحة:',
+    JSON.stringify(compactProjects),
+    '',
+    'صيغة JSON المطلوبة:',
+    '{"recommendations":[{"projectId":"...","projectTitle":"...","reason":"...","fitScore":0}],"executionPlan":["..."],"notes":"..."}'
+  ].join('\n');
+};
+
+const requestGeminiAiAdvisor = async ({ projects, userInput }) => {
+  if (!GEMINI_API_KEY) throw new Error('gemini_unavailable');
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': GEMINI_API_KEY
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: buildAiAdvisorPromptText({ projects, userInput }) }]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: 'application/json'
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`gemini_http_${response.status}:${errorText}`);
+  }
+
+  const payload = await response.json();
+  const responseText = extractGeminiTextResponse(payload);
+  if (!responseText) throw new Error('gemini_empty_response');
+  return parseGeminiJsonResponse(responseText);
+};
+
 const COMMUNITY_AI_STOP_WORDS = new Set([
   'the', 'and', 'for', 'with', 'from', 'that', 'this', 'have', 'has', 'your', 'you', 'will', 'are', 'our',
   'الى', 'إلى', 'على', 'في', 'من', 'عن', 'مع', 'هذه', 'هذا', 'ذلك', 'التي', 'الذي', 'كما', 'ثم', 'بعد',
@@ -4900,6 +5279,18 @@ app.get('/compare', (req, res) => {
   });
 
   res.render('compare', { user: req.session.user, projects, ratingsByProjectId });
+});
+
+app.get('/ai-advisor', (req, res) => {
+  const projects = db.projects()
+    .filter((p) => isProjectVisibleToUser({ project: p, sessionUser: req.session.user }))
+    .map(decorateProjectPricing);
+
+  res.render('ai-advisor', {
+    user: req.session.user,
+    projects,
+    geminiEnabled: Boolean(GEMINI_API_KEY)
+  });
 });
 
 app.get('/community', (req, res) => {
@@ -6428,6 +6819,155 @@ app.get('/api/community', requireApiUserAuth, (req, res) => {
   });
 });
 
+// User-facing AI product summary + fit check (client feature)
+app.post('/api/projects/:id/ai-fit-summary', express.json(), async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const projects = db.projects();
+    const project = projects.find((p) => p && p.id === projectId) || null;
+    if (!project) return res.status(404).json({ error: 'Project not found' });
+
+    // Basic abuse guard: rate-limit per session + IP
+    const now = Date.now();
+    if (!req.session) req.session = {};
+    const lastKey = `ai_fit_${projectId}`;
+    const lastAt = Number(req.session[lastKey] || 0);
+    if (lastAt && now - lastAt < 20 * 1000) {
+      return res.status(429).json({ error: 'Too many requests. Please wait a bit.' });
+    }
+    req.session[lastKey] = now;
+
+    const userInput = {
+      goal: (req.body && req.body.goal) ? String(req.body.goal).trim() : '',
+      level: (req.body && req.body.level) ? String(req.body.level).trim() : '',
+      stack: (req.body && req.body.stack) ? String(req.body.stack).trim() : ''
+    };
+
+    if (!userInput.goal && !userInput.stack) {
+      return res.status(400).json({ error: 'Missing user input' });
+    }
+
+    const parsed = await requestGeminiProductFitSummary({ project, userInput });
+    const out = {
+      shortSummary: String(parsed.shortSummary || '').trim(),
+      longSummary: String(parsed.longSummary || '').trim(),
+      strengths: Array.isArray(parsed.strengths) ? parsed.strengths.map((s) => String(s)).filter(Boolean).slice(0, 8) : [],
+      weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses.map((s) => String(s)).filter(Boolean).slice(0, 8) : [],
+      fitVerdict: String(parsed.fitVerdict || 'maybe'),
+      fitReason: String(parsed.fitReason || '').trim(),
+      fitChecklist: Array.isArray(parsed.fitChecklist) ? parsed.fitChecklist.map((s) => String(s)).filter(Boolean).slice(0, 10) : [],
+      model: GEMINI_MODEL
+    };
+    return res.json({ ok: true, result: out });
+  } catch (error) {
+    const message = error && error.message === 'gemini_unavailable'
+      ? 'AI غير مفعّل. أضف GEMINI_API_KEY.'
+      : 'تعذر توليد الملخص الآن';
+    return res.status(500).json({ ok: false, error: message });
+  }
+});
+
+app.post('/api/projects/:id/ai-product-chat', express.json(), async (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const projects = db.projects();
+    const project = projects.find((p) => p && p.id === projectId) || null;
+    if (!project) return res.status(404).json({ ok: false, error: 'Project not found' });
+
+    const question = (req.body && req.body.question) ? String(req.body.question).trim() : '';
+    if (!question) return res.status(400).json({ ok: false, error: 'Question is required' });
+
+    // Basic rate limit per session per project
+    const now = Date.now();
+    if (!req.session) req.session = {};
+    const key = `ai_chat_${projectId}`;
+    const lastAt = Number(req.session[key] || 0);
+    if (lastAt && now - lastAt < 5000) {
+      return res.status(429).json({ ok: false, error: 'Too many requests. Please wait a few seconds.' });
+    }
+    req.session[key] = now;
+
+    const answer = await requestGeminiProductChatAnswer({ project, question });
+    return res.json({ ok: true, answer, model: GEMINI_MODEL });
+  } catch (error) {
+    const message = error && error.message === 'gemini_unavailable'
+      ? 'AI غير مفعّل. أضف GEMINI_API_KEY.'
+      : 'تعذر الرد الآن';
+    return res.status(500).json({ ok: false, error: message });
+  }
+});
+
+app.post('/api/ai-advisor/recommend', express.json(), async (req, res) => {
+  try {
+    const projects = db.projects()
+      .filter((p) => isProjectVisibleToUser({ project: p, sessionUser: req.session.user }))
+      .map(decorateProjectPricing);
+
+    const userInput = {
+      goal: String((req.body && req.body.goal) || '').trim(),
+      budget: Number((req.body && req.body.budget) || 0),
+      level: String((req.body && req.body.level) || '').trim(),
+      stack: String((req.body && req.body.stack) || '').trim()
+    };
+
+    if (!userInput.goal) {
+      return res.status(400).json({ ok: false, error: 'اكتب هدفك أولاً.' });
+    }
+
+    const now = Date.now();
+    if (!req.session) req.session = {};
+    const lastAt = Number(req.session.aiAdvisorLastAt || 0);
+    if (lastAt && now - lastAt < 15000) {
+      return res.status(429).json({ ok: false, error: 'انتظر قليلاً قبل طلب جديد.' });
+    }
+    req.session.aiAdvisorLastAt = now;
+
+    const ai = await requestGeminiAiAdvisor({ projects, userInput });
+    const projectById = new Map(projects.map((p) => [p.id, p]));
+
+    const recommendations = Array.isArray(ai.recommendations)
+      ? ai.recommendations
+          .map((r) => {
+            const id = String((r && r.projectId) || '').trim();
+            const p = projectById.get(id);
+            if (!p) return null;
+            return {
+              projectId: p.id,
+              projectTitle: p.title,
+              reason: String((r && r.reason) || '').trim(),
+              fitScore: Math.max(0, Math.min(100, Math.round(Number((r && r.fitScore) || 0)))),
+              price: Number(p.finalPrice || p.price || 0),
+              category: p.category || '',
+              technologies: Array.isArray(p.technologies) ? p.technologies : []
+            };
+          })
+          .filter(Boolean)
+          .slice(0, 2)
+      : [];
+
+    if (!recommendations.length) {
+      return res.status(200).json({
+        ok: true,
+        recommendations: [],
+        executionPlan: [],
+        notes: 'لم أجد توصية دقيقة حالياً. جرّب توضيح الهدف والتقنيات أكثر.'
+      });
+    }
+
+    return res.json({
+      ok: true,
+      recommendations,
+      executionPlan: Array.isArray(ai.executionPlan) ? ai.executionPlan.map((s) => String(s)).filter(Boolean).slice(0, 8) : [],
+      notes: String((ai && ai.notes) || '').trim()
+    });
+  } catch (error) {
+    const message = error && error.message === 'gemini_unavailable'
+      ? 'ميزة AI غير مفعّلة حالياً. أضف GEMINI_API_KEY.'
+      : 'تعذر التوصية الآن. جرّب مرة ثانية.';
+    return res.status(500).json({ ok: false, error: message });
+  }
+});
+
 app.post('/api/community/posts/:id/like', requireApiUserAuth, (req, res) => {
   const posts = getCommunityPostsState();
   const postIndex = posts.findIndex((post) => post && post.id === req.params.id);
@@ -7394,6 +7934,20 @@ app.get('/project/:id', (req, res) => {
   }
   
   const activeCouponPromos = getActiveCouponPromoCards(db.coupons(), getCouponEligibility);
+  const relatedProjects = projects
+    .filter((candidate) => candidate && candidate.id !== project.id)
+    .filter((candidate) => isProjectVisibleToUser({ project: candidate, sessionUser: req.session.user }))
+    .map((candidate) => {
+      const decorated = decorateProjectPricing(candidate);
+      const sameCategoryScore = decorated.category && project.category && decorated.category === project.category ? 3 : 0;
+      const candidateTech = Array.isArray(decorated.technologies) ? decorated.technologies : [];
+      const projectTech = new Set(Array.isArray(project.technologies) ? project.technologies : []);
+      const sharedTechCount = candidateTech.filter((tech) => projectTech.has(tech)).length;
+      return { ...decorated, _relatedScore: sameCategoryScore + sharedTechCount, _sharedTechCount: sharedTechCount };
+    })
+    .filter((item) => item._relatedScore > 0)
+    .sort((a, b) => (b._relatedScore - a._relatedScore) || (b._sharedTechCount - a._sharedTechCount))
+    .slice(0, 4);
 
   res.render('project', {
     project,
@@ -7407,7 +7961,8 @@ app.get('/project/:id', (req, res) => {
     referralError: req.query.referralError || null,
     canApplyReferral,
     referralPrefill,
-    activeCouponPromos
+    activeCouponPromos,
+    relatedProjects
   });
 });
 
@@ -8313,6 +8868,32 @@ app.get('/my-purchases', requireAuth, (req, res) => {
     req.session.user = buildSessionUser(currentUser);
   }
   const purchases = db.purchases().filter(p => p.userId === req.session.user.id);
+  const downloadEvents = db.downloadEvents().filter((e) => e && e.userId === req.session.user.id);
+  const downloadEventsByPurchaseId = new Map();
+  downloadEvents.forEach((event) => {
+    if (!event.purchaseId) return;
+    if (!downloadEventsByPurchaseId.has(event.purchaseId)) downloadEventsByPurchaseId.set(event.purchaseId, []);
+    downloadEventsByPurchaseId.get(event.purchaseId).push(event);
+  });
+
+  const securePurchases = purchases.map((purchase) => {
+    const events = (downloadEventsByPurchaseId.get(purchase.id) || [])
+      .slice()
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    const ipSet = new Set(events.map((e) => String(e.ip || '').trim()).filter(Boolean));
+    const deviceSet = new Set(events.map((e) => String(e.device || '').trim()).filter(Boolean));
+    const suspicious = events.length >= 8 || ipSet.size >= 3 || deviceSet.size >= 3;
+    return {
+      ...purchase,
+      secureDownloadMeta: {
+        count: events.length,
+        uniqueIpCount: ipSet.size,
+        uniqueDeviceCount: deviceSet.size,
+        suspicious,
+        history: events.slice(0, 8)
+      }
+    };
+  });
   const invoices = db.invoices().filter(i => i && i.userId === req.session.user.id);
   const subscriptionPlans = db.subscriptionPlans();
   const subscriptions = db.subscriptions().filter(s => s && s.userId === req.session.user.id);
@@ -8323,7 +8904,7 @@ app.get('/my-purchases', requireAuth, (req, res) => {
     .slice(0, MAX_WALLET_TOPUPS);
   const incomingApprovals = currentUser ? getWalletIncomingApprovals({ ownerUserId: currentUser.id }) : [];
   res.render('my-purchases', {
-    purchases,
+    purchases: securePurchases,
     invoices,
     user: req.session.user,
     referralLink: currentUser && currentUser.referralCode ? `${req.protocol}://${req.get('host')}/register?ref=${encodeURIComponent(currentUser.referralCode)}` : '',
@@ -9281,6 +9862,180 @@ app.get('/admin/leak-radar', requireAdminPermission(ADMIN_PERMISSIONS.purchases)
   });
 });
 
+const clampInt = (value, min, max) => Math.max(min, Math.min(max, Math.round(Number(value || 0))));
+
+const computeLeakRiskScore = ({ downloadCount, ipCount, deviceCount }) => {
+  // Simple but effective heuristic.
+  let score = 0;
+  score += Math.min(40, downloadCount * 6); // frequent downloads is suspicious
+  score += Math.min(35, Math.max(0, ipCount - 1) * 18); // multiple IPs per buyer/project
+  score += Math.min(35, Math.max(0, deviceCount - 1) * 18); // multiple device types
+  if (downloadCount >= 10) score += 10;
+  if (ipCount >= 3) score += 10;
+  if (deviceCount >= 3) score += 10;
+  return clampInt(score, 0, 100);
+};
+
+const buildLeakRecommendation = ({ score }) => {
+  if (score >= 90) {
+    return { action: 'lock_project', title: 'خطر شديد', message: 'قفل تنزيلات المشروع مؤقتًا + راجع Leak Radar وبلاغات التسريب.' };
+  }
+  if (score >= 75) {
+    return { action: 'lock_purchase', title: 'خطر عالي', message: 'اقفل نسخة هذا المشتري مؤقتًا واطلب منه توضيح سبب تعدد الأجهزة/IP.' };
+  }
+  if (score >= 55) {
+    return { action: 'review', title: 'خطر متوسط', message: 'راقب السلوك خلال 24 ساعة. لو زاد العدد اقفل النسخة.' };
+  }
+  return { action: 'ok', title: 'طبيعي', message: 'لا إجراء الآن. استمر بالمراقبة.' };
+};
+
+
+// Admin Leak Reports (derived incident inbox)
+app.get('/admin/leak-reports', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
+  const users = db.users();
+  const projects = db.projects();
+  const purchases = db.purchases();
+  const events = db.downloadEvents();
+
+  const windowHours = parseEnvInt(process.env.LEAK_REPORTS_WINDOW_HOURS, 72);
+  const windowMs = windowHours * 60 * 60 * 1000;
+  const since = Date.now() - windowMs;
+
+  const userLabelById = new Map(users.filter(Boolean).map((u) => [u.id, u.email || u.name || u.id]));
+  const projectTitleById = new Map(projects.filter(Boolean).map((p) => [p.id, p.title || p.id]));
+  const approvedPurchaseById = new Map(purchases.filter((p) => p && p.status === 'approved').map((p) => [p.id, p]));
+
+  const groups = new Map();
+  for (const e of Array.isArray(events) ? events : []) {
+    const ts = e && e.createdAt ? Date.parse(e.createdAt) : NaN;
+    if (!Number.isFinite(ts) || ts < since || !e.userId) continue;
+
+    const purchase = e.purchaseId ? approvedPurchaseById.get(e.purchaseId) : null;
+    if (e.kind === 'purchase' && !purchase) continue;
+
+    const key = `${e.userId}::${e.projectId || ''}`;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        userId: e.userId,
+        projectId: e.projectId || null,
+        purchaseId: purchase ? purchase.id : null,
+        ips: new Set(),
+        devices: new Set(),
+        count: 0,
+        lastAt: e.createdAt
+      });
+    }
+
+    const g = groups.get(key);
+    g.count += 1;
+    if (e.ip) g.ips.add(e.ip);
+    if (e.device) g.devices.add(e.device);
+    if (!g.purchaseId && purchase) g.purchaseId = purchase.id;
+    if (e.createdAt && (!g.lastAt || Date.parse(e.createdAt) > Date.parse(g.lastAt))) {
+      g.lastAt = e.createdAt;
+    }
+  }
+
+  const reports = Array.from(groups.values())
+    .map((g) => {
+      const ipCount = g.ips.size;
+      const deviceCount = g.devices.size;
+      const score = computeLeakRiskScore({ downloadCount: g.count, ipCount, deviceCount });
+      const recommendation = buildLeakRecommendation({ score });
+
+      let status = 'watch';
+      if (score >= 90) status = 'critical';
+      else if (score >= 75) status = 'high';
+      else if (score >= 55) status = 'medium';
+
+      return {
+        userId: g.userId,
+        userLabel: userLabelById.get(g.userId) || g.userId,
+        projectId: g.projectId,
+        projectTitle: projectTitleById.get(g.projectId) || (g.projectId || 'غير معروف'),
+        purchaseId: g.purchaseId,
+        downloadCount: g.count,
+        ipCount,
+        deviceCount,
+        score,
+        status,
+        recommendation,
+        lastAt: g.lastAt
+      };
+    })
+    .filter((r) => r.score >= 55)
+    .sort((a, b) => (b.score - a.score) || (Date.parse(b.lastAt) - Date.parse(a.lastAt)));
+
+  res.render('admin/leak-reports', {
+    user: req.session.user,
+    windowHours,
+    reports
+  });
+});
+
+// Admin Leak AI (risk score + recommendations)
+app.get('/admin/leak-ai', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
+  const users = db.users();
+  const projects = db.projects();
+  const purchases = db.purchases();
+  const events = db.downloadEvents();
+
+  const windowHours = parseEnvInt(process.env.LEAK_AI_WINDOW_HOURS, 24);
+  const windowMs = windowHours * 60 * 60 * 1000;
+  const since = Date.now() - windowMs;
+
+  const userLabelById = new Map(users.filter(Boolean).map((u) => [u.id, u.email || u.name || u.id]));
+  const projectTitleById = new Map(projects.filter(Boolean).map((p) => [p.id, p.title || p.id]));
+  const approvedPurchaseById = new Map(purchases.filter((p) => p && p.status === 'approved').map((p) => [p.id, p]));
+
+  const recent = (Array.isArray(events) ? events : []).filter((e) => {
+    const t = e && e.createdAt ? Date.parse(e.createdAt) : NaN;
+    return Number.isFinite(t) && t >= since && e.userId;
+  });
+
+  const groups = new Map();
+  for (const e of recent) {
+    const p = e.purchaseId ? approvedPurchaseById.get(e.purchaseId) : null;
+    if (e.kind === 'purchase' && !p) continue;
+    const key = `${e.userId}::${e.projectId || ''}`;
+    if (!groups.has(key)) {
+      groups.set(key, { userId: e.userId, projectId: e.projectId || null, purchaseId: p ? p.id : null, ips: new Set(), devices: new Set(), count: 0 });
+    }
+    const g = groups.get(key);
+    g.count += 1;
+    if (e.ip) g.ips.add(e.ip);
+    if (e.device) g.devices.add(e.device);
+    if (!g.purchaseId && p) g.purchaseId = p.id;
+  }
+
+  const rows = Array.from(groups.values())
+    .map((g) => {
+      const ipCount = g.ips.size;
+      const deviceCount = g.devices.size;
+      const score = computeLeakRiskScore({ downloadCount: g.count, ipCount, deviceCount });
+      return {
+        userId: g.userId,
+        userLabel: userLabelById.get(g.userId) || g.userId,
+        projectId: g.projectId,
+        projectTitle: projectTitleById.get(g.projectId) || (g.projectId || 'غير معروف'),
+        purchaseId: g.purchaseId,
+        downloadCount: g.count,
+        ipList: Array.from(g.ips).slice(0, 6),
+        deviceList: Array.from(g.devices).slice(0, 6),
+        score,
+        recommendation: buildLeakRecommendation({ score })
+      };
+    })
+    .sort((a, b) => (b.score - a.score) || (b.downloadCount - a.downloadCount));
+
+  res.render('admin/leak-ai', {
+    user: req.session.user,
+    windowHours,
+    rows: rows.slice(0, 200),
+    geminiEnabled: Boolean(GEMINI_API_KEY)
+  });
+});
+
 // Admin AI Pricing (internal heuristic recommendations)
 app.get('/admin/ai-pricing', requireAdminPermission(ADMIN_PERMISSIONS.projects), (req, res) => {
   const projects = db.projects().filter(Boolean);
@@ -9377,6 +10132,58 @@ app.get('/admin/file-health', requireAdminPermission(ADMIN_PERMISSIONS.purchases
 app.post('/admin/file-health/run', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
   runFileHealthCheck();
   res.redirect('/admin/file-health');
+});
+
+
+app.get('/admin/command-center', requireAdmin, (req, res) => {
+  const purchases = db.purchases();
+  const topups = db.walletTopups();
+  const events = db.downloadEvents();
+  const audit = db.adminAuditLog();
+
+  const now = new Date();
+  const startOfDay = new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
+  const since24 = Date.now() - (24 * 60 * 60 * 1000);
+
+  const approvedToday = purchases.filter((p) => {
+    if (!p || p.status !== 'approved') return false;
+    const d = new Date(p.approvedAt || p.createdAt || 0);
+    return !Number.isNaN(d.getTime()) && d >= startOfDay;
+  });
+
+  const salesToday = Math.round(approvedToday.reduce((acc, p) => acc + Number(p.price || 0), 0) * 100) / 100;
+  const pendingOrders = purchases.filter((p) => p && p.status === 'pending').length;
+  const failedPayments = (Array.isArray(topups) ? topups : []).filter((t) => {
+    const ts = Date.parse(t && (t.updatedAt || t.createdAt) || 0);
+    return t && t.status === 'failed' && Number.isFinite(ts) && ts >= since24;
+  }).length;
+
+  const suspicious = (Array.isArray(events) ? events : []).filter((e) => {
+    const ts = Date.parse(e && e.createdAt || 0);
+    return e && e.userId && Number.isFinite(ts) && ts >= since24;
+  });
+  const byUser = new Map();
+  suspicious.forEach((e) => byUser.set(e.userId, (byUser.get(e.userId) || 0) + 1));
+  const criticalAlerts = Array.from(byUser.values()).filter((count) => count >= 10).length + failedPayments;
+
+  const alerts = [];
+  if (failedPayments > 0) alerts.push({ title: 'فشل مدفوعات', message: `${failedPayments} عملية فاشلة خلال آخر 24 ساعة` });
+  if (Array.from(byUser.values()).some((c) => c >= 10)) alerts.push({ title: 'Leak Risk', message: 'تحميلات مرتفعة بشكل غير طبيعي لبعض المستخدمين' });
+  if (!alerts.length) alerts.push({ title: 'الوضع مستقر', message: 'لا توجد إنذارات حرجة حالياً' });
+
+  const feed = (Array.isArray(audit) ? audit : []).slice(0, 20).map((entry) => ({
+    title: 'تعديل إداري',
+    message: `${entry.action || 'update'} (${entry.entity || 'entity'})`,
+    createdAt: entry.createdAt
+  }));
+
+  res.render('admin/command-center', {
+    user: req.session.user,
+    kpis: { salesToday, pendingOrders, failedPayments, criticalAlerts },
+    alerts,
+    feed
+  });
 });
 
 app.get('/admin/live-feed', requireAdmin, (req, res) => {
@@ -10284,7 +11091,7 @@ app.post('/admin/admins/:id/permissions', requireSuperAdmin, (req, res) => {
 
 // Admin - Add Project
 app.get('/admin/projects/new', requireAdminPermission(ADMIN_PERMISSIONS.projects), (req, res) => {
-  res.render('admin/project-form', { project: null, user: req.session.user });
+  res.render('admin/project-form', { project: null, user: req.session.user, error: req.query.error || null, success: req.query.success || null });
 });
 
 app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), projectUpload, async (req, res) => {
@@ -10375,7 +11182,7 @@ app.get('/admin/projects/:id/edit', requireAdminPermission(ADMIN_PERMISSIONS.pro
   const projects = db.projects();
   const project = decorateProjectPricing(projects.find(p => p.id === req.params.id));
   if (!project) return res.status(404).send('Project not found');
-  res.render('admin/project-form', { project, user: req.session.user });
+  res.render('admin/project-form', { project, user: req.session.user, error: req.query.error || null, success: req.query.success || null });
 });
 
 app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.projects), projectUpload, async (req, res) => {
@@ -10544,6 +11351,50 @@ app.post('/admin/projects/:id/delete', requireAdminPermission(ADMIN_PERMISSIONS.
     createdAt: new Date().toISOString()
   });
   res.redirect('/admin');
+});
+
+// Admin - AI product summary
+app.post('/admin/projects/:id/ai-summary', requireAdminPermission(ADMIN_PERMISSIONS.projects), async (req, res) => {
+  try {
+    const projects = db.projects();
+    const idx = projects.findIndex((p) => p && p.id === req.params.id);
+    if (idx === -1) return res.status(404).send('Project not found');
+
+    const summary = await requestGeminiProductSummary({ project: projects[idx] });
+    projects[idx].aiSummary = {
+      short: String(summary.shortSummary || '').trim(),
+      long: String(summary.longSummary || '').trim(),
+      strengths: Array.isArray(summary.strengths) ? summary.strengths.map((s) => String(s)).filter(Boolean).slice(0, 10) : [],
+      weaknesses: Array.isArray(summary.weaknesses) ? summary.weaknesses.map((s) => String(s)).filter(Boolean).slice(0, 10) : [],
+      model: GEMINI_MODEL,
+      updatedAt: new Date().toISOString()
+    };
+    db.saveProjects(projects);
+
+    addAdminAuditLogEntry({
+      req,
+      action: 'ai_product_summary',
+      entity: 'project',
+      entityId: projects[idx].id,
+      before: null,
+      after: { aiSummaryUpdatedAt: projects[idx].aiSummary.updatedAt, model: projects[idx].aiSummary.model }
+    });
+    emitLiveAdminEvent({
+      type: 'ai',
+      title: 'AI تلخيص المنتج',
+      message: `تم توليد ملخص AI للمشروع: ${projects[idx].title}`,
+      severity: 'success',
+      data: { projectId: projects[idx].id },
+      createdAt: new Date().toISOString()
+    });
+
+    return res.redirect(`/admin/projects/${projects[idx].id}/edit?success=${encodeURIComponent('تم توليد ملخص AI بنجاح')}`);
+  } catch (error) {
+    const msg = error && error.message === 'gemini_unavailable'
+      ? 'ميزة AI غير مفعلة. أضف GEMINI_API_KEY.'
+      : 'تعذر توليد الملخص الآن';
+    return res.redirect(`/admin/projects/${req.params.id}/edit?error=${encodeURIComponent(msg)}`);
+  }
 });
 
 // Admin - View all purchases
@@ -12417,6 +13268,7 @@ io.on('connection', (socket) => {
 if (!process.env.VERCEL) {
   startAbandonedCartRecoveryJob();
   startFileHealthMonitorJob();
+  startAdminAutoReports();
   httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`Codentra running on http://localhost:${PORT}`);
     console.log(`Network access: http://192.168.8.110:${PORT}`);
