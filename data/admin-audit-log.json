@@ -1,0 +1,363 @@
+[
+  {
+    "id": "a70267ae-420a-411c-890b-5964fa2ac6ca",
+    "action": "create_project",
+    "entity": "project",
+    "entityId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15",
+    "before": null,
+    "after": {
+      "title": "ا اتا",
+      "price": 350,
+      "visibility": "starter"
+    },
+    "meta": {},
+    "createdAt": "2026-06-02T15:18:19.352Z"
+  },
+  {
+    "id": "735fa322-2e66-446a-8b39-de461dfa39ad",
+    "action": "create_project",
+    "entity": "project",
+    "entityId": "8459e110-0756-40d2-91fc-c369a19280a9",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15",
+    "before": null,
+    "after": {
+      "title": "mnbgyuhj",
+      "price": 350,
+      "visibility": "public"
+    },
+    "meta": {},
+    "createdAt": "2026-06-02T15:14:28.920Z"
+  },
+  {
+    "id": "d37e92b1-4675-47ad-9a7f-d234f9988354",
+    "action": "update_project",
+    "entity": "project",
+    "entityId": "3617b9ea-425e-49c6-bb67-a04952ac921e",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15",
+    "before": {
+      "title": " قالب بورتفوليو حديث ",
+      "price": 3000,
+      "visibility": "public",
+      "saleActive": true,
+      "saleType": "percent",
+      "saleValue": 1,
+      "downloadsLocked": false,
+      "downloadsLockReason": null
+    },
+    "after": {
+      "title": " قالب بورتفوليو حديث ",
+      "price": 3000,
+      "visibility": "public",
+      "saleActive": true,
+      "saleType": "percent",
+      "saleValue": 1,
+      "downloadsLocked": false,
+      "downloadsLockReason": null
+    },
+    "meta": {},
+    "createdAt": "2026-05-26T09:45:31.183Z"
+  },
+  {
+    "id": "465bee85-b0f7-41c7-8571-cab89d2037f0",
+    "action": "unlock_download",
+    "entity": "purchase",
+    "entityId": "5a419e50-b6af-4cf1-809b-8fbd0f24b563",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15",
+    "before": {
+      "downloadLocked": true,
+      "downloadLockReason": "تم قفل النسخة بسبب الاشتباه في تسريب"
+    },
+    "after": {
+      "downloadLocked": false
+    },
+    "meta": {
+      "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+      "userId": "30f6356d-f109-439a-b18f-aa11196bcc99"
+    },
+    "createdAt": "2026-05-24T10:12:19.447Z"
+  },
+  {
+    "id": "0bb4c73f-8eee-428a-a85b-ec0143c69a67",
+    "action": "reject_purchase",
+    "entity": "purchase",
+    "entityId": "06e698dd-8e4e-41b6-90fb-ba8c00d894ff",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15",
+    "before": {
+      "status": "pending",
+      "walletRefundedAt": null,
+      "walletRefundAmount": null
+    },
+    "after": {
+      "status": "rejected",
+      "walletRefundedAt": "2026-05-24T10:12:05.129Z",
+      "walletRefundAmount": 6.6
+    },
+    "meta": {
+      "projectId": "c3fb95ed-e047-46ec-a400-3f08d3964e7c",
+      "userId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea"
+    },
+    "createdAt": "2026-05-24T10:12:05.129Z"
+  },
+  {
+    "id": "d6ee5fef-e4a8-4669-bf2a-618833cc004c",
+    "action": "approve_purchase",
+    "entity": "purchase",
+    "entityId": "6c2ad518-3657-4d61-9e52-16265e7e9d24",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15",
+    "before": {
+      "status": "pending",
+      "approvedAt": null
+    },
+    "after": {
+      "status": "approved",
+      "approvedAt": "2026-05-24T10:12:00.845Z"
+    },
+    "meta": {
+      "projectId": "3617b9ea-425e-49c6-bb67-a04952ac921e",
+      "userId": "ccf671dd-44c8-4c3b-a674-d36a413381ae"
+    },
+    "createdAt": "2026-05-24T10:12:00.845Z"
+  },
+  {
+    "id": "2fedfcba-15ca-47a5-8a2e-a0bcc6ee50e7",
+    "action": "lock_download",
+    "entity": "purchase",
+    "entityId": "59cc5e7d-b9dd-448b-8259-ed1b4f34f8cc",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15",
+    "before": {
+      "downloadLocked": false,
+      "downloadLockReason": null
+    },
+    "after": {
+      "downloadLocked": true,
+      "downloadLockReason": "تم قفل النسخة بسبب الاشتباه في تسريب",
+      "downloadLockedAt": "2026-05-24T10:01:17.798Z"
+    },
+    "meta": {
+      "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+      "userId": "e809661f-3c95-4777-995a-ac358e92fc5f"
+    },
+    "createdAt": "2026-05-24T10:01:17.799Z"
+  },
+  {
+    "id": "25f7dc21-a4ff-495b-9f4b-7ae8581697dd",
+    "action": "approve_purchase",
+    "entity": "purchase",
+    "entityId": "59cc5e7d-b9dd-448b-8259-ed1b4f34f8cc",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15",
+    "before": {
+      "status": "pending",
+      "approvedAt": null
+    },
+    "after": {
+      "status": "approved",
+      "approvedAt": "2026-05-19T15:25:36.656Z"
+    },
+    "meta": {
+      "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+      "userId": "e809661f-3c95-4777-995a-ac358e92fc5f"
+    },
+    "createdAt": "2026-05-19T15:25:36.657Z"
+  },
+  {
+    "id": "a3ea6e54-1a12-4daf-9338-f5d94a08b4ff",
+    "action": "ai_product_summary",
+    "entity": "project",
+    "entityId": "834550b7-f9d1-4104-823f-7353c49719bd",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15",
+    "before": null,
+    "after": {
+      "aiSummaryUpdatedAt": "2026-05-16T18:56:53.075Z",
+      "model": "gemini-2.5-flash"
+    },
+    "meta": {},
+    "createdAt": "2026-05-16T18:56:53.076Z"
+  },
+  {
+    "id": "60bbc1b3-a399-4c9b-826d-94f132cca06e",
+    "action": "ai_product_summary",
+    "entity": "project",
+    "entityId": "3617b9ea-425e-49c6-bb67-a04952ac921e",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15",
+    "before": null,
+    "after": {
+      "aiSummaryUpdatedAt": "2026-05-16T18:56:12.633Z",
+      "model": "gemini-2.5-flash"
+    },
+    "meta": {},
+    "createdAt": "2026-05-16T18:56:12.635Z"
+  },
+  {
+    "id": "92a91a07-4141-450e-87d0-17922f5b131b",
+    "action": "ai_product_summary",
+    "entity": "project",
+    "entityId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/8.7.1",
+    "before": null,
+    "after": {
+      "aiSummaryUpdatedAt": "2026-05-16T18:55:07.274Z",
+      "model": "gemini-2.5-flash"
+    },
+    "meta": {},
+    "createdAt": "2026-05-16T18:55:07.274Z"
+  },
+  {
+    "id": "51a2cbe0-a321-408a-9eef-949d38b348bf",
+    "action": "ai_product_summary",
+    "entity": "project",
+    "entityId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/8.7.1",
+    "before": null,
+    "after": {
+      "aiSummaryUpdatedAt": "2026-05-16T18:54:46.226Z",
+      "model": "gemini-2.5-flash"
+    },
+    "meta": {},
+    "createdAt": "2026-05-16T18:54:46.227Z"
+  },
+  {
+    "id": "ee3d789d-739b-4fb3-a26e-cfdbabf74755",
+    "action": "ai_product_summary",
+    "entity": "project",
+    "entityId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "curl/8.7.1",
+    "before": null,
+    "after": {
+      "aiSummaryUpdatedAt": "2026-05-16T18:54:30.489Z",
+      "model": "gemini-2.5-flash"
+    },
+    "meta": {},
+    "createdAt": "2026-05-16T18:54:30.490Z"
+  },
+  {
+    "id": "373bbec8-a1cd-428a-81bd-974c8caf63ba",
+    "action": "update_project",
+    "entity": "project",
+    "entityId": "3617b9ea-425e-49c6-bb67-a04952ac921e",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15",
+    "before": {
+      "title": " قالب بورتفوليو حديث ",
+      "price": 3000,
+      "visibility": "public",
+      "saleActive": true,
+      "saleType": "percent",
+      "saleValue": 1,
+      "downloadsLocked": false,
+      "downloadsLockReason": null
+    },
+    "after": {
+      "title": " قالب بورتفوليو حديث ",
+      "price": 3000,
+      "visibility": "public",
+      "saleActive": true,
+      "saleType": "percent",
+      "saleValue": 1,
+      "downloadsLocked": false,
+      "downloadsLockReason": null
+    },
+    "meta": {},
+    "createdAt": "2026-05-16T18:23:15.694Z"
+  },
+  {
+    "id": "d976874e-9103-4add-a7dc-14b9a9e8475e",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "action": "THEME_CHANGED",
+    "targetId": "multi-color",
+    "targetType": "theme",
+    "details": {
+      "themeId": "multi-color",
+      "themeName": "Multi Color"
+    },
+    "timestamp": "2026-06-14T16:44:17.842Z",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "38fea897-c064-400f-9fc7-622c7663cdac",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "action": "THEME_CHANGED",
+    "targetId": "v3",
+    "targetType": "theme",
+    "details": {
+      "themeId": "v3",
+      "themeName": "Glass v3"
+    },
+    "timestamp": "2026-06-14T16:44:24.633Z",
+    "ipAddress": "127.0.0.1"
+  },
+  {
+    "id": "7715fdb4-bf31-4cea-9a4d-c049a1ef3173",
+    "adminId": "5254e664-ba64-42eb-af35-ec814313b561",
+    "adminEmail": "admin@codentra.com",
+    "adminName": "Admin",
+    "action": "THEME_CHANGED",
+    "targetId": "multi-color",
+    "targetType": "theme",
+    "details": {
+      "themeId": "multi-color",
+      "themeName": "Multi Color"
+    },
+    "timestamp": "2026-06-14T16:47:28.547Z",
+    "ipAddress": "127.0.0.1"
+  }
+]

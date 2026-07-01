@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Replay - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/audit-replay" class="active">Audit Replay</a>
+        <a href="/admin/live-feed">الأحداث المباشرة</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>Audit Replay</h1>
+
+      <form class="glass-card" style="padding:12px;margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;" method="GET" action="/admin/audit-replay">
+        <select name="entity">
+          <option value="">كل الكيانات</option>
+          <% entities.forEach(e => { %>
+            <option value="<%= e %>" <%= filters.entity === e.toLowerCase() ? 'selected' : '' %>><%= e %></option>
+          <% }) %>
+        </select>
+        <select name="action">
+          <option value="">كل الإجراءات</option>
+          <% actions.forEach(a => { %>
+            <option value="<%= a %>" <%= filters.action === a.toLowerCase() ? 'selected' : '' %>><%= a %></option>
+          <% }) %>
+        </select>
+        <button class="btn btn-sm btn-primary" type="submit">فلترة</button>
+        <a
+          class="btn btn-sm btn-secondary"
+          href="/admin/audit-replay.csv?<%= new URLSearchParams({ entity: filters.entity || '', action: filters.action || '' }).toString() %>">تصدير CSV</a>
+      </form>
+
+      <div class="glass-card" style="padding:16px;">
+        <% if (!rows.length) { %>
+          <div>لا توجد نتائج.</div>
+        <% } %>
+        <% rows.forEach(r => { %>
+          <div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);">
+            <div><strong><%= r.action %></strong> على <strong><%= r.entity %></strong> <span style="opacity:.7;">(<%= r.entityId || '-' %>)</span></div>
+            <div style="opacity:.85;"><%= r.adminEmail || 'admin' %> - <%= r.createdAt ? new Date(r.createdAt).toLocaleString('ar-EG') : '' %></div>
+            <% if (r.before || r.after) { %>
+              <details style="margin-top:6px;">
+                <summary>قبل / بعد</summary>
+                <pre style="white-space:pre-wrap;">before: <%= JSON.stringify(r.before, null, 2) %>
+after: <%= JSON.stringify(r.after, null, 2) %></pre>
+              </details>
+            <% } %>
+          </div>
+        <% }) %>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

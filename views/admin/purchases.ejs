@@ -65,6 +65,9 @@
 
     <main class="admin-content">
       <h1>المشتريات</h1>
+      <div style="margin-bottom:12px;">
+        <a href="/admin/purchases-export.csv" class="btn btn-sm btn-primary">تصدير جميع المبيعات CSV (Excel)</a>
+      </div>
       
       <% if (purchases.length === 0) { %>
         <div class="empty-state">

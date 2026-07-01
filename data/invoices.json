@@ -362,5 +362,61 @@
     "totalDiscount": 59.4,
     "totalAfter": 6.6,
     "createdAt": "2026-05-07T20:28:47.519Z"
+  },
+  {
+    "id": "682ee23f-99d7-4035-b41c-c853c6eff73c",
+    "invoiceNumber": "INV-20260519-336660",
+    "orderId": "18b191ea-5965-445c-9295-eab4c1bf8080",
+    "userId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "userName": "ahmed samir",
+    "userEmail": "ahmedsamirsabry2100@gmail.com",
+    "paymentMethod": "Wallet Card",
+    "payerUserId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "payerName": "ahmed samir",
+    "payerEmail": "ahmedsamirsabry2100@gmail.com",
+    "walletCardMasked": "**** **** **** 2378",
+    "couponCode": null,
+    "items": [
+      {
+        "purchaseId": "59cc5e7d-b9dd-448b-8259-ed1b4f34f8cc",
+        "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+        "projectTitle": "ChatForge",
+        "priceBefore": 3400,
+        "discountAmount": 0,
+        "priceAfter": 3400
+      }
+    ],
+    "totalBefore": 3400,
+    "totalDiscount": 0,
+    "totalAfter": 3400,
+    "createdAt": "2026-05-19T15:25:36.660Z"
+  },
+  {
+    "id": "b4f3fb0c-f44a-40f8-b410-4e880d2c932b",
+    "invoiceNumber": "INV-20260524-520847",
+    "orderId": "0d10b8ff-07eb-439f-aab1-a73753c01ff8",
+    "userId": "ccf671dd-44c8-4c3b-a674-d36a413381ae",
+    "userName": "Magic C",
+    "userEmail": "magicc709@gmail.com",
+    "paymentMethod": "Wallet Card",
+    "payerUserId": "ccf671dd-44c8-4c3b-a674-d36a413381ae",
+    "payerName": "Magic C",
+    "payerEmail": "magicc709@gmail.com",
+    "walletCardMasked": "**** **** **** 6831",
+    "couponCode": "SAVE 10",
+    "items": [
+      {
+        "purchaseId": "6c2ad518-3657-4d61-9e52-16265e7e9d24",
+        "projectId": "3617b9ea-425e-49c6-bb67-a04952ac921e",
+        "projectTitle": " قالب بورتفوليو حديث ",
+        "priceBefore": 3000,
+        "discountAmount": 30,
+        "priceAfter": 2970
+      }
+    ],
+    "totalBefore": 3000,
+    "totalDiscount": 30,
+    "totalAfter": 2970,
+    "createdAt": "2026-05-24T10:12:00.847Z"
   }
 ]

@@ -25,7 +25,24 @@
     "saleValue": 1,
     "saleOccasion": "unn",
     "saleDurationDays": null,
-    "saleExpiresAt": "2026-05-16T00:00:00.000Z"
+    "saleExpiresAt": "2026-05-16T00:00:00.000Z",
+    "downloadsLocked": false,
+    "downloadsLockReason": null,
+    "downloadsLockedAt": null,
+    "aiSummary": {
+      "short": "قالب بورتفوليو عصري وأنيق.",
+      "long": "قالب بورتفوليو عصري وأنيق بتصميم زجاجي حديث، يدعم اللغات المتعددة (العربية/الإنجليزية) ويتميز بحركات سلسة. مثالي للمطورين والمصممين لعرض أعمالهم باحترافية.",
+      "strengths": [
+        "تصميم عصري وأنيق",
+        "تصميم زجاجي عصري",
+        "يدعم اللغات المتعددة (العربية/الإنجليزية)",
+        "حركات سلسة",
+        "مثالي للمطورين والمصممين لعرض أعمالهم بشكل احترافي"
+      ],
+      "weaknesses": [],
+      "model": "gemini-2.5-flash",
+      "updatedAt": "2026-05-16T18:56:12.633Z"
+    }
   },
   {
     "id": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
@@ -53,7 +70,26 @@
     "saleValue": 0,
     "saleOccasion": null,
     "saleDurationDays": 9,
-    "saleExpiresAt": null
+    "saleExpiresAt": null,
+    "aiSummary": {
+      "short": "قالب ويب احترافي متكامل لإنشاء منصات شات ذكاء اصطناعي باللغة العربية بسرعة، يتميز بواجهة عصرية ومحرك ذكاء اصطناعي متقدم ونظام بيانات يعتمد على التخزين المحلي.",
+      "long": "ChatForge هو قالب ويب احترافي مصمم لتمكين المطورين والشركات ورواد الأعمال من إنشاء منصات شات ذكاء اصطناعي باللغة العربية في دقائق. يتميز بواجهة مستخدم عصرية بتصميم Glassmorphism ودعم كامل للغة العربية (RTL)، مع تصميم متجاوب لجميع الأجهزة وألوان جذابة وحركات سلسة. يتضمن محرك ذكاء اصطناعي متكامل مع Gemini API، ويدعم شخصيات قابلة للتخصيص، وذاكرة سياقية للمحادثات، وتحليل وتوليد الصور بالذكاء الاصطناعي. يعتمد نظام البيانات على التخزين المحلي الآمن دون الحاجة لخوادم، ويوفر إمكانية تصدير البيانات وإحصائيات متقدمة مع بحث وفلترة سريع.",
+      "strengths": [
+        "قالب ويب احترافي ومتكامل",
+        "إنشاء منصات شات ذكاء اصطناعي باللغة العربية",
+        "إعداد سريع خلال دقائق",
+        "واجهة مستخدم عصرية بتصميم Glassmorphism",
+        "دعم كامل للغة العربية (RTL)",
+        "تصميم متجاوب لجميع الأجهزة",
+        "تكامل متقدم مع Gemini API",
+        "شخصيات ذكاء اصطناعي قابلة للتخصيص",
+        "ذاكرة سياقية للمحادثات",
+        "تحليل الصور بالذكاء الاصطناعي"
+      ],
+      "weaknesses": [],
+      "model": "gemini-2.5-flash",
+      "updatedAt": "2026-05-16T18:55:07.274Z"
+    }
   },
   {
     "id": "13c1c09d-0357-4918-a60d-d935b86c1c5d",
@@ -200,6 +236,60 @@
     "filePath": "uploads/313c0be1-7013-4d4b-a9e9-e5e1cdce68cd-codentra-vps-deploy-20260325_130641.zip",
     "originalFileName": "codentra-vps-deploy-20260325_130641.zip",
     "images": [],
-    "createdAt": "2026-05-02T18:18:45.538Z"
+    "createdAt": "2026-05-02T18:18:45.538Z",
+    "aiSummary": {
+      "short": "لا تتوفر معلومات كافية لتقديم ملخص قصير.",
+      "long": "الوصف المقدم للمنتج 'f4rg4' وهو 'g4g4bt' لا يحتوي على تفاصيل كافية لتقديم ملخص طويل أو تحليل شامل لنقاط القوة والضعف.",
+      "strengths": [],
+      "weaknesses": [],
+      "model": "gemini-2.5-flash",
+      "updatedAt": "2026-05-16T18:56:53.075Z"
+    }
+  },
+  {
+    "id": "8459e110-0756-40d2-91fc-c369a19280a9",
+    "title": "mnbgyuhj",
+    "description": "jhgfdrtfyvuhbjknlm,",
+    "price": 350,
+    "category": "Web",
+    "technologies": [],
+    "visibility": "public",
+    "downloadsLocked": false,
+    "downloadsLockReason": null,
+    "downloadsLockedAt": null,
+    "saleActive": false,
+    "saleType": null,
+    "saleValue": 0,
+    "saleOccasion": null,
+    "saleDurationDays": null,
+    "saleExpiresAt": null,
+    "filePath": "uploads/ba6adcd4-6a5a-454b-9a9a-0e307ae25930-AppIcons.zip",
+    "originalFileName": "AppIcons.zip",
+    "images": [],
+    "createdAt": "2026-06-02T15:14:28.919Z"
+  },
+  {
+    "id": "41ead4d5-de0a-4865-a8a7-9528bc6c0490",
+    "title": "ا اتا",
+    "description": "bncvfgvhjkl.",
+    "price": 350,
+    "category": "Web",
+    "technologies": [
+      "jhgcftxcyghvj"
+    ],
+    "visibility": "starter",
+    "downloadsLocked": false,
+    "downloadsLockReason": null,
+    "downloadsLockedAt": null,
+    "saleActive": false,
+    "saleType": null,
+    "saleValue": 0,
+    "saleOccasion": null,
+    "saleDurationDays": null,
+    "saleExpiresAt": null,
+    "filePath": "uploads/04257ff9-6562-409f-bef8-6bed0bbb456d-neuraconnect-clean.zip",
+    "originalFileName": "neuraconnect-clean.zip",
+    "images": [],
+    "createdAt": "2026-06-02T15:18:19.351Z"
   }
 ]

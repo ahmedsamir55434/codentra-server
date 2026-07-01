@@ -12,6 +12,13 @@
   gap: 16px;
 }
 
+.purchases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 28px;
+  align-items: stretch;
+}
+
 .purchase-card {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
@@ -30,6 +37,317 @@
   transform: translateY(-4px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), var(--shadow-glow), var(--shadow-lg);
   border-color: rgba(255, 255, 255, 0.18);
+}
+
+.subscription-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 100%;
+  border: 1px solid var(--tier-border, rgba(255,255,255,.18));
+  background:
+    radial-gradient(circle at top right, var(--tier-accent-soft, rgba(255,255,255,.08)) 0, transparent 38%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.05) 45%, rgba(255, 255, 255, 0.03) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.08),
+    0 0 0 1px var(--tier-border, rgba(255,255,255,.16)),
+    0 18px 44px var(--tier-glow, rgba(0,0,0,.18));
+  isolation: isolate;
+}
+
+.subscription-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.subscription-plan-note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.subscription-plan-dash {
+  width: 72px;
+  height: 4px;
+  border-radius: 999px;
+  margin: 10px 0 18px;
+  background: linear-gradient(90deg, var(--tier-accent, rgba(255,255,255,.85)), transparent);
+}
+
+.subscription-tier-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  background: var(--tier-accent-soft, rgba(255, 255, 255, 0.10));
+  border: 1px solid var(--tier-border, rgba(255, 255, 255, 0.16));
+  color: var(--text-primary);
+}
+
+.subscription-tier-mark {
+  min-width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  background: linear-gradient(135deg, var(--tier-accent-soft, rgba(255,255,255,.08)) 0%, rgba(255,255,255,.03) 100%);
+  border: 1px solid var(--tier-border, rgba(255, 255, 255, 0.12));
+  color: var(--tier-accent, var(--text-primary));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 12px 24px rgba(0,0,0,.10);
+}
+
+.subscription-card-glow {
+  position: absolute;
+  inset: -24% -14% auto auto;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  filter: blur(8px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.subscription-card-starter .subscription-card-glow {
+  background: radial-gradient(circle, rgba(120, 180, 255, 0.55), transparent 68%);
+}
+
+.subscription-card-pro .subscription-card-glow {
+  background: radial-gradient(circle, rgba(185, 120, 255, 0.65), transparent 68%);
+}
+
+.subscription-card-business .subscription-card-glow {
+  background: radial-gradient(circle, rgba(255, 190, 90, 0.75), transparent 68%);
+}
+
+.subscription-card-starter {
+  border-color: var(--tier-border, rgba(120, 180, 255, 0.22)) !important;
+  border-radius: 24px !important;
+}
+
+.subscription-card-pro {
+  border-color: var(--tier-border, rgba(155, 120, 255, 0.28)) !important;
+  transform: translateY(-2px);
+  border-radius: 30px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.10),
+    0 0 0 1px var(--tier-border, rgba(155,120,255,.30)),
+    0 24px 56px rgba(185,120,255,.22),
+    0 18px 44px rgba(0,0,0,.18);
+}
+
+.subscription-card-business {
+  border-color: var(--tier-border, rgba(255, 190, 90, 0.30)) !important;
+  transform: translateY(-3px);
+  border-radius: 36px 24px 36px 36px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.10),
+    0 0 0 1px var(--tier-border, rgba(255,190,90,.36)),
+    0 28px 68px rgba(255, 190, 90, 0.22),
+    var(--shadow-lg) !important;
+}
+
+.subscription-card-business .subscription-card-head {
+  padding-bottom: 8px;
+}
+
+.subscription-card-business:hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 18px 40px rgba(255, 190, 90, 0.14), var(--shadow-lg);
+}
+
+.subscription-card-starter::after,
+.subscription-card-pro::after,
+.subscription-card-business::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 8px;
+  border-radius: 999px 999px 0 0;
+  background: var(--tier-accent, rgba(255,255,255,.75));
+  opacity: .8;
+}
+
+.subscription-card-pro::after {
+  height: 12px;
+}
+
+.subscription-card-business::after {
+  height: 14px;
+}
+
+.subscription-card-starter::before,
+.subscription-card-pro::before,
+.subscription-card-business::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.02), rgba(255,255,255,0) 30%),
+    linear-gradient(180deg, rgba(255,255,255,.08), transparent 18%);
+  opacity: .95;
+}
+
+.subscription-card-pro::before {
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,0) 34%),
+    linear-gradient(180deg, rgba(185,120,255,.10), transparent 18%);
+}
+
+.subscription-card-business::before {
+  background:
+    linear-gradient(90deg, rgba(255,190,90,.16), rgba(255,255,255,0) 42%),
+    linear-gradient(180deg, rgba(255,190,90,.12), transparent 16%);
+}
+
+.subscription-card-pro .subscription-tier-pill {
+  background: linear-gradient(135deg, rgba(185,120,255,.24), rgba(255,255,255,.06));
+}
+
+.subscription-card-business .subscription-tier-pill {
+  background: linear-gradient(135deg, rgba(255,190,90,.28), rgba(255,255,255,.07));
+}
+
+.subscription-features li {
+  margin-bottom: 6px;
+}
+
+.subscription-ribbon {
+  position: absolute;
+  top: 18px;
+  left: -28px;
+  transform: rotate(-18deg);
+  padding: 6px 30px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--tier-accent, rgba(255,255,255,.85)), rgba(255,255,255,.45));
+  color: #06111d;
+  font-weight: 800;
+  letter-spacing: .04em;
+  box-shadow: 0 12px 24px rgba(0,0,0,.16);
+}
+
+.subscription-card-starter .subscription-tier-pill,
+.subscription-card-starter .subscription-tier-mark {
+  box-shadow: 0 10px 24px rgba(110,180,255,.12);
+}
+
+.subscription-card-pro .subscription-tier-pill,
+.subscription-card-pro .subscription-tier-mark {
+  box-shadow: 0 14px 28px rgba(185,120,255,.16);
+}
+
+.subscription-card-business .subscription-tier-pill,
+.subscription-card-business .subscription-tier-mark {
+  box-shadow: 0 18px 36px rgba(255,190,90,.22);
+}
+
+.subscription-card-starter .subscription-features li::marker {
+  color: rgba(110,180,255,.95);
+}
+
+.subscription-card-pro .subscription-features li::marker {
+  color: rgba(185,120,255,.95);
+}
+
+.subscription-card-business .subscription-features li::marker {
+  color: rgba(255,190,90,.95);
+}
+
+.subscription-card-business h2 {
+  font-size: 2rem;
+  letter-spacing: -0.03em;
+}
+
+.subscription-card-business .sale-card {
+  background: linear-gradient(135deg, rgba(255,190,90,.16), rgba(255,255,255,.05));
+  border-color: rgba(255,190,90,.24);
+}
+
+.subscription-upgrade-note {
+  margin: 12px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+
+.comparison-table-wrap {
+  overflow-x: auto;
+}
+
+.subscription-comparison-card {
+  padding-bottom: 22px;
+}
+
+.comparison-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), var(--shadow);
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 16px 18px;
+  text-align: right;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.comparison-table th {
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.comparison-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.comparison-table tbody tr:nth-child(odd) td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.comparison-table td:first-child {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.comparison-table th:nth-child(2),
+.comparison-table td:nth-child(2) {
+  color: rgba(110, 180, 255, 0.98);
+}
+
+.comparison-table th:nth-child(3),
+.comparison-table td:nth-child(3) {
+  color: rgba(185, 120, 255, 0.98);
+}
+
+.comparison-table th:nth-child(4),
+.comparison-table td:nth-child(4) {
+  color: rgba(255, 190, 90, 0.98);
+}
+
+html[data-theme="light"] .comparison-table {
+  background: linear-gradient(135deg, rgba(255,255,255,.78), rgba(255,255,255,.55));
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="light"] .comparison-table th,
+html[data-theme="light"] .comparison-table td {
+  border-bottom-color: rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="light"] .comparison-table th {
+  background: rgba(15, 23, 42, 0.04);
 }
 
 .purchase-info h3 {
@@ -259,6 +577,99 @@
   background: linear-gradient(135deg, rgba(220, 53, 69, 0.14) 0%, rgba(220, 53, 69, 0.06) 100%);
 }
 
+.membership-booster {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+}
+
+.membership-booster-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.membership-booster-head span {
+  display: inline-flex;
+  width: fit-content;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+}
+
+.membership-booster-head h3 {
+  margin: 8px 0 0;
+}
+
+.membership-booster-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.membership-booster-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.membership-booster-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.membership-booster-card-head strong {
+  color: var(--text-primary);
+}
+
+.membership-booster-card-head span {
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-weight: 800;
+}
+
+.membership-booster-card p,
+.membership-booster-card small {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.membership-booster-card b {
+  color: var(--text-primary);
+}
+
+.membership-booster-starter .membership-booster-card-head span {
+  color: rgba(110, 180, 255, 0.98);
+}
+
+.membership-booster-pro .membership-booster-card-head span {
+  color: rgba(185, 120, 255, 0.98);
+}
+
+.membership-booster-business .membership-booster-card-head span {
+  color: rgba(255, 190, 90, 0.98);
+}
+
+html[data-theme="light"] .membership-booster,
+html[data-theme="light"] .membership-booster-card {
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(15, 23, 42, 0.10);
+}
+
 @media (max-width: 768px) {
   .purchase-card {
     flex-direction: column;
@@ -301,6 +712,29 @@
   .referral-link-input {
     min-width: 0;
     width: 100%;
+  }
+
+  .membership-booster-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .membership-booster-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    padding: 12px 14px;
+    font-size: 0.92rem;
+  }
+
+  .subscription-card-business {
+    transform: none;
+  }
+
+  .subscription-comparison-card {
+    padding-bottom: 18px;
   }
 }
 
@@ -367,5 +801,365 @@
   .loyalty-points-field,
   .loyalty-submit-btn {
     width: 100%;
+  }
+
+  .subscription-card-pro,
+  .subscription-card-business {
+    transform: none;
+  }
+
+  .subscription-card-business {
+    border-radius: 30px 20px 30px 30px !important;
+    grid-column: auto;
+  }
+
+  .subscription-card-business h2 {
+    font-size: 1.7rem;
+  }
+
+  .purchases-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+
+/* Full redesign for the subscriptions page. Kept page-scoped so old purchase styles do not leak in. */
+.subscriptions-page {
+  padding: 32px 0 54px;
+}
+
+.subscriptions-layout {
+  display: grid;
+  gap: 22px;
+}
+
+.subscriptions-hero,
+.subscription-status-panel,
+.subscription-compare-section,
+.subscription-plan-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 18px)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur, 18px)) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), var(--shadow);
+}
+
+.subscriptions-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 28px;
+  border-radius: 28px;
+}
+
+.subscriptions-hero h1,
+.subscription-status-panel h2,
+.subscription-section-head h2,
+.subscription-plan-card h2 {
+  margin: 0;
+  letter-spacing: 0;
+  color: var(--text-primary);
+}
+
+.subscriptions-hero h1 {
+  margin-top: 8px;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+}
+
+.subscriptions-hero p,
+.subscription-section-head p,
+.subscription-muted,
+.subscription-plan-note,
+.subscription-upgrade-note {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.subscriptions-kicker {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.subscription-status-panel {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+  border-radius: 22px;
+}
+
+.subscription-status-data {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.subscription-status-data span {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+}
+
+.subscription-status-data strong {
+  color: var(--text-primary);
+}
+
+.subscription-plans-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+.subscription-plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 22px;
+  border-radius: 24px;
+  border-color: var(--tier-border, rgba(255, 255, 255, 0.14));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 18px 42px var(--tier-glow, rgba(0,0,0,.18));
+}
+
+.subscription-plan-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-top: 5px solid var(--tier-accent, rgba(255,255,255,.7));
+  opacity: .9;
+}
+
+.subscription-plan-card-pro {
+  transform: translateY(-4px);
+}
+
+.subscription-plan-card-business {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 22px 54px rgba(255, 190, 90, 0.18), var(--shadow-lg);
+}
+
+.subscription-plan-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.subscription-plan-head h2 {
+  margin-top: 10px;
+  font-size: 1.7rem;
+}
+
+.subscription-plan-pill,
+.subscription-plan-mark,
+.subscription-plan-ribbon {
+  border: 1px solid var(--tier-border, rgba(255,255,255,.14));
+  background: var(--tier-accent-soft, rgba(255,255,255,.06));
+  color: var(--text-primary);
+}
+
+.subscription-plan-pill {
+  display: inline-flex;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+}
+
+.subscription-plan-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 46px;
+  height: 46px;
+  border-radius: 16px;
+  color: var(--tier-accent, var(--text-primary));
+  font-weight: 800;
+}
+
+.subscription-plan-ribbon {
+  position: relative;
+  z-index: 1;
+  width: fit-content;
+  align-self: flex-start;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.subscription-plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.subscription-plan-price strong {
+  font-size: 1.45rem;
+  color: var(--text-primary);
+}
+
+.subscription-plan-price span {
+  color: var(--text-secondary);
+}
+
+.subscription-plan-features {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.subscription-plan-features li {
+  position: relative;
+  padding-inline-start: 20px;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.subscription-plan-features li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.72em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tier-accent, rgba(255,255,255,.75));
+}
+
+.subscription-plan-form {
+  display: grid;
+  gap: 12px;
+  margin-top: auto;
+}
+
+.subscription-compare-section {
+  padding: 24px;
+  border-radius: 26px;
+}
+
+.subscription-section-head {
+  margin-bottom: 18px;
+}
+
+.subscription-compare-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.subscription-compare-row {
+  display: grid;
+  grid-template-columns: 1.1fr repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+
+.subscription-compare-row > * {
+  min-width: 0;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.subscription-compare-row span {
+  color: var(--text-secondary);
+}
+
+.subscription-compare-row strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+html[data-theme="light"] .subscriptions-hero,
+html[data-theme="light"] .subscription-status-panel,
+html[data-theme="light"] .subscription-compare-section,
+html[data-theme="light"] .subscription-plan-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.62));
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="light"] .subscriptions-kicker,
+html[data-theme="light"] .subscription-status-data span,
+html[data-theme="light"] .subscription-plan-price,
+html[data-theme="light"] .subscription-compare-row > * {
+  border-color: rgba(15, 23, 42, 0.08);
+  background: rgba(15, 23, 42, 0.04);
+}
+
+@media (max-width: 980px) {
+  .subscription-plans-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .subscription-plan-card-pro {
+    transform: none;
+  }
+
+  .subscription-status-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .subscription-compare-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .subscriptions-page {
+    padding-top: 20px;
+  }
+
+  .subscriptions-hero {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 22px;
+  }
+
+  .subscriptions-hero h1 {
+    font-size: 2rem;
+  }
+
+  .subscription-status-data,
+  .subscription-status-data span {
+    width: 100%;
+  }
+
+  .subscription-plan-card,
+  .subscription-compare-section {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .subscription-plan-head {
+    align-items: center;
+  }
+
+  .subscription-plan-head h2 {
+    font-size: 1.45rem;
+  }
+
+  .subscription-compare-row {
+    grid-template-columns: 1fr;
   }
 }

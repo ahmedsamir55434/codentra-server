@@ -26,9 +26,16 @@
             <h2>💬 التواصل مع الدعم</h2>
             <p>يمكنك إرسال رسالة للأدمن بخصوص مشترياتك أو استفساراتك</p>
           <% } %>
+          <div class="chat-status">
+            <% if (user.supportMode === 'human') { %>
+              <p>حالة الدعم: <strong>دعم بشري</strong>. تم تحويل المحادثة إلى فريق دعم حقيقي، وسيرد عليك أحد أعضاء الفريق شخصياً.</p>
+            <% } else { %>
+              <p>حالة الدعم: <strong>دعم ذكي آلي</strong>. أضف صورًا أو فيديوهات وسيتم تحليلها سريعاً من القِبل الذكاء الاصطناعي الذكي.</p>
+            <% } %>
+          </div>
         </div>
 
-        <div class="chat-messages">
+        <div class="chat-messages" id="chatMessages" data-user-id="<%= user.id %>" data-purchase-id="<%= purchaseChat ? purchaseChat.purchaseId : '' %>">
           <% if (messages.length === 0) { %>
             <div class="empty-chat">
               <div class="empty-icon">💬</div>
@@ -36,12 +43,94 @@
             </div>
           <% } else { %>
             <% messages.forEach(msg => { %>
-              <div class="message <%= msg.senderId === user.id ? 'sent' : 'received' %>">
+              <div class="message <%= msg.senderId === user.id ? 'sent' : 'received' %> <%= msg.senderId === 'ai-support' ? 'ai-message' : '' %>">
                 <div class="message-content">
                   <%= msg.content %>
                 </div>
+                <% if (Array.isArray(msg.attachments) && msg.attachments.length) { %>
+                  <div class="message-attachments">
+                    <% msg.attachments.forEach(file => { %>
+                      <a href="/<%= file.filePath %>" target="_blank" class="message-attachment">
+                        <% if (file.mimeType && file.mimeType.startsWith('image/')) { %>
+                          <img src="/<%= file.filePath %>" alt="<%= file.originalName %>">
+                        <% } else if (file.mimeType && file.mimeType.startsWith('video/')) { %>
+                          <video src="/<%= file.filePath %>" controls></video>
+                        <% } else { %>
+                          <span class="attachment-icon">ملف</span>
+                        <% } %>
+                        <span><%= file.originalName %></span>
+                      </a>
+                    <% }) %>
+                  </div>
+                <% } %>
+                <% if (msg.senderId === 'ai-support' && (Array.isArray(msg.aiSuggestedProjects) && msg.aiSuggestedProjects.length || Array.isArray(msg.aiSuggestedPlans) && msg.aiSuggestedPlans.length || Array.isArray(msg.aiActions) && msg.aiActions.length)) { %>
+                  <div class="ai-response-panel">
+                    <% if (Array.isArray(msg.aiSuggestedProjects) && msg.aiSuggestedProjects.length) { %>
+                      <div class="ai-response-block">
+                        <span class="ai-response-label">اقتراحات المنتجات</span>
+                        <div class="ai-suggestion-list">
+                          <% msg.aiSuggestedProjects.forEach(project => { %>
+                            <div class="ai-suggestion-card">
+                              <div class="ai-suggestion-title"><%= project.projectTitle %></div>
+                              <div class="ai-suggestion-meta">
+                                <span>$<%= Number(project.price || 0).toFixed(2) %></span>
+                                <% if (project.reason) { %><span><%= project.reason %></span><% } %>
+                              </div>
+                              <div class="ai-action-row">
+                                <a href="/project/<%= project.projectId %>" class="btn btn-secondary btn-sm">فتح المنتج</a>
+                                <form action="/cart/add" method="POST" class="ai-inline-form">
+                                  <input type="hidden" name="projectId" value="<%= project.projectId %>">
+                                  <button type="submit" class="btn btn-primary btn-sm">إضافة للسلة</button>
+                                </form>
+                              </div>
+                            </div>
+                          <% }) %>
+                        </div>
+                      </div>
+                    <% } %>
+
+                    <% if (Array.isArray(msg.aiSuggestedPlans) && msg.aiSuggestedPlans.length) { %>
+                      <div class="ai-response-block">
+                        <span class="ai-response-label">اقتراحات الاشتراك</span>
+                        <div class="ai-suggestion-list">
+                          <% msg.aiSuggestedPlans.forEach(plan => { %>
+                            <div class="ai-suggestion-card ai-plan-card">
+                              <div class="ai-suggestion-title"><%= plan.planName %></div>
+                              <div class="ai-suggestion-meta">
+                                <span>$<%= Number(plan.price || 0).toFixed(2) %> / <%= plan.durationDays || 30 %> يوم</span>
+                                <% if (plan.reason) { %><span><%= plan.reason %></span><% } %>
+                              </div>
+                              <div class="ai-action-row">
+                                <a href="/subscriptions" class="btn btn-secondary btn-sm">عرض الاشتراكات</a>
+                                <a href="/membership" class="btn btn-primary btn-sm">العضوية الحالية</a>
+                              </div>
+                            </div>
+                          <% }) %>
+                        </div>
+                      </div>
+                    <% } %>
+
+                    <% if (Array.isArray(msg.aiActions) && msg.aiActions.length) { %>
+                      <div class="ai-response-block ai-actions-block">
+                        <span class="ai-response-label">خطوات سريعة</span>
+                        <div class="ai-action-row ai-action-row-wrap">
+                          <% msg.aiActions.forEach(action => { %>
+                            <% if (action.type === 'add-to-cart' && action.projectId) { %>
+                              <form action="<%= action.href %>" method="POST" class="ai-inline-form">
+                                <input type="hidden" name="projectId" value="<%= action.projectId %>">
+                                <button type="submit" class="btn btn-primary btn-sm"><%= action.label %></button>
+                              </form>
+                            <% } else { %>
+                              <a href="<%= action.href %>" class="btn btn-secondary btn-sm"><%= action.label %></a>
+                            <% } %>
+                          <% }) %>
+                        </div>
+                      </div>
+                    <% } %>
+                  </div>
+                <% } %>
                 <div class="message-meta">
-                  <span class="sender"><%= msg.senderId === user.id ? 'أنت' : 'الأدمن' %></span>
+                  <span class="sender"><%= msg.senderId === user.id ? 'أنت' : msg.senderId === 'ai-support' ? 'AI Support' : 'الأدمن' %></span>
                   <span class="time"><%= new Date(msg.createdAt).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) %></span>
                 </div>
               </div>
@@ -50,12 +139,23 @@
         </div>
 
         <div class="chat-input">
-          <form action="<%= purchaseChat ? `/messages/purchase/${purchaseChat.purchaseId}` : '/messages' %>" method="POST" class="message-form">
+          <form action="<%= purchaseChat ? `/messages/purchase/${purchaseChat.purchaseId}` : '/messages' %>" method="POST" class="message-form" enctype="multipart/form-data" id="supportMessageForm">
             <% if (purchaseChat) { %>
               <input type="hidden" name="purchaseId" value="<%= purchaseChat.purchaseId %>">
             <% } %>
-            <textarea name="content" placeholder="اكتب رسالتك هنا..." required rows="3"></textarea>
-            <button type="submit" class="btn btn-primary">إرسال</button>
+            <textarea name="content" placeholder="اكتب رسالتك هنا..." rows="3"></textarea>
+            <div class="support-tools">
+              <label class="btn btn-secondary support-file-btn">
+                إرفاق ملف
+                <input type="file" name="attachments" id="supportAttachments" multiple accept="image/*,video/*,.pdf,.txt,.md,.json,.csv,.log,.zip">
+              </label>
+              <% if (!purchaseChat) { %>
+                <button type="button" class="btn btn-secondary" id="recordScreenBtn">تسجيل شاشة</button>
+              <% } %>
+              <button type="button" class="btn btn-warning" id="handoffToHumanBtn">أريد دعم بشري</button>
+              <button type="submit" class="btn btn-primary">إرسال</button>
+            </div>
+            <div class="support-file-preview" id="supportFilePreview"></div>
           </form>
         </div>
       </div>
@@ -63,5 +163,244 @@
   </main>
 
   <%- include('partials/footer') %>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    (function() {
+      const form = document.getElementById('supportMessageForm');
+      const fileInput = document.getElementById('supportAttachments');
+      const preview = document.getElementById('supportFilePreview');
+      const recordBtn = document.getElementById('recordScreenBtn');
+      const handoffBtn = document.getElementById('handoffToHumanBtn');
+      const messageContainer = document.getElementById('chatMessages');
+      const textarea = form ? form.querySelector('textarea[name="content"]') : null;
+      let recordedFile = null;
+      let socket;
+
+      function scrollToBottom() {
+        if (!messageContainer) return;
+        messageContainer.scrollTop = messageContainer.scrollHeight;
+      }
+
+      function escapeHtml(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function formatAttachments(attachments) {
+        if (!Array.isArray(attachments) || !attachments.length) return '';
+        return attachments.map(file => {
+          const fileUrl = encodeURI('/' + (file.filePath || ''));
+          const title = escapeHtml(file.originalName);
+          if (file.mimeType && file.mimeType.startsWith('image/')) {
+            return `<a href="${fileUrl}" target="_blank" class="message-attachment"><img src="${fileUrl}" alt="${title}"><span>${title}</span></a>`;
+          }
+          if (file.mimeType && file.mimeType.startsWith('video/')) {
+            return `<a href="${fileUrl}" target="_blank" class="message-attachment"><video src="${fileUrl}" controls></video><span>${title}</span></a>`;
+          }
+          return `<a href="${fileUrl}" target="_blank" class="message-attachment"><span class="attachment-icon">ملف</span><span>${title}</span></a>`;
+        }).join('');
+      }
+
+      function renderAiPanel(message) {
+        if (!message || !Array.isArray(message.aiActions) && !Array.isArray(message.aiSuggestedProjects) && !Array.isArray(message.aiSuggestedPlans)) return '';
+        let html = '';
+        if (Array.isArray(message.aiSuggestedProjects) && message.aiSuggestedProjects.length) {
+          html += '<div class="ai-response-block"><span class="ai-response-label">اقتراحات المنتجات</span><div class="ai-suggestion-list">';
+          message.aiSuggestedProjects.forEach(project => {
+            html += `<div class="ai-suggestion-card"><div class="ai-suggestion-title">${escapeHtml(project.projectTitle)}</div><div class="ai-suggestion-meta"><span>$${Number(project.price || 0).toFixed(2)}</span>${project.reason ? `<span>${escapeHtml(project.reason)}</span>` : ''}</div><div class="ai-action-row"><a href="/project/${encodeURIComponent(project.projectId)}" class="btn btn-secondary btn-sm">فتح المنتج</a><form action="/cart/add" method="POST" class="ai-inline-form"><input type="hidden" name="projectId" value="${escapeHtml(project.projectId)}"><button type="submit" class="btn btn-primary btn-sm">إضافة للسلة</button></form></div></div>`;
+          });
+          html += '</div></div>';
+        }
+        if (Array.isArray(message.aiSuggestedPlans) && message.aiSuggestedPlans.length) {
+          html += '<div class="ai-response-block"><span class="ai-response-label">اقتراحات الاشتراك</span><div class="ai-suggestion-list">';
+          message.aiSuggestedPlans.forEach(plan => {
+            html += `<div class="ai-suggestion-card ai-plan-card"><div class="ai-suggestion-title">${escapeHtml(plan.planName)}</div><div class="ai-suggestion-meta"><span>$${Number(plan.price || 0).toFixed(2)} / ${plan.durationDays || 30} يوم</span>${plan.reason ? `<span>${escapeHtml(plan.reason)}</span>` : ''}</div><div class="ai-action-row"><a href="/subscriptions" class="btn btn-secondary btn-sm">عرض الاشتراكات</a><a href="/membership" class="btn btn-primary btn-sm">العضوية الحالية</a></div></div>`;
+          });
+          html += '</div></div>';
+        }
+        if (Array.isArray(message.aiActions) && message.aiActions.length) {
+          html += '<div class="ai-response-block ai-actions-block"><span class="ai-response-label">خطوات سريعة</span><div class="ai-action-row ai-action-row-wrap">';
+          message.aiActions.forEach(action => {
+            if (action.type === 'add-to-cart' && action.projectId) {
+              html += `<form action="${escapeHtml(action.href)}" method="POST" class="ai-inline-form"><input type="hidden" name="projectId" value="${escapeHtml(action.projectId)}"><button type="submit" class="btn btn-primary btn-sm">${escapeHtml(action.label)}</button></form>`;
+            } else {
+              html += `<a href="${escapeHtml(action.href)}" class="btn btn-secondary btn-sm">${escapeHtml(action.label)}</a>`;
+            }
+          });
+          html += '</div></div>';
+        }
+        return html ? `<div class="ai-response-panel">${html}</div>` : '';
+      }
+
+      const appendedMessageIds = new Set();
+
+      function appendMessage(message) {
+        if (!messageContainer || !message) return;
+        if (message.id && appendedMessageIds.has(message.id)) return;
+        if (message.id) appendedMessageIds.add(message.id);
+        const wrapper = document.createElement('div');
+        const isSent = message.senderId === '<%= user.id %>';
+        const isAi = message.senderId === 'ai-support';
+        wrapper.className = `message ${isSent ? 'sent' : 'received'} ${isAi ? 'ai-message' : ''}`;
+        if (message.pending) {
+          wrapper.classList.add('pending');
+        }
+        let html = `<div class="message-content">${escapeHtml(message.content || '')}</div>`;
+        if (Array.isArray(message.attachments) && message.attachments.length) {
+          html += `<div class="message-attachments">${formatAttachments(message.attachments)}</div>`;
+        }
+        if (isAi) {
+          html += renderAiPanel(message);
+        }
+        html += `<div class="message-meta"><span class="sender">${isSent ? 'أنت' : isAi ? 'AI Support' : 'الأدمن'}</span><span class="time">${new Date(message.createdAt).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</span></div>`;
+        wrapper.innerHTML = html;
+        messageContainer.appendChild(wrapper);
+        scrollToBottom();
+      }
+
+      function addTypingIndicator() {
+        if (!messageContainer || document.getElementById('aiTypingIndicator')) return;
+        const wrapper = document.createElement('div');
+        wrapper.id = 'aiTypingIndicator';
+        wrapper.className = 'message received ai-message typing-indicator';
+        wrapper.innerHTML = '<div class="message-content">جاري تجهيز الرد...</div><div class="message-meta"><span class="sender">AI Support</span></div>';
+        messageContainer.appendChild(wrapper);
+        scrollToBottom();
+      }
+
+      function removeTypingIndicator() {
+        const existing = document.getElementById('aiTypingIndicator');
+        if (existing) existing.remove();
+      }
+
+      function renderPreview() {
+        if (!preview || !fileInput) return;
+        const names = Array.from(fileInput.files || []).map(file => file.name);
+        if (recordedFile) names.push(recordedFile.name);
+        preview.textContent = names.length ? 'المرفقات: ' + names.join('، ') : '';
+      }
+
+      async function sendFormData(extraData = null) {
+        if (!form) return;
+        const data = new FormData(form);
+        if (extraData) {
+          Object.keys(extraData).forEach((key) => data.set(key, extraData[key]));
+        }
+        const clientTempId = String(data.get('clientTempId') || `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+        data.set('clientTempId', clientTempId);
+
+        const pendingContent = String(data.get('content') || '').trim();
+        if (pendingContent) {
+          appendMessage({
+            id: clientTempId,
+            senderId: '<%= user.id %>',
+            senderName: '<%= user.name %>',
+            content: pendingContent,
+            createdAt: new Date().toISOString(),
+            pending: true
+          });
+        }
+        addTypingIndicator();
+
+        if (recordedFile) {
+          data.append('attachments', recordedFile);
+        }
+
+        try {
+          const response = await fetch(form.action, {
+            method: 'POST',
+            body: data,
+            headers: {
+              Accept: 'application/json'
+            }
+          });
+          if (!response.ok) {
+            throw new Error('network');
+          }
+          const payload = await response.json();
+          removeTypingIndicator();
+          if (payload.userMessage) appendMessage(payload.userMessage);
+          if (payload.aiMessage) appendMessage(payload.aiMessage);
+          form.reset();
+          recordedFile = null;
+          renderPreview();
+          if (textarea) textarea.value = '';
+        } catch (error) {
+          removeTypingIndicator();
+          form.submit();
+        }
+      }
+
+      if (fileInput) {
+        fileInput.addEventListener('change', renderPreview);
+      }
+
+      if (recordBtn && navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+        recordBtn.addEventListener('click', async () => {
+          if (recordBtn.dataset.recording === '1') return;
+          try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+            const chunks = [];
+            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            recordBtn.dataset.recording = '1';
+            recordBtn.textContent = 'جاري التسجيل... اضغط إيقاف من المتصفح';
+            recorder.ondataavailable = event => {
+              if (event.data && event.data.size) chunks.push(event.data);
+            };
+            recorder.onstop = () => {
+              const blob = new Blob(chunks, { type: 'video/webm' });
+              recordedFile = new File([blob], 'screen-recording.webm', { type: 'video/webm' });
+              recordBtn.dataset.recording = '0';
+              recordBtn.textContent = 'تسجيل شاشة';
+              if (textarea && !textarea.value.trim()) {
+                textarea.value = 'أرسلت تسجيل شاشة يوضح المشكلة.';
+              }
+              renderPreview();
+            };
+            stream.getVideoTracks()[0].addEventListener('ended', () => recorder.stop());
+            recorder.start();
+          } catch (error) {
+            recordBtn.textContent = 'تسجيل شاشة';
+          }
+        });
+      }
+
+      if (handoffBtn) {
+        handoffBtn.addEventListener('click', async () => {
+          if (!confirm('هل تريد تحويل المحادثة الآن لفريق الدعم البشري؟')) return;
+          await sendFormData({ content: 'حولني للدعم البشري', handoff: '1' });
+        });
+      }
+
+      if (form) {
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          await sendFormData();
+        });
+      }
+
+      if (typeof io !== 'undefined') {
+        socket = io();
+        const currentUserId = messageContainer ? messageContainer.dataset.userId : null;
+        const currentPurchaseId = messageContainer ? messageContainer.dataset.purchaseId : null;
+        socket.on('connect', () => {
+          if (currentUserId) {
+            socket.emit('join-chat-room', { userId: currentUserId, admin: false });
+          }
+        });
+
+        socket.on('new-chat-message', (payload) => {
+          if (!payload || !payload.userId || payload.userId !== messageContainer.dataset.userId) return;
+          appendMessage(payload.message);
+        });
+      }
+
+      scrollToBottom();
+    })();
+  </script>
 </body>
 </html>

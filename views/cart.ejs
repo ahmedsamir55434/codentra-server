@@ -150,6 +150,47 @@
               </div>
             </div>
 
+            <% if (Array.isArray(membershipBoosters) && membershipBoosters.length) { %>
+              <section class="membership-booster" aria-label="توفير الاشتراكات">
+                <div class="membership-booster-head">
+                  <div>
+                    <span>Membership Booster</span>
+                    <h3>اشترك ووفر على الطلب ده</h3>
+                  </div>
+                  <a href="/subscriptions" class="btn btn-secondary">عرض الاشتراكات</a>
+                </div>
+                <div class="membership-booster-grid">
+                  <% membershipBoosters.forEach(boost => { %>
+                    <article class="membership-booster-card membership-booster-<%= boost.tier %>">
+                      <div class="membership-booster-card-head">
+                        <strong><%= boost.planName %></strong>
+                        <span><%= boost.discountPercent %>%</span>
+                      </div>
+                      <p>توفير متوقع على السلة: <b><%= displayMoney(boost.savings) %></b></p>
+                      <% if (boost.isSmartDeal) { %>
+                        <small>الاشتراك يغطي تكلفته من الطلب الحالي.</small>
+                      <% } else { %>
+                        <small>مفيد لو هتشتري أكثر من مشروع خلال الشهر.</small>
+                      <% } %>
+                      <% if (boost.isCurrent) { %>
+                        <button type="button" class="btn btn-secondary" disabled>خطتك الحالية</button>
+                      <% } else if (boost.isUpgrade) { %>
+                        <form method="POST" action="/subscriptions/upgrade">
+                          <input type="hidden" name="planId" value="<%= boost.planId %>">
+                          <button type="submit" class="btn btn-primary">ترقية الآن</button>
+                        </form>
+                      <% } else { %>
+                        <form method="POST" action="/subscriptions/subscribe">
+                          <input type="hidden" name="planId" value="<%= boost.planId %>">
+                          <button type="submit" class="btn btn-primary">اشترك ووفر</button>
+                        </form>
+                      <% } %>
+                    </article>
+                  <% }) %>
+                </div>
+              </section>
+            <% } %>
+
             <!-- Coupon Section with Apply Button -->
             <div class="coupon-section">
               <label style="display:block; margin-bottom:8px; font-weight:bold;">كود الخصم:</label>

@@ -770,6 +770,51 @@ main.hero,
   box-shadow: var(--glass-v3-glow), var(--glass-v3-shadow);
 }
 
+.hero-subscription-chip {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(110, 180, 255, 0.12), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(110, 180, 255, 0.18);
+  box-shadow: var(--glass-v3-glow);
+}
+
+.hero-subscription-chip strong {
+  font-size: 0.98rem;
+  color: var(--text-primary);
+}
+
+.hero-subscription-kicker {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hero-subscription-chip span:last-child {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.hero-subscription-chip strong {
+  font-size: 0.98rem;
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .hero-subscription-chip {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.05), rgba(255, 255, 255, 0.82));
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="light"] .hero-subscription-kicker {
+  background: rgba(15, 23, 42, 0.05);
+}
+
 .hero .container::before,
 .project-hero-content::before,
 .community-hero::before,
@@ -1541,6 +1586,60 @@ html[data-theme="light"] .nav-user-chip {
   font-size: 0.92rem;
 }
 
+.nav-user-subscription {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, rgba(110, 180, 255, 0.14), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(110, 180, 255, 0.16);
+}
+
+.nav-user-subscription-starter {
+  background: linear-gradient(135deg, rgba(110, 180, 255, 0.14), rgba(255, 255, 255, 0.04));
+  border-color: rgba(110, 180, 255, 0.18);
+}
+
+.nav-user-subscription-pro {
+  background: linear-gradient(135deg, rgba(185, 120, 255, 0.18), rgba(255, 255, 255, 0.05));
+  border-color: rgba(185, 120, 255, 0.20);
+}
+
+.nav-user-subscription-business {
+  background: linear-gradient(135deg, rgba(255, 190, 90, 0.22), rgba(255, 255, 255, 0.05));
+  border-color: rgba(255, 190, 90, 0.24);
+}
+
+.nav-user-subscription-none {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.14), rgba(255, 255, 255, 0.04));
+  border-color: rgba(148, 163, 184, 0.18);
+}
+
+html[data-theme="light"] .nav-user-subscription-starter {
+  background: linear-gradient(135deg, rgba(110, 180, 255, 0.10), rgba(255, 255, 255, 0.82));
+}
+
+html[data-theme="light"] .nav-user-subscription-pro {
+  background: linear-gradient(135deg, rgba(185, 120, 255, 0.12), rgba(255, 255, 255, 0.82));
+}
+
+html[data-theme="light"] .nav-user-subscription-business {
+  background: linear-gradient(135deg, rgba(255, 190, 90, 0.14), rgba(255, 255, 255, 0.82));
+}
+
+html[data-theme="light"] .nav-user-subscription-none {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.08), rgba(255, 255, 255, 0.82));
+}
+
+html[data-theme="light"] .nav-user-subscription {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.07), rgba(255, 255, 255, 0.8));
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
 .nav-more-menu {
   position: relative;
 }
@@ -1846,6 +1945,58 @@ html[data-theme="light"] .mobile-nav-user {
 .mobile-nav-user-label {
   color: var(--text-secondary);
   font-size: 0.78rem;
+}
+
+.mobile-nav-user-subscription {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.mobile-nav-user-subscription-starter {
+  background: rgba(110, 180, 255, 0.12);
+  border-color: rgba(110, 180, 255, 0.18);
+}
+
+.mobile-nav-user-subscription-pro {
+  background: rgba(185, 120, 255, 0.14);
+  border-color: rgba(185, 120, 255, 0.20);
+}
+
+.mobile-nav-user-subscription-business {
+  background: rgba(255, 190, 90, 0.18);
+  border-color: rgba(255, 190, 90, 0.24);
+}
+
+.mobile-nav-user-subscription-none {
+  background: rgba(148, 163, 184, 0.10);
+  border-color: rgba(148, 163, 184, 0.16);
+}
+
+html[data-theme="light"] .mobile-nav-user-subscription {
+  background: rgba(15, 23, 42, 0.05);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+html[data-theme="light"] .mobile-nav-user-subscription-starter {
+  background: rgba(110, 180, 255, 0.08);
+}
+
+html[data-theme="light"] .mobile-nav-user-subscription-pro {
+  background: rgba(185, 120, 255, 0.10);
+}
+
+html[data-theme="light"] .mobile-nav-user-subscription-business {
+  background: rgba(255, 190, 90, 0.12);
+}
+
+html[data-theme="light"] .mobile-nav-user-subscription-none {
+  background: rgba(148, 163, 184, 0.06);
 }
 
 .mobile-nav-auth {

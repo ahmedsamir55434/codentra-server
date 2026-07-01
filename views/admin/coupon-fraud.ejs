@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>كشف تلاعب الكوبونات - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/coupons">الكوبونات</a>
+        <a href="/admin/coupon-fraud" class="active">كشف التلاعب</a>
+        <a href="/admin/purchases">المشتريات</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>كشف تلاعب الكوبونات</h1>
+      <div class="glass-card" style="padding:14px; margin-bottom:14px; opacity:0.9;">تحليل تلقائي لاستخدام الكوبونات خلال آخر 7 أيام مع رصد الأنماط غير الطبيعية.</div>
+
+      <% if (!reports || reports.length === 0) { %>
+        <div class="glass-card" style="padding:16px;">لا توجد بيانات كوبونات كافية للتحليل.</div>
+      <% } else { %>
+        <div class="glass-card" style="padding:16px; overflow:auto;">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>الكوبون</th>
+                <th>الخطر</th>
+                <th>استخدام 24س</th>
+                <th>استخدام 7 أيام</th>
+                <th>عدد المستخدمين</th>
+                <th>أعلى مستخدم</th>
+                <th>إجمالي الخصم</th>
+                <th>أسباب الاشتباه</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% reports.forEach(r => { %>
+                <tr>
+                  <td><strong><%= r.code %></strong></td>
+                  <td>
+                    <span class="glass-badge" style="<%= r.risk === 'high' ? 'background:rgba(255,80,80,.18);border-color:rgba(255,80,80,.35);' : r.risk === 'medium' ? 'background:rgba(255,190,80,.18);border-color:rgba(255,190,80,.35);' : 'background:rgba(80,220,140,.18);border-color:rgba(80,220,140,.35);' %>">
+                      <%= r.risk === 'high' ? 'عالي' : r.risk === 'medium' ? 'متوسط' : 'منخفض' %>
+                    </span>
+                  </td>
+                  <td><%= r.uses24h %></td>
+                  <td><%= r.totalUses7d %></td>
+                  <td><%= r.uniqueUsers %></td>
+                  <td>
+                    <% if (r.topUser) { %>
+                      <div><%= r.topUser.label %></div>
+                      <div style="opacity:.7;font-size:12px;"><%= r.topUser.count %> مرة (<%= r.topUserShare %>%)</div>
+                    <% } else { %>-<% } %>
+                  </td>
+                  <td>$<%= Number(r.totalDiscount || 0).toFixed(2) %></td>
+                  <td><%= r.reasons.length ? r.reasons.join(' - ') : 'طبيعي' %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </main>
+  </div>
+</body>
+</html>

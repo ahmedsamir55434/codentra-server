@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI مستشار اختيار المشروع - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+  <style>
+    .advisor-shell {
+      padding: 18px 0 40px;
+    }
+
+    .advisor-grid {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .advisor-panel {
+      background: var(--glass-v3-surface);
+      border: 1px solid var(--glass-v3-border);
+      border-radius: 20px;
+      box-shadow: var(--glass-v3-glow), var(--glass-v3-shadow-soft);
+      -webkit-backdrop-filter: var(--glass-v3-backdrop);
+      backdrop-filter: var(--glass-v3-backdrop);
+      padding: 16px;
+    }
+
+    .advisor-panel h3 {
+      margin: 0 0 10px;
+      font-size: 1.08rem;
+    }
+
+    .advisor-copy {
+      margin: 0 0 12px;
+      opacity: 0.85;
+      line-height: 1.8;
+      font-size: 0.96rem;
+    }
+
+    .advisor-field {
+      margin-bottom: 10px;
+    }
+
+    .advisor-field label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    .advisor-field input,
+    .advisor-field select,
+    .advisor-field textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--glass-v3-border);
+      background: var(--glass-v3-surface-soft);
+      color: var(--text-color);
+      font-family: inherit;
+    }
+
+    .advisor-field textarea {
+      resize: vertical;
+      min-height: 92px;
+    }
+
+    .advisor-result-item {
+      background: var(--glass-v3-surface-soft);
+      border: 1px solid var(--glass-v3-border);
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .advisor-result-title {
+      margin: 0 0 6px;
+      font-size: 1rem;
+    }
+
+    .advisor-meta {
+      opacity: 0.75;
+      font-size: 0.85rem;
+      line-height: 1.7;
+    }
+
+    .advisor-reason {
+      margin-top: 8px;
+      line-height: 1.8;
+      opacity: 0.92;
+    }
+
+    .advisor-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .advisor-plan {
+      margin: 0;
+      padding-right: 18px;
+      line-height: 1.9;
+      opacity: 0.95;
+    }
+
+    .advisor-note {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      opacity: 0.8;
+      line-height: 1.8;
+    }
+
+    .advisor-empty {
+      opacity: 0.82;
+      line-height: 1.8;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 980px) {
+      .advisor-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="hero">
+    <div class="container">
+      <h1>AI مستشار اختيار المشروع</h1>
+      <p>صف احتياجك، وسنقترح المشروع الأنسب مع خطة تنفيذ عملية.</p>
+    </div>
+  </main>
+
+  <section class="projects-section advisor-shell">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="section-kicker">Smart Assistant</span>
+          <h2>اختيار أدق وتجربة أسرع</h2>
+        </div>
+        <p class="section-copy">هذه الأداة تقترح مشاريع من الموجود في المتجر فقط، ثم تبني لك خطوات تنفيذ واضحة.</p>
+      </div>
+
+      <div class="advisor-grid">
+        <section class="advisor-panel">
+          <h3>بياناتك</h3>
+          <p class="advisor-copy">كل ما كان وصفك أدق، كانت التوصية أقوى.</p>
+
+          <% if (!geminiEnabled) { %>
+            <div class="error-message">ميزة AI غير مفعّلة حالياً. أضف <code>GEMINI_API_KEY</code>.</div>
+          <% } %>
+
+          <div class="advisor-field">
+            <label for="advisorGoal">هدفك</label>
+            <textarea id="advisorGoal" placeholder="مثال: منصة كورسات مع لوحة تحكم للأدمن"></textarea>
+          </div>
+          <div class="advisor-field">
+            <label for="advisorBudget">الميزانية التقريبية (دولار)</label>
+            <input id="advisorBudget" type="number" min="0" step="1" placeholder="مثال: 120">
+          </div>
+          <div class="advisor-field">
+            <label for="advisorLevel">مستوى الخبرة</label>
+            <select id="advisorLevel">
+              <option value="">اختر</option>
+              <option value="beginner">مبتدئ</option>
+              <option value="intermediate">متوسط</option>
+              <option value="advanced">محترف</option>
+            </select>
+          </div>
+          <div class="advisor-field">
+            <label for="advisorStack">تقنياتك/بيئتك</label>
+            <input id="advisorStack" type="text" placeholder="مثال: Node.js + React + PostgreSQL">
+          </div>
+          <button id="advisorRunBtn" class="btn btn-primary" type="button" <%= geminiEnabled ? '' : 'disabled' %>>اعمل توصية</button>
+          <div id="advisorErr" class="error-message" style="display:none; margin-top:10px;"></div>
+        </section>
+
+        <section class="advisor-panel">
+          <h3>النتيجة</h3>
+          <div id="advisorEmpty" class="advisor-empty">بعد الضغط على "اعمل توصية" ستظهر المشاريع المقترحة وخطة التنفيذ هنا.</div>
+          <div id="advisorResults" style="display:none;"></div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <%- include('partials/footer') %>
+
+  <script>
+    (function () {
+      const runBtn = document.getElementById('advisorRunBtn');
+      const errBox = document.getElementById('advisorErr');
+      const goalEl = document.getElementById('advisorGoal');
+      const budgetEl = document.getElementById('advisorBudget');
+      const levelEl = document.getElementById('advisorLevel');
+      const stackEl = document.getElementById('advisorStack');
+      const emptyEl = document.getElementById('advisorEmpty');
+      const resultsEl = document.getElementById('advisorResults');
+      if (!runBtn) return;
+
+      const money = (v) => {
+        const n = Number(v || 0);
+        return Number.isFinite(n) ? `$${n.toFixed(2)}` : '-';
+      };
+
+      runBtn.addEventListener('click', async () => {
+        errBox.style.display = 'none';
+        const payload = {
+          goal: String(goalEl.value || '').trim(),
+          budget: Number(budgetEl.value || 0),
+          level: String(levelEl.value || '').trim(),
+          stack: String(stackEl.value || '').trim()
+        };
+        if (!payload.goal) {
+          errBox.textContent = 'اكتب هدفك أولاً.';
+          errBox.style.display = 'block';
+          return;
+        }
+
+        const oldText = runBtn.textContent;
+        runBtn.disabled = true;
+        runBtn.textContent = '...جاري التحليل';
+
+        try {
+          const res = await fetch('/api/ai-advisor/recommend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data || data.ok !== true) {
+            throw new Error((data && data.error) ? data.error : 'تعذر التوصية الآن');
+          }
+
+          const recs = Array.isArray(data.recommendations) ? data.recommendations : [];
+          const plan = Array.isArray(data.executionPlan) ? data.executionPlan : [];
+          const notes = String(data.notes || '').trim();
+
+          resultsEl.innerHTML = '';
+          if (!recs.length) {
+            emptyEl.style.display = 'block';
+            emptyEl.textContent = notes || 'لم تتوفر توصية واضحة حالياً.';
+            resultsEl.style.display = 'none';
+            return;
+          }
+
+          recs.forEach((rec) => {
+            const item = document.createElement('div');
+            item.className = 'advisor-result-item';
+            item.innerHTML = `
+              <h4 class="advisor-result-title">${rec.projectTitle}</h4>
+              <div class="advisor-meta">الملاءمة: ${rec.fitScore || 0}% | التصنيف: ${rec.category || '-'} | السعر: ${money(rec.price)}</div>
+              <div class="advisor-meta">التقنيات: ${(rec.technologies || []).join(', ') || '-'}</div>
+              <div class="advisor-reason">${rec.reason || ''}</div>
+              <div class="advisor-actions">
+                <a class="btn btn-secondary btn-sm" href="/project/${rec.projectId}">فتح المنتج</a>
+                <a class="btn btn-primary btn-sm" href="/cart/add?projectId=${rec.projectId}" onclick="event.preventDefault(); const f=document.createElement('form');f.method='POST';f.action='/cart/add';const i=document.createElement('input');i.type='hidden';i.name='projectId';i.value='${rec.projectId}';f.appendChild(i);document.body.appendChild(f);f.submit();">أضف للسلة</a>
+              </div>
+            `;
+            resultsEl.appendChild(item);
+          });
+
+          if (plan.length) {
+            const planBox = document.createElement('div');
+            planBox.className = 'advisor-result-item';
+            planBox.innerHTML = '<h4 class="advisor-result-title">خطة التنفيذ</h4>';
+            const ul = document.createElement('ul');
+            ul.className = 'advisor-plan';
+            plan.forEach((step) => {
+              const li = document.createElement('li');
+              li.textContent = step;
+              ul.appendChild(li);
+            });
+            planBox.appendChild(ul);
+            if (notes) {
+              const note = document.createElement('div');
+              note.className = 'advisor-note';
+              note.textContent = notes;
+              planBox.appendChild(note);
+            }
+            resultsEl.appendChild(planBox);
+          }
+
+          emptyEl.style.display = 'none';
+          resultsEl.style.display = 'block';
+        } catch (e) {
+          errBox.textContent = (e && e.message) ? e.message : 'تعذر التوصية الآن';
+          errBox.style.display = 'block';
+        } finally {
+          runBtn.disabled = false;
+          runBtn.textContent = oldText;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
+

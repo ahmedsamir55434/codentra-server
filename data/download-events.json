@@ -1,5 +1,89 @@
 [
   {
+    "id": "f35279dc-701b-4f9a-ae46-46dc6d681b28",
+    "kind": "purchase",
+    "userId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "purchaseId": "00c32fb9-e9dc-4474-9b27-8590afe31b83",
+    "projectId": "c208d7ef-c2fa-46f9-ba21-2d69006dbb87",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15",
+    "device": "mac",
+    "meta": {
+      "via": "session-download"
+    },
+    "createdAt": "2026-06-04T10:06:58.265Z"
+  },
+  {
+    "id": "24ff477a-8265-45d9-b0e4-962a7af431ec",
+    "kind": "purchase",
+    "userId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "purchaseId": "9632bc94-cc39-4067-a0ac-50d3e68b128b",
+    "projectId": "2574e809-55b6-4694-9108-2848ae7afb28",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.4 Safari/605.1.15",
+    "device": "mac",
+    "meta": {
+      "via": "session-download"
+    },
+    "createdAt": "2026-06-04T10:06:45.666Z"
+  },
+  {
+    "id": "37e84078-8186-4c47-ba06-31afa03d7080",
+    "kind": "purchase",
+    "userId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "purchaseId": "59cc5e7d-b9dd-448b-8259-ed1b4f34f8cc",
+    "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "device": "mac",
+    "meta": {
+      "via": "session-download"
+    },
+    "createdAt": "2026-05-19T15:25:42.825Z"
+  },
+  {
+    "id": "f53c5c85-61b7-4301-b4e3-3dcb157219bb",
+    "kind": "purchase",
+    "userId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "purchaseId": "59cc5e7d-b9dd-448b-8259-ed1b4f34f8cc",
+    "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "device": "mac",
+    "meta": {
+      "via": "session-download"
+    },
+    "createdAt": "2026-05-19T15:25:42.195Z"
+  },
+  {
+    "id": "fd8fcbbc-eec9-45f4-998b-fa155d9aaf70",
+    "kind": "purchase",
+    "userId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "purchaseId": "59cc5e7d-b9dd-448b-8259-ed1b4f34f8cc",
+    "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "device": "mac",
+    "meta": {
+      "via": "session-download"
+    },
+    "createdAt": "2026-05-19T15:25:41.401Z"
+  },
+  {
+    "id": "c7ce729b-3f5c-4eeb-a9ba-c084d80d9b18",
+    "kind": "purchase",
+    "userId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "purchaseId": "59cc5e7d-b9dd-448b-8259-ed1b4f34f8cc",
+    "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+    "ip": "127.0.0.1",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+    "device": "mac",
+    "meta": {
+      "via": "session-download"
+    },
+    "createdAt": "2026-05-19T15:25:40.416Z"
+  },
+  {
     "id": "fe3b6652-adeb-44a5-8461-30a93003cd97",
     "kind": "purchase",
     "userId": "30f6356d-f109-439a-b18f-aa11196bcc99",

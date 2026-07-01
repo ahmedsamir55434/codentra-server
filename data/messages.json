@@ -117,5 +117,2210 @@
     "orderId": "566c9960-0776-42c2-9447-af49e0878dee",
     "projectTitle": "f4rg4",
     "createdAt": "2026-05-07T20:25:15.661Z"
+  },
+  {
+    "id": "6a84fbdd-14c8-40e1-8d4e-f3be4998cb6d",
+    "senderId": "9cdd341f-c043-4e10-80be-f2ec4167208c",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "purchaseId": null,
+    "read": false,
+    "createdAt": "2026-06-04T10:53:42.050Z"
+  },
+  {
+    "id": "ddd06df2-d9d9-46d9-9808-e58ab71fde8f",
+    "senderId": "9cdd341f-c043-4e10-80be-f2ec4167208c",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "purchaseId": null,
+    "read": false,
+    "createdAt": "2026-06-04T10:53:47.186Z"
+  },
+  {
+    "id": "55e91dfd-1aa3-499a-ae33-f66aea30696f",
+    "senderId": "9cdd341f-c043-4e10-80be-f2ec4167208c",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "purchaseId": null,
+    "read": false,
+    "createdAt": "2026-06-04T10:54:11.150Z"
+  },
+  {
+    "id": "d18f72c5-ffc3-43e6-93a4-4d0a5db18e15",
+    "senderId": "9cdd341f-c043-4e10-80be-f2ec4167208c",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "purchaseId": null,
+    "read": false,
+    "createdAt": "2026-06-04T10:57:31.277Z"
+  },
+  {
+    "id": "f92dd85f-d68a-4da0-9d51-e828fba10b4c",
+    "senderId": "9cdd341f-c043-4e10-80be-f2ec4167208c",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "purchaseId": null,
+    "read": false,
+    "createdAt": "2026-06-04T10:57:43.661Z"
+  },
+  {
+    "id": "2e865175-93d5-4d2e-9464-7d7b8bc27c4f",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "اهلا",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-04T11:01:19.446Z"
+  },
+  {
+    "id": "e08b180d-0c46-47f5-b9eb-f95eb603ee68",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "أنا مش متأكد من أفضل إجراء آمن هنا، لذلك حولتك لخدمة العملاء. انتظر حتى يرد عليك أحد أفراد الدعم.",
+    "purchaseId": null,
+    "aiAction": "handoff",
+    "escalatedToHuman": true,
+    "read": false,
+    "createdAt": "2026-06-04T11:01:19.446Z"
+  },
+  {
+    "id": "b53909ca-34f5-4506-9317-2d16ff843ab9",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "جمد بطاقتي",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-04T11:01:41.599Z"
+  },
+  {
+    "id": "d371fe2d-bb57-42b9-9009-803bb60985df",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "تم تجميد بطاقة المحفظة الخاصة بحسابك فورًا. لا يمكن استخدامها في الدفع الآن. لو حبيت تفك التجميد تقدر تعمل ده من إعدادات البطاقة أو تكتب لي \"فك تجميد بطاقتي\".",
+    "purchaseId": null,
+    "aiAction": "freeze_wallet_card",
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-04T11:01:41.603Z"
+  },
+  {
+    "id": "528211c1-6449-41cc-b51a-f77c71eb0221",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "فك تجميد بطاقتي",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-04T11:01:53.613Z"
+  },
+  {
+    "id": "d423bbd4-8280-46e8-ac19-baf205b39727",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "فك تجميد البطاقة إجراء حساس، لذلك حولتك لخدمة العملاء. انتظر حتى يرد عليك أحد أفراد الدعم.",
+    "purchaseId": null,
+    "aiAction": "handoff",
+    "escalatedToHuman": true,
+    "read": false,
+    "createdAt": "2026-06-04T11:01:53.614Z"
+  },
+  {
+    "id": "fcdf8f31-4da4-4e29-90c8-8e6137ac496b",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "فك تجميد بطاقتي",
+    "purchaseId": null,
+    "attachments": [
+      {
+        "id": "2e3bc254-f79f-4eb4-9be8-22c597da15e2",
+        "originalName": "screen-recording.webm",
+        "fileName": "48c7e41a-e11b-4449-8365-998e55e9ce8a-screen-recording.webm",
+        "filePath": "uploads/support-attachments/48c7e41a-e11b-4449-8365-998e55e9ce8a-screen-recording.webm",
+        "mimeType": "video/webm",
+        "size": 0,
+        "extractedText": ""
+      }
+    ],
+    "read": true,
+    "createdAt": "2026-06-04T11:02:54.877Z"
+  },
+  {
+    "id": "9d43fbc6-9f8a-46a4-bc26-56ef60428ce4",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "عذرًا، لا أستطيع فك تجميد بطاقتك مباشرة. صلاحياتي تقتصر على تجميد البطاقة بناءً على طلبك الصريح. لفك تجميد بطاقتك، يرجى التواصل مع فريق الدعم البشري لمساعدتك في هذه العملية.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      },
+      {
+        "type": "handoff-human",
+        "label": "حولني للدعم البشري",
+        "href": "/messages"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-04T11:02:58.054Z"
+  },
+  {
+    "id": "108ffcbd-906c-45dd-8480-376037c2e83a",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "فك تجميد بطاقتي",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-04T11:02:59.262Z"
+  },
+  {
+    "id": "31364746-7fb5-4202-9722-6a3db79e2b2f",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "عذرًا، لا أستطيع فك تجميد بطاقتك مباشرة. صلاحياتي تسمح فقط بتجميد بطاقتك الخاصة إذا طلبت ذلك صراحةً. لفك تجميد بطاقتك، يرجى التواصل مع فريق الدعم البشري لمساعدتك في هذا الإجراء.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      },
+      {
+        "type": "handoff-human",
+        "label": "حولني للدعم البشري",
+        "href": "/messages"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-04T11:03:02.265Z"
+  },
+  {
+    "id": "7f56dc6d-8750-42c2-b1da-50f346b8df10",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "فك تجميد بطاقتي",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-04T11:03:02.444Z"
+  },
+  {
+    "id": "f6a01b2e-3e6d-49a6-98ab-c6459b40bb83",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "عذرًا، لا أستطيع فك تجميد بطاقتك مباشرة. صلاحياتي تقتصر على تجميد بطاقتك الخاصة إذا طلبت ذلك صراحةً. لفك تجميد بطاقتك، يرجى التواصل مع فريق الدعم البشري لمساعدتك.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      },
+      {
+        "type": "handoff-human",
+        "label": "حولني للدعم البشري",
+        "href": "/messages"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": true,
+    "read": false,
+    "createdAt": "2026-06-04T11:03:05.141Z"
+  },
+  {
+    "id": "deba7852-3d22-488b-a5f8-6de1e1e288f0",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "عايز اشتري منتج",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-04T11:03:35.169Z"
+  },
+  {
+    "id": "fdf07cba-51c1-4367-9068-1fa402ab859e",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "أنا أقدر أساعدك كعميل في كل ما يخص الموقع: ترشيح مشروع مناسب، شرح الفروقات، إضافته للسلة، توجيهك للاشتراك المناسب، أو تلخيص الملفات التي أرسلتها.\nولو هدفك التوفير أو الخصومات، فخطة Starter تبدو مناسبة — هذه الخطة مناسبة إذا كنت تريد مزايا أكثر أو خصمًا أعلى على مشترياتك..\nإذا أردت، أقدر أفتح لك المنتج، أضيفه للسلة، أو أوجهك إلى الاشتراكات مباشرة.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-subscriptions",
+        "label": "عرض الاشتراكات",
+        "href": "/subscriptions"
+      },
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [
+      {
+        "planId": "starter",
+        "planName": "Starter",
+        "price": 149,
+        "durationDays": 30,
+        "reason": "هذه الخطة مناسبة إذا كنت تريد مزايا أكثر أو خصمًا أعلى على مشترياتك.",
+        "score": 1,
+        "tier": "starter"
+      },
+      {
+        "planId": "pro",
+        "planName": "Pro",
+        "price": 299,
+        "durationDays": 30,
+        "reason": "هذه الخطة مناسبة إذا كنت تريد مزايا أكثر أو خصمًا أعلى على مشترياتك.",
+        "score": 1,
+        "tier": "pro"
+      },
+      {
+        "planId": "business",
+        "planName": "Business",
+        "price": 499,
+        "durationDays": 30,
+        "reason": "هذه الخطة مناسبة إذا كنت تريد مزايا أكثر أو خصمًا أعلى على مشترياتك.",
+        "score": 1,
+        "tier": "business"
+      }
+    ],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-04T11:03:35.581Z"
+  },
+  {
+    "id": "d4fed27d-7ecb-446a-b779-9c25ffd8bc99",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "عايز اشتري تطبيق يحول الكلام لي بدي اف",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-04T11:04:05.716Z"
+  },
+  {
+    "id": "74e8b8de-a8ad-4fdf-a727-e0c154abd033",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "أهلاً بك! بناءً على طلبك لشراء تطبيق يحول الكلام إلى PDF، أنصحك بتطبيق \"PDF Master Pro\".",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "عرض تفاصيل PDF Master Pro",
+        "href": "/project/2828e22e-e740-4830-952a-99c968f2e19a"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "2828e22e-e740-4830-952a-99c968f2e19a",
+        "projectTitle": "PDF Master Pro",
+        "price": 1200,
+        "reason": "هذا التطبيق هو الأنسب لطلبك، حيث يمكنك من تحويل النصوص والصور إلى ملفات PDF احترافية بسهولة. يمكنك استخدامه لتحويل الكلام بعد تحويله إلى نص إلى PDF."
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "starter",
+        "planName": "Starter",
+        "price": 149,
+        "reason": "لتحصل على خصم على مشترياتك ودعم أساسي، يمكنك الاشتراك في خطة Starter."
+      }
+    ],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-04T11:04:12.373Z"
+  },
+  {
+    "id": "baeb162f-b48f-48b2-a295-130f278688d9",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "اشتريلهولي",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-04T11:04:42.734Z"
+  },
+  {
+    "id": "4981c59a-7e5b-4d89-8e67-daa889caf55c",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "أهلاً بك! لمساعدتك في اختيار المنتج الأنسب، يرجى تزويدنا بمزيد من التفاصيل حول اهتماماتك أو نوع المشروع الذي تبحث عنه. لا يمكنني إتمام عملية الشراء مباشرة، ولكن يمكنني مساعدتك في الاختيار. بناءً على المشاريع المتاحة، أقترح عليك:",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "عرض تفاصيل PDF Master Pro",
+        "href": "/project/2828e22e-e740-4830-952a-99c968f2e19a"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "2828e22e-e740-4830-952a-99c968f2e19a",
+        "projectTitle": "PDF Master Pro",
+        "price": 1200,
+        "reason": "تطبيق عملي ومفيد لتحويل الصور والنصوص إلى PDF بسهولة، بواجهة عربية كاملة وتصميم عصري، وهو بسعر مناسب جداً مقارنة بفوائده."
+      }
+    ],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-04T11:04:52.882Z"
+  },
+  {
+    "id": "796f2b85-ccdb-4395-8130-5ed2aab18832",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "يمكنك شراء الموقع لي",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-04T11:05:12.819Z"
+  },
+  {
+    "id": "51053a3f-d646-48f0-9982-d60aad569d23",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "مرحباً بك! يسعدني مساعدتك في اختيار وشراء موقع. بناءً على طلبك والمشاريع المتاحة لك، أقترح عليك مشروع ChatForge.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "عرض تفاصيل ChatForge",
+        "href": "/projects/31c57f4a-b3df-4666-a0d2-9297a19469dc"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+        "projectTitle": "ChatForge",
+        "price": 3400,
+        "reason": "لأنه قالب ويب احترافي ومتكامل لإنشاء منصة شاتات ذكاء اصطناعي باللغة العربية خلال دقائق، وهو خيار ممتاز لموقع عصري ومفيد."
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "starter",
+        "planName": "Starter",
+        "price": 149,
+        "reason": "لتحصل على خصم على مشترياتك ودعم أساسي، مما يوفر لك قيمة إضافية عند شراء المشروع."
+      }
+    ],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-04T11:05:22.602Z"
+  },
+  {
+    "id": "8e51cfdf-6528-4799-9b98-1333a1976c49",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "اشتري موقع ChatForge لي من خلال صلاحيتك",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-04T11:06:00.381Z"
+  },
+  {
+    "id": "b0dde7b4-cdba-4814-bb2c-b2d9f188444b",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "أهلاً بك! لا أستطيع إتمام عملية الشراء مباشرةً نيابةً عنك بسبب قيود الصلاحيات، ولكن يمكنني مساعدتك في إضافة مشروع ChatForge إلى سلة مشترياتك وتوجيهك لإتمام عملية الشراء.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "عرض مشروع ChatForge",
+        "href": "/project/31c57f4a-b3df-4666-a0d2-9297a19469dc"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+        "projectTitle": "ChatForge",
+        "price": 3400,
+        "reason": "لقد طلبت شراء هذا المشروع تحديدًا، وهو قالب ويب احترافي متكامل لإنشاء منصة شاتات ذكاء اصطناعي باللغة العربية."
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "pro",
+        "planName": "Pro",
+        "price": 299,
+        "reason": "لتحصل على خصم أكبر على مشترياتك وأولوية أعلى في الدعم، مما يوفر لك تجربة أفضل عند شراء المشاريع."
+      }
+    ],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-04T11:06:08.885Z"
+  },
+  {
+    "id": "e9711022-80e7-4df2-a66c-dcff74863f5c",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "اهلا",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T13:27:51.586Z"
+  },
+  {
+    "id": "e7658387-4842-4354-bdca-8dd53f0052f4",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "أهلاً بك يا أحمد سمير! كيف يمكنني مساعدتك اليوم؟",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T13:27:53.906Z"
+  },
+  {
+    "id": "4d132d91-3a2c-4b8a-aad8-c2bfad5d700a",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "تم إرسال مرفقات للدعم.",
+    "purchaseId": null,
+    "attachments": [
+      {
+        "id": "2da79ad4-ca0d-4317-bcaa-c1fb07de0f34",
+        "originalName": "Image 5-15-26 at 9.28â¯PM.png",
+        "fileName": "82140f7c-4aba-4ccc-8a46-ed1cde0be64c-Image_5-15-26_at_9.28_PM.png",
+        "filePath": "uploads/support-attachments/82140f7c-4aba-4ccc-8a46-ed1cde0be64c-Image_5-15-26_at_9.28_PM.png",
+        "mimeType": "image/png",
+        "size": 395328,
+        "extractedText": ""
+      }
+    ],
+    "read": true,
+    "createdAt": "2026-06-12T13:29:08.987Z"
+  },
+  {
+    "id": "eaa66df8-b190-469d-b2f7-9cb0f1f80ac0",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "مرحباً بك أحمد سمير! لا يمكنني رؤية محتوى الصورة المرفقة. يرجى وصف طلبك أو محتوى الصورة حتى أتمكن من مساعدتك. يمكنني مساعدتك في كل ما يتعلق بحسابك الشخصي، شراء المنتجات، التوجيه للاشتراكات، أو تجميد بطاقتك الخاصة إذا طلبت ذلك صراحةً.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T13:29:12.417Z"
+  },
+  {
+    "id": "808787b8-63d2-45ac-a271-27771c1d772c",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "hi",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T13:46:26.968Z"
+  },
+  {
+    "id": "b64eb0ec-1410-4c37-a3fa-36009063017a",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "أهلاً بك أحمد سمير، كيف يمكنني مساعدتك اليوم؟",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "عرض مشروع NeuraConnect",
+        "href": "/project/2574e809-55b6-4694-9108-2848ae7afb28"
+      },
+      {
+        "type": "open-project",
+        "label": "عرض مشروع ChatForge",
+        "href": "/project/31c57f4a-b3df-4666-a0d2-9297a19469dc"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "2574e809-55b6-4694-9108-2848ae7afb28",
+        "projectTitle": "NeuraConnect هو منصة اجتماعية تفاعلية متكاملة تدعم اللغة العربية وتجمع بين وسائل التواصل الاجتماعي والذكاء الاصطناعي",
+        "price": 20000,
+        "reason": "منصة اجتماعية متكاملة بالذكاء الاصطناعي، مثالية للمستخدمين الذين يبحثون عن حلول متقدمة وشاملة تتضمن التواصل الاجتماعي وميزات الذكاء الاصطناعي."
+      },
+      {
+        "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+        "projectTitle": "ChatForge",
+        "price": 3400,
+        "reason": "قالب ويب احترافي لإنشاء منصة شاتات ذكاء اصطناعي، مناسب للمطورين والشركات التي ترغب في دمج قدرات الذكاء الاصطناعي في تطبيقاتها."
+      }
+    ],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T13:46:38.501Z"
+  },
+  {
+    "id": "c0edf377-a344-45f3-9769-05a1d48ed047",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "انا",
+    "purchaseId": null,
+    "attachments": [
+      {
+        "id": "3f458930-0514-4be4-b69c-cd106197b09d",
+        "originalName": "Ø­Ù ÙØ´ÙÙØ© ØªØ­Ø¯ÙØ« macOS.png",
+        "fileName": "368fc844-2c96-4326-8892-5c1263edf095-_macOS.png",
+        "filePath": "uploads/support-attachments/368fc844-2c96-4326-8892-5c1263edf095-_macOS.png",
+        "mimeType": "image/png",
+        "size": 318327,
+        "extractedText": "صورة مرفقة: Ø­Ù ÙØ´ÙÙØ© ØªØ­Ø¯ÙØ« macOS.png."
+      }
+    ],
+    "read": true,
+    "createdAt": "2026-06-12T13:46:55.152Z"
+  },
+  {
+    "id": "bc8009e4-693b-477b-a96f-ab4e0fc2a9d1",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "وصلني 1 مرفق. قرأت الملفات النصية المرفقة وسأضيف ملخصها للدعم لو احتاج يتابع معك. \n\nملخص سريع لما قرأته من الملفات: صورة مرفقة: Ø­Ù ÙØ´ÙÙØ© ØªØ­Ø¯ÙØ« macOS.png.",
+    "purchaseId": null,
+    "aiAction": "attachment_received",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "فتح ا اتا",
+        "href": "/project/41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "add-to-cart",
+        "label": "إضافة ا اتا للسلة",
+        "href": "/cart/add",
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "open-subscriptions",
+        "label": "عرض الاشتراكات",
+        "href": "/subscriptions"
+      },
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490",
+        "projectTitle": "ا اتا",
+        "price": 350,
+        "originalPrice": 350,
+        "reason": "هذا المشروع يطابق الكلمات التي ذكرتها في رسالتك.",
+        "score": 1,
+        "visibility": "starter"
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "business",
+        "planName": "Business",
+        "price": 499,
+        "durationDays": 30,
+        "reason": "هذه هي الخطة الحالية لديك ويمكنني توضيح المزايا المرتبطة بها.",
+        "score": 2,
+        "tier": "business"
+      }
+    ],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T13:46:56.116Z"
+  },
+  {
+    "id": "34bc7de2-ddee-4097-b64e-97481e1a6172",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "أرسلت تسجيل شاشة يوضح المشكلة.",
+    "purchaseId": null,
+    "attachments": [
+      {
+        "id": "86458b6c-94ed-490c-8db0-55333b9d11c0",
+        "originalName": "screen-recording.webm",
+        "fileName": "8f74fb89-bcfd-4a4d-a17b-ca4ee99b8906-screen-recording.webm",
+        "filePath": "uploads/support-attachments/8f74fb89-bcfd-4a4d-a17b-ca4ee99b8906-screen-recording.webm",
+        "mimeType": "video/webm",
+        "size": 1386924,
+        "extractedText": "فيديو مرفق: screen-recording.webm. يحتوي على تسجيل مرئي أو شرح للمشكلة."
+      }
+    ],
+    "read": true,
+    "createdAt": "2026-06-12T13:47:29.153Z"
+  },
+  {
+    "id": "0b57f145-0121-4417-b859-5006373c467f",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "شكرًا لك على إرسال تسجيل الشاشة. للأسف، لا يمكنني مشاهدة أو تحليل محتوى الفيديو مباشرة. يرجى وصف المشكلة التي تواجهها كتابيًا حتى أتمكن من تقديم المساعدة.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T13:47:33.075Z"
+  },
+  {
+    "id": "c8469ce8-867c-404c-8414-b53f5d4a9d33",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "تم إرسال مرفقات للدعم.",
+    "purchaseId": null,
+    "attachments": [
+      {
+        "id": "7a4625da-8a4d-421f-b3ef-15e31259286a",
+        "originalName": "IMG_3064.mov",
+        "fileName": "5bc6680a-c2d1-4fbd-ba75-a8188ef18930-IMG_3064.mov",
+        "filePath": "uploads/support-attachments/5bc6680a-c2d1-4fbd-ba75-a8188ef18930-IMG_3064.mov",
+        "mimeType": "video/quicktime",
+        "size": 16773915,
+        "extractedText": "فيديو مرفق: IMG_3064.mov. يحتوي على تسجيل مرئي أو شرح للمشكلة."
+      }
+    ],
+    "read": true,
+    "createdAt": "2026-06-12T13:47:46.879Z"
+  },
+  {
+    "id": "36afa007-72bb-43a2-a8f3-5fdcc3e8cfe9",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "مرحباً بك يا أحمد، لقد لاحظت أنك أرفقت فيديو (IMG_3064.mov). للأسف، لا يمكنني معالجة محتوى الفيديو مباشرة. يرجى تزويدي بوصف نصي للمشكلة أو شرح لما يظهر في الفيديو حتى أتمكن من مساعدتك بشكل أفضل.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      },
+      {
+        "type": "handoff-human",
+        "label": "حولني للدعم البشري",
+        "href": "/messages"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T13:47:49.775Z"
+  },
+  {
+    "id": "dc714d5f-a995-44ff-801c-383ac0391256",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "تم إرسال مرفقات للدعم.",
+    "purchaseId": null,
+    "attachments": [
+      {
+        "id": "97fd6625-5d8e-45aa-a14a-526f92909e86",
+        "originalName": "176a081d-a729-4852-a5c3-fb724a06b6ff.png",
+        "fileName": "16d6b29b-8339-4be5-b5d4-2b5c5cebc850-176a081d-a729-4852-a5c3-fb724a06b6ff.png",
+        "filePath": "uploads/support-attachments/16d6b29b-8339-4be5-b5d4-2b5c5cebc850-176a081d-a729-4852-a5c3-fb724a06b6ff.png",
+        "mimeType": "image/png",
+        "size": 2880316,
+        "extractedText": "صورة مرفقة: 176a081d-a729-4852-a5c3-fb724a06b6ff.png."
+      }
+    ],
+    "read": true,
+    "createdAt": "2026-06-12T13:48:19.271Z"
+  },
+  {
+    "id": "db59e995-b9f7-426c-916b-d0c320190a08",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "وصلني 1 مرفق. قرأت الملفات النصية المرفقة وسأضيف ملخصها للدعم لو احتاج يتابع معك. \n\nملخص سريع لما قرأته من الملفات: صورة مرفقة: 176a081d-a729-4852-a5c3-fb724a06b6ff.png.",
+    "purchaseId": null,
+    "aiAction": "attachment_received",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "فتح ا اتا",
+        "href": "/project/41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "add-to-cart",
+        "label": "إضافة ا اتا للسلة",
+        "href": "/cart/add",
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "open-subscriptions",
+        "label": "عرض الاشتراكات",
+        "href": "/subscriptions"
+      },
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490",
+        "projectTitle": "ا اتا",
+        "price": 350,
+        "originalPrice": 350,
+        "reason": "هذا المشروع يطابق الكلمات التي ذكرتها في رسالتك.",
+        "score": 1,
+        "visibility": "starter"
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "business",
+        "planName": "Business",
+        "price": 499,
+        "durationDays": 30,
+        "reason": "هذه هي الخطة الحالية لديك ويمكنني توضيح المزايا المرتبطة بها.",
+        "score": 2,
+        "tier": "business"
+      }
+    ],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T13:48:25.203Z"
+  },
+  {
+    "id": "43adb440-6a7d-48ec-a7a4-abe7ce765d70",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "حولني للدعم البشري",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T13:51:12.887Z"
+  },
+  {
+    "id": "16d5cc41-c5a0-4ccf-9a14-89088294cd97",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "طلبك يتطلب تدخل الدعم البشري. سيتم تحويلك إلى أحد ممثلي الدعم لمساعدتك بشكل أفضل.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      },
+      {
+        "type": "handoff-human",
+        "label": "حولني للدعم البشري",
+        "href": "/messages"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T13:51:16.074Z"
+  },
+  {
+    "id": "1dfa1e8c-56ba-4fe4-a947-66a8f7042e70",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "اهلا",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T13:51:23.019Z"
+  },
+  {
+    "id": "2ee5285a-b0d6-4598-9693-79cf47c29bce",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "أهلاً بك يا أحمد سمير! كيف يمكنني مساعدتك اليوم؟",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T13:51:25.309Z"
+  },
+  {
+    "id": "0cdde63f-680c-4c56-8db7-86c716c85211",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "عايز منتج لتحويل الكلام لي بدي اف",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T13:58:57.392Z"
+  },
+  {
+    "id": "6dad6870-f282-49b6-aaa6-1b3aaeec3f95",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "أهلاً بك يا try! يسعدني مساعدتك في العثور على المنتج المناسب. بناءً على طلبك لتحويل الكلام إلى PDF، أنصحك بشدة بمنتجنا الرائع \"PDF Master Pro\". هذا التطبيق مصمم خصيصًا لتحويل النصوص والصور إلى ملفات PDF احترافية بسهولة تامة. يمكنك إدخال النص الذي ترغب بتحويله (سواء كان مكتوبًا أو منسوخًا من كلام محول) وسيقوم التطبيق بإنشاء ملف PDF عالي الجودة لك. إنه الحل الأمثل لاحتياجاتك!",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "عرض تفاصيل PDF Master Pro",
+        "href": "/projects/2828e22e-e740-4830-952a-99c968f2e19a"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "2828e22e-e740-4830-952a-99c968f2e19a",
+        "projectTitle": "PDF Master Pro",
+        "price": 1200,
+        "reason": "هذا التطبيق متخصص في تحويل النصوص والصور إلى ملفات PDF احترافية، مما يجعله الخيار الأمثل لتحويل الكلام (بعد تحويله إلى نص) إلى مستندات PDF."
+      }
+    ],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T13:59:04.302Z"
+  },
+  {
+    "id": "ab119751-bdd6-46f5-9f71-e45d941b1680",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "اقترحي اشتراك",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T13:59:20.889Z"
+  },
+  {
+    "id": "e46cac5c-d7de-4c40-b591-622960db0093",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "أهلاً بك! لاحظت أنك مشترك حاليًا في خطة Business، وهي أعلى خططنا وأكثرها تميزًا. هذه الخطة توفر لك أفضل الخصومات المتاحة على جميع المشاريع، بالإضافة إلى دعم مميز وأولوية قصوى في الاستجابة لاستفساراتك. إنها مصممة خصيصًا للمستخدمين الكثيفين الذين يرغبون في الاستفادة القصوى من خدمات Codentra. بما أنك مشترك بالفعل في هذه الخطة، فأنت تستمتع بأقصى المزايا المتاحة لدينا. هل ترغب في معرفة المزيد عن أي من هذه المزايا أو تجديد اشتراكك الحالي؟",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-subscriptions",
+        "label": "عرض الاشتراكات",
+        "href": "/subscriptions"
+      },
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [
+      {
+        "planId": "business",
+        "planName": "Business",
+        "price": 499,
+        "reason": "أنت مشترك حاليًا في خطة Business، وهي الخطة الأعلى والأكثر شمولاً لدينا. توفر لك هذه الخطة أفضل الخصومات المتاحة ودعمًا مميزًا، مما يجعلها الخيار الأمثل للاستفادة القصوى من خدمات Codentra."
+      }
+    ],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T13:59:25.478Z"
+  },
+  {
+    "id": "3b0d6a63-887a-4722-881f-ea770802f157",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "سلام عليكم",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:07:37.532Z"
+  },
+  {
+    "id": "1ad0b24b-06e7-4118-95b2-7500c8782ebe",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "وعليكم السلام ورحمة الله وبركاته! أهلاً بك في دعم Codentra AI. يسعدنا مساعدتك اليوم.\n\nنلاحظ أنك مشترك حاليًا في خطة Business، وهي خطتنا الأكثر تميزًا التي تمنحك أفضل الخصومات ودعمًا مميزًا ومزايا مخصصة للمستخدمين الكثيفين.\n\nكيف يمكنني مساعدتك اليوم؟ هل تبحث عن مشروع معين، أو تحتاج إلى مساعدة في حسابك، أو لديك أي استفسارات أخرى؟",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "عرض مشروع NeuraConnect",
+        "href": "/projects/2574e809-55b6-4694-9108-2848ae7afb28"
+      },
+      {
+        "type": "open-project",
+        "label": "عرض مشروع ChatForge",
+        "href": "/projects/31c57f4a-b3df-4666-a0d2-9297a19469dc"
+      },
+      {
+        "type": "open-subscription",
+        "label": "تفاصيل اشتراكك الحالي",
+        "href": "/account/subscription"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "2574e809-55b6-4694-9108-2848ae7afb28",
+        "projectTitle": "NeuraConnect هو منصة اجتماعية تفاعلية متكاملة تدعم اللغة العربية وتجمع بين وسائل التواصل الاجتماعي والذكاء الاصطناعي",
+        "price": 20000,
+        "reason": "مشروع متكامل ومتقدم يجمع بين التواصل الاجتماعي والذكاء الاصطناعي، مثالي للمستخدمين من فئة Business الذين يبحثون عن حلول شاملة."
+      },
+      {
+        "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+        "projectTitle": "ChatForge",
+        "price": 3400,
+        "reason": "قالب ويب احترافي لإنشاء منصة شاتات ذكاء اصطناعي، مناسب جدًا لأصحاب الأعمال الذين يرغبون في دمج حلول الذكاء الاصطناعي."
+      },
+      {
+        "projectId": "13c1c09d-0357-4918-a60d-d935b86c1c5d",
+        "projectTitle": " CityShift: 2D Drive - لعبة قيادة سيارات ثنائية الأبعاد",
+        "price": 7000,
+        "reason": "لعبة متطورة ثنائية الأبعاد بمحرك فيزيائي واقعي، تظهر قدرات تقنية عالية وقد تكون مثيرة للاهتمام للمطورين أو الشركات التي تبحث عن مشاريع ترفيهية."
+      }
+    ],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T14:07:46.019Z"
+  },
+  {
+    "id": "094603f6-ccc8-4df1-a359-68ba701898cc",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "تم تحويل المحادثة إلى الدعم البشري. سيقوم أحد أعضاء الفريق بالرد شخصياً.",
+    "system": true,
+    "read": false,
+    "createdAt": "2026-06-12T14:09:25.363Z"
+  },
+  {
+    "id": "3b67d41b-7775-4c91-a286-9adc71973bd9",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "تم إعادة المحادثة إلى دعم الذكاء الاصطناعي الذكي. سأعود للرد تلقائياً الآن.",
+    "system": true,
+    "read": false,
+    "createdAt": "2026-06-12T14:09:34.193Z"
+  },
+  {
+    "id": "e4a14ba8-836e-4f4b-8a53-b9919746c32d",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "read": false,
+    "createdAt": "2026-06-12T14:14:16.107Z"
+  },
+  {
+    "id": "b2c7c0cd-6555-4416-a842-e6febebd10b8",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "read": false,
+    "createdAt": "2026-06-12T14:14:19.247Z"
+  },
+  {
+    "id": "e52b1105-c0a1-4759-b04e-f1080ac3e4ef",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "read": false,
+    "createdAt": "2026-06-12T14:14:23.539Z"
+  },
+  {
+    "id": "569b176a-3f79-43d8-a2ba-c203bb76c1c3",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "content": "تم تحويل المحادثة إلى الدعم البشري. سيقوم أحد أعضاء الفريق بالرد شخصياً.",
+    "system": true,
+    "read": false,
+    "createdAt": "2026-06-12T14:14:29.309Z"
+  },
+  {
+    "id": "fd18b3d2-b10b-4fbd-9fa6-9a4143d9b964",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "read": false,
+    "createdAt": "2026-06-12T14:14:31.294Z"
+  },
+  {
+    "id": "temp-1781273689840-ilnb1y5041",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "high",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:14:49.855Z"
+  },
+  {
+    "id": "a4e85946-b722-43ad-ae06-8abf7691ba65",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "أنا مش متأكد من أفضل إجراء آمن هنا، لذلك حولتك لخدمة العملاء. انتظر حتى يرد عليك أحد أفراد الدعم.",
+    "purchaseId": null,
+    "aiAction": "handoff",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "فتح ا اتا",
+        "href": "/project/41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "add-to-cart",
+        "label": "إضافة ا اتا للسلة",
+        "href": "/cart/add",
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "open-subscriptions",
+        "label": "عرض الاشتراكات",
+        "href": "/subscriptions"
+      },
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      },
+      {
+        "type": "handoff-human",
+        "label": "حولني للدعم البشري",
+        "href": "/messages"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490",
+        "projectTitle": "ا اتا",
+        "price": 350,
+        "originalPrice": 350,
+        "reason": "هذا المشروع يطابق الكلمات التي ذكرتها في رسالتك.",
+        "score": 1,
+        "visibility": "starter"
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "business",
+        "planName": "Business",
+        "price": 499,
+        "durationDays": 30,
+        "reason": "هذه هي الخطة الحالية لديك ويمكنني توضيح المزايا المرتبطة بها.",
+        "score": 2,
+        "tier": "business"
+      }
+    ],
+    "escalatedToHuman": true,
+    "read": false,
+    "createdAt": "2026-06-12T14:14:50.690Z"
+  },
+  {
+    "id": "temp-1781273697895-t2slpo2axys",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "اهلا",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:14:57.906Z"
+  },
+  {
+    "id": "temp-1781273711526-3bcog1fg0sk",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "حولني للدعم البشري",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:15:11.550Z"
+  },
+  {
+    "id": "99677d9c-280c-41d1-8aef-51eb4cc76fb2",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "تم تحويلك للدعم البشري. انتظر رد الأدمن.",
+    "purchaseId": null,
+    "aiAction": "handoff",
+    "aiActions": [
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      },
+      {
+        "type": "handoff-human",
+        "label": "حولني للدعم البشري",
+        "href": "/messages"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": true,
+    "read": false,
+    "createdAt": "2026-06-12T14:15:11.552Z"
+  },
+  {
+    "id": "temp-1781273745912-cwpbk89xva5",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "hi",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:15:45.920Z"
+  },
+  {
+    "id": "temp-1781273778404-dvjxvxdbmip",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "hi",
+    "purchaseId": null,
+    "attachments": [],
+    "read": false,
+    "createdAt": "2026-06-12T14:16:18.419Z"
+  },
+  {
+    "id": "temp-1781273808762-6yj5du1ix6n",
+    "senderId": "ccf671dd-44c8-4c3b-a674-d36a413381ae",
+    "senderName": "Magic C",
+    "receiverId": "admin",
+    "content": "hi",
+    "purchaseId": null,
+    "attachments": [],
+    "read": false,
+    "createdAt": "2026-06-12T14:16:48.772Z"
+  },
+  {
+    "id": "fc1b76bd-8b85-4567-84c7-8484527f30cd",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "ccf671dd-44c8-4c3b-a674-d36a413381ae",
+    "content": "أنا مش متأكد من أفضل إجراء آمن هنا، لذلك حولتك لخدمة العملاء. انتظر حتى يرد عليك أحد أفراد الدعم.",
+    "purchaseId": null,
+    "aiAction": "handoff",
+    "aiActions": [
+      {
+        "type": "open-subscriptions",
+        "label": "عرض الاشتراكات",
+        "href": "/subscriptions"
+      },
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      },
+      {
+        "type": "handoff-human",
+        "label": "حولني للدعم البشري",
+        "href": "/messages"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [
+      {
+        "planId": "starter",
+        "planName": "Starter",
+        "price": 149,
+        "durationDays": 30,
+        "reason": "هذه الخطة مناسبة إذا كنت تريد مزايا أكثر أو خصمًا أعلى على مشترياتك.",
+        "score": 1,
+        "tier": "starter"
+      },
+      {
+        "planId": "pro",
+        "planName": "Pro",
+        "price": 299,
+        "durationDays": 30,
+        "reason": "هذه الخطة مناسبة إذا كنت تريد مزايا أكثر أو خصمًا أعلى على مشترياتك.",
+        "score": 1,
+        "tier": "pro"
+      },
+      {
+        "planId": "business",
+        "planName": "Business",
+        "price": 499,
+        "durationDays": 30,
+        "reason": "هذه الخطة مناسبة إذا كنت تريد مزايا أكثر أو خصمًا أعلى على مشترياتك.",
+        "score": 1,
+        "tier": "business"
+      }
+    ],
+    "escalatedToHuman": true,
+    "read": false,
+    "createdAt": "2026-06-12T14:16:49.400Z"
+  },
+  {
+    "id": "temp-1781273816428-5fq8f5lwiz3",
+    "senderId": "ccf671dd-44c8-4c3b-a674-d36a413381ae",
+    "senderName": "Magic C",
+    "receiverId": "admin",
+    "content": "اهلا",
+    "purchaseId": null,
+    "attachments": [],
+    "read": false,
+    "createdAt": "2026-06-12T14:16:56.439Z"
+  },
+  {
+    "id": "temp-1781273857878-iznyyxojte",
+    "senderId": "9cdd341f-c043-4e10-80be-f2ec4167208c",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "اهلا",
+    "purchaseId": null,
+    "attachments": [],
+    "read": false,
+    "createdAt": "2026-06-12T14:17:37.890Z"
+  },
+  {
+    "id": "2375c026-40fe-4a90-b35e-9fa328a5e2da",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "9cdd341f-c043-4e10-80be-f2ec4167208c",
+    "content": "أنا مش متأكد من أفضل إجراء آمن هنا، لذلك حولتك لخدمة العملاء. انتظر حتى يرد عليك أحد أفراد الدعم.",
+    "purchaseId": null,
+    "aiAction": "handoff",
+    "aiActions": [
+      {
+        "type": "open-subscriptions",
+        "label": "عرض الاشتراكات",
+        "href": "/subscriptions"
+      },
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      },
+      {
+        "type": "handoff-human",
+        "label": "حولني للدعم البشري",
+        "href": "/messages"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [
+      {
+        "planId": "starter",
+        "planName": "Starter",
+        "price": 149,
+        "durationDays": 30,
+        "reason": "هذه الخطة مناسبة إذا كنت تريد مزايا أكثر أو خصمًا أعلى على مشترياتك.",
+        "score": 1,
+        "tier": "starter"
+      },
+      {
+        "planId": "pro",
+        "planName": "Pro",
+        "price": 299,
+        "durationDays": 30,
+        "reason": "هذه الخطة مناسبة إذا كنت تريد مزايا أكثر أو خصمًا أعلى على مشترياتك.",
+        "score": 1,
+        "tier": "pro"
+      },
+      {
+        "planId": "business",
+        "planName": "Business",
+        "price": 499,
+        "durationDays": 30,
+        "reason": "هذه الخطة مناسبة إذا كنت تريد مزايا أكثر أو خصمًا أعلى على مشترياتك.",
+        "score": 1,
+        "tier": "business"
+      }
+    ],
+    "escalatedToHuman": true,
+    "read": false,
+    "createdAt": "2026-06-12T14:17:38.576Z"
+  },
+  {
+    "id": "b34430c8-b792-4287-9acc-e49c627f77d2",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "hh",
+    "read": false,
+    "createdAt": "2026-06-12T14:18:49.000Z"
+  },
+  {
+    "id": "c1aae770-d15b-497b-8361-731bd4768e80",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "تم إعادة المحادثة إلى دعم الذكاء الاصطناعي الذكي. سأعود للرد تلقائياً الآن.",
+    "system": true,
+    "read": false,
+    "createdAt": "2026-06-12T14:19:29.655Z"
+  },
+  {
+    "id": "27cd252f-ec90-4084-9348-0e47e2eaa573",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "hi",
+    "read": false,
+    "createdAt": "2026-06-12T14:19:33.365Z"
+  },
+  {
+    "id": "temp-1781274001184-07yhfxjgj4gn",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "hi",
+    "purchaseId": null,
+    "attachments": [],
+    "read": false,
+    "createdAt": "2026-06-12T14:20:01.198Z"
+  },
+  {
+    "id": "temp-1781274361526-aj5n67s99c",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "اه",
+    "purchaseId": null,
+    "attachments": [],
+    "read": false,
+    "createdAt": "2026-06-12T14:26:01.539Z"
+  },
+  {
+    "id": "temp-1781274383575-0ankvyeonoxp",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "hi",
+    "purchaseId": null,
+    "attachments": [],
+    "read": false,
+    "createdAt": "2026-06-12T14:26:23.585Z"
+  },
+  {
+    "id": "temp-1781274447592-vlf2sq81am9",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "hi",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:27:27.603Z"
+  },
+  {
+    "id": "b0451cff-1605-4a25-be03-149a069fc3de",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "شكراً لتواصلك. لو سمحت وضّح لي أكثر المشكلة أو ما الذي تريد إنجازه بالضبط، وسأساعدك مباشرة دون تحويل المحادثة إلى الدعم البشري إلا إذا طلبت ذلك صراحة.",
+    "purchaseId": null,
+    "aiAction": "request_details",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "فتح ا اتا",
+        "href": "/project/41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "add-to-cart",
+        "label": "إضافة ا اتا للسلة",
+        "href": "/cart/add",
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "open-subscriptions",
+        "label": "عرض الاشتراكات",
+        "href": "/subscriptions"
+      },
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490",
+        "projectTitle": "ا اتا",
+        "price": 350,
+        "originalPrice": 350,
+        "reason": "هذا المشروع يطابق الكلمات التي ذكرتها في رسالتك.",
+        "score": 1,
+        "visibility": "starter"
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "business",
+        "planName": "Business",
+        "price": 499,
+        "durationDays": 30,
+        "reason": "هذه هي الخطة الحالية لديك ويمكنني توضيح المزايا المرتبطة بها.",
+        "score": 2,
+        "tier": "business"
+      }
+    ],
+    "read": false,
+    "createdAt": "2026-06-12T14:27:28.215Z"
+  },
+  {
+    "id": "temp-1781274457731-vszvycskagr",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "السلام عليكم",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:27:37.745Z"
+  },
+  {
+    "id": "ff39a588-c8a0-43aa-a8e9-1e306cf40b53",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "شكراً لتواصلك. لو سمحت وضّح لي أكثر المشكلة أو ما الذي تريد إنجازه بالضبط، وسأساعدك مباشرة دون تحويل المحادثة إلى الدعم البشري إلا إذا طلبت ذلك صراحة.",
+    "purchaseId": null,
+    "aiAction": "request_details",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "فتح ا اتا",
+        "href": "/project/41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "add-to-cart",
+        "label": "إضافة ا اتا للسلة",
+        "href": "/cart/add",
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "open-subscriptions",
+        "label": "عرض الاشتراكات",
+        "href": "/subscriptions"
+      },
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490",
+        "projectTitle": "ا اتا",
+        "price": 350,
+        "originalPrice": 350,
+        "reason": "هذا المشروع يطابق الكلمات التي ذكرتها في رسالتك.",
+        "score": 1,
+        "visibility": "starter"
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "business",
+        "planName": "Business",
+        "price": 499,
+        "durationDays": 30,
+        "reason": "هذه هي الخطة الحالية لديك ويمكنني توضيح المزايا المرتبطة بها.",
+        "score": 2,
+        "tier": "business"
+      }
+    ],
+    "read": false,
+    "createdAt": "2026-06-12T14:27:38.457Z"
+  },
+  {
+    "id": "temp-1781274489051-029auza77205",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "اقترحي منتج يمكن ن اكسب منه مال",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:28:09.061Z"
+  },
+  {
+    "id": "aa06e7ad-4099-4a06-9b3b-76602ce296d9",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "أنا أقدر أساعدك كعميل في كل ما يخص الموقع: ترشيح مشروع مناسب، شرح الفروقات، إضافته للسلة، توجيهك للاشتراك المناسب، أو تلخيص الملفات التي أرسلتها.\nأرى أن ا اتا قد يكون مناسبًا لك — هذا المشروع يطابق الكلمات التي ذكرتها في رسالتك..\nولو هدفك التوفير أو الخصومات، فخطة Business تبدو مناسبة — هذه هي الخطة الحالية لديك ويمكنني توضيح المزايا المرتبطة بها..\nإذا أردت، أقدر أفتح لك المنتج، أضيفه للسلة، أو أوجهك إلى الاشتراكات مباشرة.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "فتح ا اتا",
+        "href": "/project/41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "add-to-cart",
+        "label": "إضافة ا اتا للسلة",
+        "href": "/cart/add",
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "open-subscriptions",
+        "label": "عرض الاشتراكات",
+        "href": "/subscriptions"
+      },
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490",
+        "projectTitle": "ا اتا",
+        "price": 350,
+        "originalPrice": 350,
+        "reason": "هذا المشروع يطابق الكلمات التي ذكرتها في رسالتك.",
+        "score": 1,
+        "visibility": "starter"
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "business",
+        "planName": "Business",
+        "price": 499,
+        "durationDays": 30,
+        "reason": "هذه هي الخطة الحالية لديك ويمكنني توضيح المزايا المرتبطة بها.",
+        "score": 2,
+        "tier": "business"
+      }
+    ],
+    "read": false,
+    "createdAt": "2026-06-12T14:28:09.785Z"
+  },
+  {
+    "id": "temp-1781274519191-q5e8ssg8f7",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "انا عايز منتج يكون موقع شخصي",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:28:39.202Z"
+  },
+  {
+    "id": "4ce3c994-3161-4753-b6db-5a95023ff693",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "أنا أقدر أساعدك كعميل في كل ما يخص الموقع: ترشيح مشروع مناسب، شرح الفروقات، إضافته للسلة، توجيهك للاشتراك المناسب، أو تلخيص الملفات التي أرسلتها.\nأرى أن ا اتا قد يكون مناسبًا لك — هذا المشروع يطابق الكلمات التي ذكرتها في رسالتك..\nولو هدفك التوفير أو الخصومات، فخطة Business تبدو مناسبة — هذه هي الخطة الحالية لديك ويمكنني توضيح المزايا المرتبطة بها..\nإذا أردت، أقدر أفتح لك المنتج، أضيفه للسلة، أو أوجهك إلى الاشتراكات مباشرة.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "فتح ا اتا",
+        "href": "/project/41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "add-to-cart",
+        "label": "إضافة ا اتا للسلة",
+        "href": "/cart/add",
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "open-subscriptions",
+        "label": "عرض الاشتراكات",
+        "href": "/subscriptions"
+      },
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490",
+        "projectTitle": "ا اتا",
+        "price": 350,
+        "originalPrice": 350,
+        "reason": "هذا المشروع يطابق الكلمات التي ذكرتها في رسالتك.",
+        "score": 1,
+        "visibility": "starter"
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "business",
+        "planName": "Business",
+        "price": 499,
+        "durationDays": 30,
+        "reason": "هذه هي الخطة الحالية لديك ويمكنني توضيح المزايا المرتبطة بها.",
+        "score": 2,
+        "tier": "business"
+      }
+    ],
+    "read": false,
+    "createdAt": "2026-06-12T14:28:39.668Z"
+  },
+  {
+    "id": "temp-1781275689519-9etab7g3llk",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "اهلا\\",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:48:09.538Z"
+  },
+  {
+    "id": "1a62a1c4-0745-4569-bc85-4cb652b61a9f",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "شكراً لتواصلك. لو سمحت وضّح لي أكثر المشكلة أو ما الذي تريد إنجازه بالضبط، وسأساعدك مباشرة دون تحويل المحادثة إلى الدعم البشري إلا إذا طلبت ذلك صراحة.",
+    "purchaseId": null,
+    "aiAction": "request_details",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "فتح ا اتا",
+        "href": "/project/41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "add-to-cart",
+        "label": "إضافة ا اتا للسلة",
+        "href": "/cart/add",
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "open-subscriptions",
+        "label": "عرض الاشتراكات",
+        "href": "/subscriptions"
+      },
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490",
+        "projectTitle": "ا اتا",
+        "price": 350,
+        "originalPrice": 350,
+        "reason": "هذا المشروع يطابق الكلمات التي ذكرتها في رسالتك.",
+        "score": 1,
+        "visibility": "starter"
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "business",
+        "planName": "Business",
+        "price": 499,
+        "durationDays": 30,
+        "reason": "هذه هي الخطة الحالية لديك ويمكنني توضيح المزايا المرتبطة بها.",
+        "score": 2,
+        "tier": "business"
+      }
+    ],
+    "read": false,
+    "createdAt": "2026-06-12T14:48:10.366Z"
+  },
+  {
+    "id": "temp-1781275705270-mqyuxo32y7h",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "اهلا",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:48:25.282Z"
+  },
+  {
+    "id": "55532949-9b07-496b-a293-81a321544d0b",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "شكراً لتواصلك. لو سمحت وضّح لي أكثر المشكلة أو ما الذي تريد إنجازه بالضبط، وسأساعدك مباشرة دون تحويل المحادثة إلى الدعم البشري إلا إذا طلبت ذلك صراحة.",
+    "purchaseId": null,
+    "aiAction": "request_details",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "فتح ا اتا",
+        "href": "/project/41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "add-to-cart",
+        "label": "إضافة ا اتا للسلة",
+        "href": "/cart/add",
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490"
+      },
+      {
+        "type": "open-subscriptions",
+        "label": "عرض الاشتراكات",
+        "href": "/subscriptions"
+      },
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "41ead4d5-de0a-4865-a8a7-9528bc6c0490",
+        "projectTitle": "ا اتا",
+        "price": 350,
+        "originalPrice": 350,
+        "reason": "هذا المشروع يطابق الكلمات التي ذكرتها في رسالتك.",
+        "score": 1,
+        "visibility": "starter"
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "business",
+        "planName": "Business",
+        "price": 499,
+        "durationDays": 30,
+        "reason": "هذه هي الخطة الحالية لديك ويمكنني توضيح المزايا المرتبطة بها.",
+        "score": 2,
+        "tier": "business"
+      }
+    ],
+    "read": false,
+    "createdAt": "2026-06-12T14:48:25.922Z"
+  },
+  {
+    "id": "temp-1781275854540-8gs9nhkygsb",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "hi",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:50:54.558Z"
+  },
+  {
+    "id": "8c96ce3a-4e4b-46c3-b3c1-4e45fec8a426",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "أهلاً بك يا أحمد سمير في دعم Codentra! يسعدنا وجودك معنا.\n\nنلاحظ أنك مشترك حاليًا في خطة Business المتميزة، والتي تمنحك أفضل الخصومات ودعمًا مميزًا ومزايا مخصصة للمستخدمين الكثيفين. هذا يعني أنك تستفيد من أقصى توفير وأفضل خدمة لدينا.\n\nكيف يمكنني مساعدتك اليوم؟ هل تبحث عن منتج معين، أو لديك استفسار حول حسابك، أو ترغب في استكشاف مشاريع جديدة؟",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "عرض مشروع ChatForge",
+        "href": "/projects/31c57f4a-b3df-4666-a0d2-9297a19469dc"
+      },
+      {
+        "type": "open-project",
+        "label": "عرض مشروع NeuraConnect",
+        "href": "/projects/2574e809-55b6-4694-9108-2848ae7afb28"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+        "projectTitle": "ChatForge",
+        "price": 3400,
+        "reason": "نظرًا لكونك مشتركًا في خطة Business، قد يثير اهتمامك مشروع ChatForge، وهو قالب ويب احترافي متكامل لإنشاء منصة شاتات ذكاء اصطناعي باللغة العربية. إنه مثالي للمطورين والشركات ورواد الأعمال الذين يسعون لدمج الذكاء الاصطناعي في مشاريعهم بسرعة واحترافية."
+      },
+      {
+        "projectId": "2574e809-55b6-4694-9108-2848ae7afb28",
+        "projectTitle": "NeuraConnect هو منصة اجتماعية تفاعلية متكاملة تدعم اللغة العربية وتجمع بين وسائل التواصل الاجتماعي والذكاء الاصطناعي",
+        "price": 20000,
+        "reason": "إذا كنت تبحث عن مشروع ضخم ومتكامل يلبي احتياجات الأعمال المتقدمة، فإن NeuraConnect هو منصة اجتماعية تفاعلية تجمع بين وسائل التواصل الاجتماعي والذكاء الاصطناعي، وتوفر نظام تواصل شامل مع مساعد ذكاء اصطناعي. إنه حل مثالي لمن يسعى لبناء مجتمع رقمي متكامل."
+      }
+    ],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T14:51:05.018Z"
+  },
+  {
+    "id": "temp-1781275878260-rgqrf4287to",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "السلام عليكم",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:51:18.273Z"
+  },
+  {
+    "id": "7e4a6575-795a-464b-849e-f6abbf68b2e5",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "وعليكم السلام ورحمة الله وبركاته، أهلاً بك يا أحمد سمير في دعم Codentra AI! يسعدنا مساعدتك.\nنلاحظ أنك مشترك حاليًا في خطة Business المتميزة، والتي تمنحك أفضل الخصومات ودعمًا مميزًا ومزايا مخصصة للمستخدمين الكثيفين. هذه الخطة تضمن لك الحصول على أقصى استفادة من مشاريعنا.\nكيف يمكنني مساعدتك اليوم؟ هل تبحث عن منتج جديد، تحتاج إلى مساعدة في حسابك، أو لديك أي استفسارات أخرى؟",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "عرض مشروع ChatForge",
+        "href": "/projects/31c57f4a-b3df-4666-a0d2-9297a19469dc"
+      },
+      {
+        "type": "open-project",
+        "label": "عرض مشروع NeuraConnect",
+        "href": "/projects/2574e809-55b6-4694-9108-2848ae7afb28"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+        "projectTitle": "ChatForge",
+        "price": 3400,
+        "reason": "بصفتك مشتركًا في خطة Business، قد تكون مهتمًا بالمشاريع التي تضيف قيمة استراتيجية. ChatForge هو قالب ويب احترافي لإنشاء منصة شاتات ذكاء اصطناعي باللغة العربية، وهو مثالي للشركات التي ترغب في دمج حلول الذكاء الاصطناعي المتقدمة في أعمالها وتحسين تفاعلات العملاء."
+      },
+      {
+        "projectId": "2574e809-55b6-4694-9108-2848ae7afb28",
+        "projectTitle": "NeuraConnect هو منصة اجتماعية تفاعلية متكاملة تدعم اللغة العربية وتجمع بين وسائل التواصل الاجتماعي والذكاء الاصطناعي",
+        "price": 20000,
+        "reason": "نظرًا لكونك مستخدمًا بخطة Business، قد تبحث عن حلول متكاملة. NeuraConnect هي منصة اجتماعية تفاعلية متكاملة مع ذكاء اصطناعي، مناسبة جدًا للشركات التي تسعى لبناء مجتمعات تفاعلية، أو منصات تواصل متقدمة، أو حتى لتقديم خدمات مبتكرة تعتمد على الذكاء الاصطناعي."
+      }
+    ],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-06-12T14:51:31.219Z"
+  },
+  {
+    "id": "temp-1781275914202-8es1vq28sd9",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "حولني للدعم البشري",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:51:54.223Z"
+  },
+  {
+    "id": "ca3878e7-3acf-4554-9d8c-0e26f0aabf64",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "بالتأكيد، سيتم تحويلك الآن إلى فريق الدعم البشري لمساعدتك بشكل مباشر. يرجى الانتظار قليلاً وسيتواصل معك أحد ممثلي خدمة العملاء في أقرب وقت ممكن.",
+    "purchaseId": null,
+    "aiAction": "handoff",
+    "aiActions": [
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      },
+      {
+        "type": "handoff-human",
+        "label": "حولني للدعم البشري",
+        "href": "/messages"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": true,
+    "read": false,
+    "createdAt": "2026-06-12T14:51:56.338Z"
+  },
+  {
+    "id": "temp-1781275930296-7cerik3omwf",
+    "senderId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "بد",
+    "purchaseId": null,
+    "attachments": [],
+    "read": true,
+    "createdAt": "2026-06-12T14:52:10.311Z"
+  },
+  {
+    "id": "fffe9862-664b-49b5-9ab9-f75045f265bb",
+    "senderId": "admin",
+    "senderName": "Admin",
+    "receiverId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "content": "تم إعادة المحادثة إلى دعم الذكاء الاصطناعي الذكي. سأعود للرد تلقائياً الآن.",
+    "system": true,
+    "read": false,
+    "createdAt": "2026-06-12T17:51:59.223Z"
+  },
+  {
+    "id": "temp-1782920811465-llxbl39zm6b",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "hi",
+    "purchaseId": null,
+    "attachments": [],
+    "read": false,
+    "createdAt": "2026-07-01T15:46:51.748Z"
+  },
+  {
+    "id": "temp-1782920824050-t0xwa6bxng",
+    "senderId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "senderName": "try",
+    "receiverId": "admin",
+    "content": "هلا",
+    "purchaseId": null,
+    "attachments": [],
+    "read": false,
+    "createdAt": "2026-07-01T15:47:04.619Z"
+  },
+  {
+    "id": "temp-1782921121658-e18of5naco7",
+    "senderId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "هلا",
+    "purchaseId": null,
+    "attachments": [],
+    "read": false,
+    "createdAt": "2026-07-01T15:52:01.668Z"
+  },
+  {
+    "id": "da6bb822-27fb-4c50-84ee-811d92aeb622",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "content": "أهلاً بك يا أحمد سمير في دعم Codentra! كيف يمكنني مساعدتك اليوم؟ يسعدني أن أكون مساعدك الذكي في استكشاف مشاريعنا المميزة أو اختيار خطة الاشتراك الأنسب لك.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "عرض جميع المشاريع",
+        "href": "/projects"
+      },
+      {
+        "type": "open-subscription",
+        "label": "استكشاف خطط الاشتراك",
+        "href": "/subscriptions"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "3617b9ea-425e-49c6-bb67-a04952ac921e",
+        "projectTitle": " قالب بورتفوليو حديث ",
+        "price": 3000,
+        "reason": "هذا القالب عصري وأنيق، ومثالي للمطورين والمصممين الذين يرغبون في عرض أعمالهم بشكل احترافي وجذاب."
+      },
+      {
+        "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+        "projectTitle": "ChatForge",
+        "price": 3400,
+        "reason": "إذا كنت مهتمًا بإنشاء منصة شات ذكاء اصطناعي باللغة العربية، فإن ChatForge هو قالب ويب احترافي ومتكامل مصمم خصيصًا لذلك."
+      },
+      {
+        "projectId": "2828e22e-e740-4830-952a-99c968f2e19a",
+        "projectTitle": "PDF Master Pro",
+        "price": 1200,
+        "reason": "تطبيق عملي ومفيد لتحويل الصور والنصوص إلى ملفات PDF احترافية بسهولة على الأجهزة المحمولة، بواجهة عربية كاملة."
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "starter",
+        "planName": "Starter",
+        "price": 149,
+        "reason": "بصفتك مستخدمًا جديدًا، خطة Starter هي الخيار الأمثل لتبدأ رحلتك مع Codentra، حيث توفر لك خصمًا على مشترياتك ودعمًا أساسيًا بسعر مناسب."
+      },
+      {
+        "planId": "pro",
+        "planName": "Pro",
+        "price": 299,
+        "reason": "إذا كنت تخطط لمشتريات متعددة أو تحتاج إلى دعم بأولوية أعلى، فإن خطة Pro تقدم لك خصمًا أكبر ومزايا إضافية قيمة."
+      }
+    ],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-07-01T15:52:08.315Z"
+  },
+  {
+    "id": "temp-1782921151795-khjdsw1trc8",
+    "senderId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "انا عايز منتج للتواصل مع الذكاء الاصتناعي",
+    "purchaseId": null,
+    "attachments": [],
+    "read": false,
+    "createdAt": "2026-07-01T15:52:31.810Z"
+  },
+  {
+    "id": "7815f62f-54b4-4b41-aa80-2e909e4bc04c",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "content": "أهلاً بك يا أحمد سمير! يسعدني جداً مساعدتك في العثور على المنتج الأمثل للتواصل مع الذكاء الاصطناعي. بناءً على طلبك، لدينا منتج متميز مصمم خصيصاً لهذا الغرض، وسيكون الخيار الأفضل لك.",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-project",
+        "label": "عرض تفاصيل مشروع ChatForge",
+        "href": "/projects/31c57f4a-b3df-4666-a0d2-9297a19469dc"
+      }
+    ],
+    "aiSuggestedProjects": [
+      {
+        "projectId": "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+        "projectTitle": "ChatForge",
+        "price": 3400,
+        "reason": "هذا المشروع هو قالب ويب احترافي متكامل لإنشاء منصة شاتات ذكاء اصطناعي باللغة العربية خلال دقائق، ويتضمن تكامل Gemini API المتقدم. إنه الخيار الأمثل لك إذا كنت تبحث عن حل مباشر وفعال للتواصل مع الذكاء الاصطناعي وبناء منصتك الخاصة."
+      }
+    ],
+    "aiSuggestedPlans": [
+      {
+        "planId": "starter",
+        "planName": "Starter",
+        "price": 149,
+        "reason": "لتحقيق أقصى استفادة وتوفير، أنصحك بالاشتراك في خطة 'Starter'. هذه الخطة ستمنحك خصماً على مشترياتك، مما سيساعدك على توفير جزء من تكلفة مشروع 'ChatForge' أو أي منتجات أخرى ترغب في شرائها لاحقاً، بالإضافة إلى دعم أساسي."
+      }
+    ],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-07-01T15:52:40.092Z"
+  },
+  {
+    "id": "temp-1782921175498-oubvfepi16",
+    "senderId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "senderName": "ahmed samir",
+    "receiverId": "admin",
+    "content": "انت كلب",
+    "purchaseId": null,
+    "attachments": [],
+    "read": false,
+    "createdAt": "2026-07-01T15:52:55.504Z"
+  },
+  {
+    "id": "7ef08a17-8d44-4315-b3f6-5fa27ecb46b4",
+    "senderId": "ai-support",
+    "senderName": "Codentra AI Support",
+    "receiverId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+    "content": "أهلاً بك يا أحمد سمير، أنا هنا لمساعدتك في أي استفسارات تخص حسابك الشخصي، المنتجات المتاحة، الاشتراكات، أو سلة المشتريات. كيف يمكنني خدمتك اليوم؟",
+    "purchaseId": null,
+    "aiAction": "guided_help",
+    "aiActions": [
+      {
+        "type": "open-cart",
+        "label": "فتح السلة",
+        "href": "/cart"
+      }
+    ],
+    "aiSuggestedProjects": [],
+    "aiSuggestedPlans": [],
+    "escalatedToHuman": false,
+    "read": false,
+    "createdAt": "2026-07-01T15:52:58.737Z"
   }
 ]

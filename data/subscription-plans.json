@@ -1,1 +1,41 @@
-[]
+[
+  {
+    "id": "starter",
+    "name": "Starter",
+    "price": 149,
+    "durationDays": 30,
+    "currency": "USD",
+    "active": true,
+    "features": [
+      "خصم على المشتريات",
+      "دعم أساسي",
+      "حفظ سجل الاشتراك"
+    ]
+  },
+  {
+    "id": "pro",
+    "name": "Pro",
+    "price": 299,
+    "durationDays": 30,
+    "currency": "USD",
+    "active": true,
+    "features": [
+      "خصم أكبر",
+      "أولوية أعلى في الدعم",
+      "مزايا إضافية للمشتركين"
+    ]
+  },
+  {
+    "id": "business",
+    "name": "Business",
+    "price": 499,
+    "durationDays": 30,
+    "currency": "USD",
+    "active": true,
+    "features": [
+      "أفضل خصم",
+      "دعم مميز",
+      "مخصص للمستخدمين الكثيفين"
+    ]
+  }
+]

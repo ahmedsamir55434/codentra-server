@@ -359,6 +359,35 @@
                     تم استرداد مبلغ: <strong><%= displayMoney(purchase.walletRefundAmount) %></strong> للمحفظة
                   </p>
                 <% } %>
+
+                <% const secureMeta = purchase.secureDownloadMeta || null; %>
+                <% if (secureMeta) { %>
+                  <div class="modification-note" style="margin-top:8px; line-height:1.8;">
+                    <strong>سجل تنزيلات آمن:</strong>
+                    <span>إجمالي التحميلات: <%= secureMeta.count %></span>
+                    <span> | IPs: <%= secureMeta.uniqueIpCount %></span>
+                    <span> | أجهزة: <%= secureMeta.uniqueDeviceCount %></span>
+                  </div>
+                  <% if (secureMeta.suspicious) { %>
+                    <div class="error-message" style="margin-top:8px;">
+                      تنبيه أمني: تم رصد تحميلات متعددة من أكثر من IP/جهاز. لو ليس أنت، تواصل مع الدعم فورًا.
+                    </div>
+                  <% } %>
+                  <% if (secureMeta.history && secureMeta.history.length > 0) { %>
+                    <details style="margin-top:8px;">
+                      <summary style="cursor:pointer; font-weight:700;">عرض آخر التحميلات</summary>
+                      <div style="margin-top:8px; border:1px solid var(--glass-border); border-radius:10px; padding:8px;">
+                        <% secureMeta.history.forEach(ev => { %>
+                          <div style="font-size:12px; opacity:0.9; padding:6px 0; border-bottom:1px dashed var(--glass-border);">
+                            <span><%= new Date(ev.createdAt).toLocaleString('ar-EG') %></span>
+                            <span class="ltr"> | IP: <%= ev.ip || '-' %></span>
+                            <span> | جهاز: <%= ev.device || '-' %></span>
+                          </div>
+                        <% }) %>
+                      </div>
+                    </details>
+                  <% } %>
+                <% } %>
               </div>
               <div class="purchase-actions">
                 <% if (purchase.status === 'approved') { %>

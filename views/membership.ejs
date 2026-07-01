@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>عضويتي - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="/css/glass-v3.css" />
+  <link rel="stylesheet" href="/css/purchases.css" />
+</head>
+<body>
+  <%- include('partials/header') %>
+  <main class="page purchases-page">
+    <div class="container">
+      <div class="section-head" style="margin-bottom: 20px;">
+        <div>
+          <span class="section-kicker">العضوية</span>
+          <h1 style="margin-top:8px;">مركز العضوية الحالي</h1>
+        </div>
+        <p class="section-copy">كل ما يخص اشتراكك، الوصول الخاص، والخصومات المفعلة في مكان واحد.</p>
+      </div>
+
+      <section class="purchase-card" style="margin-bottom:18px;">
+        <div style="display:grid; gap:10px; width:100%;">
+          <div class="hero-subscription-chip" style="margin-top:0; width: fit-content;">
+            <span class="hero-subscription-kicker">حالة الاشتراك</span>
+            <strong><%= activeSubscription ? activePlan.name : 'بدون اشتراك' %></strong>
+            <span><%= activeSubscription ? 'مزايا مفعلة على حسابك' : 'اشترك لتفعيل المزايا الخاصة' %></span>
+          </div>
+          <% if (activeSubscription) { %>
+            <div style="display:grid; gap:6px; color: var(--text-secondary);">
+              <div>مستوى الوصول: <strong style="color:var(--text-primary);"><%= tierLabel %></strong></div>
+              <div>ينتهي في: <strong style="color:var(--text-primary);"><%= activeSubscription.currentPeriodEnd ? new Date(activeSubscription.currentPeriodEnd).toLocaleString('ar-EG') : '-' %></strong></div>
+              <div>الخصم الحالي: <strong style="color:var(--text-primary);"><%= discountPercent %>%</strong></div>
+            </div>
+          <% } else { %>
+            <div style="color: var(--text-secondary);">لا يوجد اشتراك نشط حالياً.</div>
+          <% } %>
+        </div>
+      </section>
+
+      <section class="purchases-grid">
+        <div class="purchase-card subscription-card subscription-card-starter">
+          <div class="subscription-card-glow" aria-hidden="true"></div>
+          <div class="subscription-card-head">
+            <div>
+              <span class="subscription-tier-pill">Starter</span>
+              <h2 style="margin:8px 0 6px;">Starter</h2>
+              <p class="subscription-plan-note">بداية ذكية ومناسبة للمستخدم الجديد</p>
+            </div>
+            <div class="subscription-tier-mark">01</div>
+          </div>
+          <div class="subscription-plan-dash" aria-hidden="true"></div>
+          <div class="sale-card">خصم 10% + وصول للمشتركين + إشعارات حصرية</div>
+        </div>
+
+        <div class="purchase-card subscription-card subscription-card-pro">
+          <div class="subscription-card-glow" aria-hidden="true"></div>
+          <span class="subscription-ribbon">الأكثر طلبًا</span>
+          <div class="subscription-card-head">
+            <div>
+              <span class="subscription-tier-pill">Pro</span>
+              <h2 style="margin:8px 0 6px;">Pro</h2>
+              <p class="subscription-plan-note">خيار متوازن للمستخدم النشط</p>
+            </div>
+            <div class="subscription-tier-mark">02</div>
+          </div>
+          <div class="subscription-plan-dash" aria-hidden="true"></div>
+          <div class="sale-card">خصم 20% + منتجات مبكرة + دعم أولوية</div>
+        </div>
+
+        <div class="purchase-card subscription-card subscription-card-business">
+          <div class="subscription-card-glow" aria-hidden="true"></div>
+          <span class="subscription-ribbon">VIP</span>
+          <div class="subscription-card-head">
+            <div>
+              <span class="subscription-tier-pill">Business</span>
+              <h2 style="margin:8px 0 6px;">Business</h2>
+              <p class="subscription-plan-note">أقوى تجربة وواجهة أفخم للمحترفين</p>
+            </div>
+            <div class="subscription-tier-mark">03</div>
+          </div>
+          <div class="subscription-plan-dash" aria-hidden="true"></div>
+          <div class="sale-card">خصم 30% + دعم VIP + وصول كامل وحصري</div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <%- include('partials/footer') %>
+</body>
+</html>

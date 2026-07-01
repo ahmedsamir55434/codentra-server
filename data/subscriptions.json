@@ -1,1 +1,32 @@
-[]
+[
+  {
+    "id": "6da854bd-57e5-4ebb-aa97-8db2b2bfc181",
+    "userId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "planId": "starter",
+    "status": "canceled",
+    "currentPeriodStart": "2026-06-02T15:11:42.305Z",
+    "currentPeriodEnd": "2026-07-02T15:11:42.305Z",
+    "canceledAt": "2026-06-02T15:26:30.498Z",
+    "createdAt": "2026-06-02T15:11:42.305Z"
+  },
+  {
+    "id": "f35b2a1a-6033-4886-8877-79ae531064c3",
+    "userId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "planId": "business",
+    "status": "active",
+    "currentPeriodStart": "2026-06-02T15:26:34.565Z",
+    "currentPeriodEnd": "2026-07-02T15:26:34.565Z",
+    "canceledAt": null,
+    "createdAt": "2026-06-02T15:26:34.565Z"
+  },
+  {
+    "id": "8b2370a1-66d8-45bd-8ad2-839b2870ed7a",
+    "userId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "planId": "business",
+    "status": "active",
+    "currentPeriodStart": "2026-06-04T11:06:45.095Z",
+    "currentPeriodEnd": "2026-07-04T11:06:45.095Z",
+    "canceledAt": null,
+    "createdAt": "2026-06-04T11:06:45.095Z"
+  }
+]

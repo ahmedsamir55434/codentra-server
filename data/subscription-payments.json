@@ -1,1 +1,41 @@
-[]
+[
+  {
+    "id": "f01e5681-0949-4eb8-8191-8c296e00f9a5",
+    "subscriptionId": "6da854bd-57e5-4ebb-aa97-8db2b2bfc181",
+    "userId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "planId": "starter",
+    "amount": 149,
+    "currency": "USD",
+    "method": "wallet",
+    "priceBefore": 149,
+    "discountAmount": 0,
+    "couponCode": null,
+    "createdAt": "2026-06-02T15:11:42.305Z"
+  },
+  {
+    "id": "f295a85f-dd82-4ee6-8eb2-dbb361fb0a1d",
+    "subscriptionId": "f35b2a1a-6033-4886-8877-79ae531064c3",
+    "userId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "planId": "business",
+    "amount": 499,
+    "currency": "USD",
+    "method": "wallet",
+    "priceBefore": 499,
+    "discountAmount": 0,
+    "couponCode": null,
+    "createdAt": "2026-06-02T15:26:34.565Z"
+  },
+  {
+    "id": "8245188a-5828-4a0e-9ad0-a0a94c478467",
+    "subscriptionId": "8b2370a1-66d8-45bd-8ad2-839b2870ed7a",
+    "userId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "planId": "business",
+    "amount": 499,
+    "currency": "USD",
+    "method": "wallet",
+    "priceBefore": 499,
+    "discountAmount": 0,
+    "couponCode": null,
+    "createdAt": "2026-06-04T11:06:45.095Z"
+  }
+]

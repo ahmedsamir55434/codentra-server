@@ -162,11 +162,32 @@
           </div>
         <% } %>
 
-        <% if (user && user.role === 'user' && user.subscription && user.subscription.status === 'active') { %>
-          <% if (user.subscription.planId === 'basic') { %>
-            <div class="success-message">خصم المشتركين: 10% سيتم تطبيقه عند الشراء</div>
-          <% } else if (user.subscription.planId === 'premium') { %>
-            <div class="success-message">خصم المشتركين: 20% سيتم تطبيقه عند الشراء</div>
+          <% if (project.visibility && project.visibility !== 'public') { %>
+            <div class="sale-card" style="margin-top:14px;">
+              <div class="sale-head" style="align-items:flex-start;">
+                <span class="sale-label">🔒 منتج مخصص للمشتركين</span>
+              </div>
+              <div style="line-height:1.8; opacity:.9; margin-top:8px;">
+                <% if (project.visibility === 'subscribers') { %>
+                  متاح لأي اشتراك نشط.
+                <% } else if (project.visibility === 'starter' || project.visibility === 'basic') { %>
+                  متاح لخطط Starter فما فوق.
+                <% } else if (project.visibility === 'pro') { %>
+                  متاح لخطط Pro فما فوق.
+                <% } else if (project.visibility === 'business' || project.visibility === 'premium') { %>
+                  متاح لخطط Business فقط.
+                <% } %>
+              </div>
+            </div>
+          <% } %>
+
+          <% if (user && user.role === 'user' && user.subscription && user.subscription.status === 'active') { %>
+            <% if (user.subscription.planId === 'starter' || user.subscription.planId === 'basic') { %>
+              <div class="success-message">خصم المشتركين: 10% + وصول للمنتجات المخصصة للمشتركين</div>
+            <% } else if (user.subscription.planId === 'pro') { %>
+            <div class="success-message">خصم المشتركين: 20% + وصول لمنتجات Pro الحصرية</div>
+          <% } else if (user.subscription.planId === 'business' || user.subscription.planId === 'premium') { %>
+            <div class="success-message">خصم المشتركين: 30% + وصول لمنتجات Business الحصرية</div>
           <% } %>
         <% } %>
         
@@ -211,10 +232,140 @@
             <span class="meta-label">التصنيف:</span>
             <span class="meta-value"><%= project.category %></span>
           </div>
+          <div class="project-meta-row">
+            <span class="meta-label">الرؤية:</span>
+            <span class="meta-value">
+              <% if (!project.visibility || project.visibility === 'public') { %>
+                عام
+              <% } else if (project.visibility === 'subscribers') { %>
+                للمشتركين فقط
+              <% } else if (project.visibility === 'starter' || project.visibility === 'basic') { %>
+                Starter فما فوق
+              <% } else if (project.visibility === 'pro') { %>
+                Pro فما فوق
+              <% } else if (project.visibility === 'business' || project.visibility === 'premium') { %>
+                Business فقط
+              <% } else { %>
+                خاص
+              <% } %>
+            </span>
+          </div>
+        </div>
+
+        <!-- AI Summary (Customer Feature) -->
+        <div class="sale-card" style="margin-top:14px;">
+          <div class="sale-head" style="align-items:flex-start;">
+            <span class="sale-label">✨ AI ملخص + هل يناسبني؟</span>
+          </div>
+          <div style="margin-top:10px;">
+            <label style="display:block; font-weight:800; margin-bottom:6px;">هدفك</label>
+            <input id="aiGoal" class="input" style="width:100%;" placeholder="مثال: متجر إلكتروني، لوحة تحكم، موقع شركة...">
+          </div>
+          <div style="margin-top:10px;">
+            <label style="display:block; font-weight:800; margin-bottom:6px;">خبرتك</label>
+            <select id="aiLevel" class="input" style="width:100%;">
+              <option value="">اختر</option>
+              <option value="beginner">مبتدئ</option>
+              <option value="intermediate">متوسط</option>
+              <option value="advanced">محترف</option>
+            </select>
+          </div>
+          <div style="margin-top:10px;">
+            <label style="display:block; font-weight:800; margin-bottom:6px;">تقنياتك/بيئتك</label>
+            <input id="aiStack" class="input" style="width:100%;" placeholder="مثال: Node 20 + React + PostgreSQL...">
+          </div>
+          <div style="margin-top:12px; display:flex; gap:10px;">
+            <button id="aiRunBtn" type="button" class="btn btn-primary" style="flex:1;">تلخيص</button>
+          </div>
+          <div id="aiSummaryBox" style="display:none; margin-top:12px; padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:rgba(0,0,0,0.10);">
+            <div id="aiVerdict" style="font-weight:900;"></div>
+            <div id="aiReason" style="opacity:0.9; margin-top:6px; line-height:1.8;"></div>
+            <div style="margin-top:10px;">
+              <div style="font-weight:900; margin-bottom:6px;">ملخص قصير</div>
+              <div id="aiShort" style="opacity:0.92; line-height:1.8;"></div>
+            </div>
+            <div style="margin-top:10px;">
+              <div style="font-weight:900; margin-bottom:6px;">ملخص تفصيلي</div>
+              <div id="aiLong" style="opacity:0.92; line-height:1.8;"></div>
+            </div>
+            <div style="margin-top:10px; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px;">
+              <div>
+                <div style="font-weight:900; margin-bottom:6px;">نقاط قوة</div>
+                <ul id="aiStrengths" style="margin:0; padding:0 18px; opacity:0.92; line-height:1.8;"></ul>
+              </div>
+              <div>
+                <div style="font-weight:900; margin-bottom:6px;">نقاط ضعف</div>
+                <ul id="aiWeaknesses" style="margin:0; padding:0 18px; opacity:0.92; line-height:1.8;"></ul>
+              </div>
+            </div>
+            <div style="margin-top:10px;">
+              <div style="font-weight:900; margin-bottom:6px;">Checklist</div>
+              <ul id="aiChecklist" style="margin:0; padding:0 18px; opacity:0.92; line-height:1.8;"></ul>
+            </div>
+          </div>
+          <div id="aiSummaryError" style="display:none; margin-top:10px; color:#ffb4b4; font-weight:800;"></div>
+        </div>
+
+        <div class="sale-card" style="margin-top:14px;">
+          <div class="sale-head" style="align-items:flex-start;">
+            <span class="sale-label">AI خدمة العملاء للمنتج</span>
+          </div>
+          <div id="aiProductChatLog" style="margin-top:10px; max-height:260px; overflow:auto; display:flex; flex-direction:column; gap:8px;">
+            <div style="padding:10px; border-radius:12px; background:rgba(255,255,255,0.08); line-height:1.7;">
+              اسأل أي سؤال عن هذا المنتج وسأرد عليك بناءً على تفاصيله.
+            </div>
+          </div>
+          <div style="margin-top:10px;">
+            <textarea id="aiProductChatQuestion" class="input" rows="3" style="width:100%;" placeholder="اكتب سؤالك عن المنتج..."></textarea>
+          </div>
+          <div style="margin-top:10px; display:flex; gap:10px;">
+            <button id="aiProductChatSend" type="button" class="btn btn-primary" style="flex:1;">إرسال</button>
+          </div>
+          <div id="aiProductChatError" style="display:none; margin-top:8px; color:#ffb4b4; font-weight:700;"></div>
         </div>
       </div>
     </aside>
   </main>
+
+  <% if (Array.isArray(relatedProjects) && relatedProjects.length > 0) { %>
+    <section class="projects-section related-projects-section">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="section-kicker">اقتراحات ذكية</span>
+            <h2>مشاريع مشابهة</h2>
+          </div>
+          <p class="section-copy">اخترنا لك مشاريع قريبة من نفس التصنيف والتقنيات.</p>
+        </div>
+        <div class="projects-grid">
+          <% relatedProjects.forEach(item => { %>
+            <div class="project-card">
+              <div class="project-image <%= item.images && item.images.length > 0 ? 'has-cover' : '' %>">
+                <% if (item.images && item.images.length > 0) { %>
+                  <img src="/<%= item.images[0] %>" alt="<%= item.title %>" class="project-cover">
+                <% } else { %>
+                  <div class="placeholder-img"><span><%= item.category %></span></div>
+                <% } %>
+              </div>
+              <div class="project-info">
+                <h3><%= item.title %></h3>
+                <p class="project-desc"><%= item.description.substring(0, 90) %><%= item.description.length > 90 ? '...' : '' %></p>
+                <div class="project-tech">
+                  <% (item.technologies || []).slice(0, 3).forEach(tech => { %>
+                    <span class="tech-tag"><%= tech %></span>
+                  <% }) %>
+                </div>
+                <div class="project-footer">
+                  <span class="price"><%= displayMoney(item.finalPrice || item.price) %></span>
+                  <a href="/project/<%= item.id %>" class="btn btn-primary">تفاصيل</a>
+                </div>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+    </section>
+  <% } %>
 
   <!-- Image Lightbox -->
   <div class="image-lightbox" id="imageLightbox" onclick="closeLightbox()">
@@ -298,6 +449,153 @@
         closeLightbox();
       }
     });
+  </script>
+
+  <script>
+    (function () {
+      const btn = document.getElementById('aiRunBtn');
+      if (!btn) return;
+      const goal = document.getElementById('aiGoal');
+      const level = document.getElementById('aiLevel');
+      const stack = document.getElementById('aiStack');
+      const box = document.getElementById('aiSummaryBox');
+      const err = document.getElementById('aiSummaryError');
+
+      const verdictEl = document.getElementById('aiVerdict');
+      const reasonEl = document.getElementById('aiReason');
+      const shortEl = document.getElementById('aiShort');
+      const longEl = document.getElementById('aiLong');
+      const strengthsEl = document.getElementById('aiStrengths');
+      const weaknessesEl = document.getElementById('aiWeaknesses');
+      const checklistEl = document.getElementById('aiChecklist');
+
+      const setList = (el, items) => {
+        el.innerHTML = '';
+        (Array.isArray(items) ? items : []).forEach((it) => {
+          const li = document.createElement('li');
+          li.textContent = String(it);
+          el.appendChild(li);
+        });
+      };
+
+      const verdictLabel = (v) => {
+        if (v === 'fit') return 'يناسبك غالبًا';
+        if (v === 'not_fit') return 'غير مناسب غالبًا';
+        return 'ممكن يناسبك (بحسب حالتك)';
+      };
+
+      btn.addEventListener('click', async () => {
+        err.style.display = 'none';
+        box.style.display = 'none';
+
+        const payload = {
+          goal: (goal.value || '').trim(),
+          level: (level.value || '').trim(),
+          stack: (stack.value || '').trim()
+        };
+        if (!payload.goal && !payload.stack) {
+          err.textContent = 'اكتب هدفك أو تقنياتك على الأقل.';
+          err.style.display = 'block';
+          return;
+        }
+
+        const oldText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '...جاري التلخيص';
+        try {
+          const res = await fetch('/api/projects/<%= project.id %>/ai-fit-summary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data || data.ok !== true) {
+            throw new Error((data && data.error) ? data.error : 'فشل التلخيص');
+          }
+          const r = data.result || {};
+          verdictEl.textContent = verdictLabel(r.fitVerdict);
+          reasonEl.textContent = r.fitReason || '';
+          shortEl.textContent = r.shortSummary || '';
+          longEl.textContent = r.longSummary || '';
+          setList(strengthsEl, r.strengths || []);
+          setList(weaknessesEl, r.weaknesses || []);
+          setList(checklistEl, r.fitChecklist || []);
+          box.style.display = 'block';
+        } catch (e) {
+          err.textContent = (e && e.message) ? e.message : 'تعذر توليد الملخص الآن';
+          err.style.display = 'block';
+        } finally {
+          btn.disabled = false;
+          btn.textContent = oldText;
+        }
+      });
+    })();
+  </script>
+
+  <script>
+    (function () {
+      const sendBtn = document.getElementById('aiProductChatSend');
+      const input = document.getElementById('aiProductChatQuestion');
+      const log = document.getElementById('aiProductChatLog');
+      const err = document.getElementById('aiProductChatError');
+      if (!sendBtn || !input || !log || !err) return;
+
+      const addBubble = (text, role) => {
+        const div = document.createElement('div');
+        div.style.padding = '10px';
+        div.style.borderRadius = '12px';
+        div.style.lineHeight = '1.7';
+        if (role === 'user') {
+          div.style.background = 'rgba(99,102,241,0.22)';
+          div.style.alignSelf = 'flex-start';
+        } else {
+          div.style.background = 'rgba(255,255,255,0.08)';
+          div.style.alignSelf = 'stretch';
+        }
+        div.textContent = text;
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+      };
+
+      const sendQuestion = async () => {
+        err.style.display = 'none';
+        const question = String(input.value || '').trim();
+        if (!question) return;
+
+        addBubble(question, 'user');
+        input.value = '';
+
+        const oldText = sendBtn.textContent;
+        sendBtn.disabled = true;
+        sendBtn.textContent = '...جاري الرد';
+
+        try {
+          const res = await fetch('/api/projects/<%= project.id %>/ai-product-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data || data.ok !== true) {
+            throw new Error((data && data.error) ? data.error : 'تعذر الرد الآن');
+          }
+          addBubble(String(data.answer || 'لا يوجد رد حالياً'), 'ai');
+        } catch (e) {
+          err.textContent = (e && e.message) ? e.message : 'تعذر الرد الآن';
+          err.style.display = 'block';
+        } finally {
+          sendBtn.disabled = false;
+          sendBtn.textContent = oldText;
+        }
+      };
+
+      sendBtn.addEventListener('click', sendQuestion);
+      input.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+          sendQuestion();
+        }
+      });
+    })();
   </script>
 </body>
 </html>

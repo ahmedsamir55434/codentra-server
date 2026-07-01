@@ -8,8 +8,8 @@
     "createdAt": "2026-02-23T13:59:16.053Z",
     "isSuperAdmin": true,
     "recentlyViewedProjectIds": [
-      "31c57f4a-b3df-4666-a0d2-9297a19469dc",
       "2828e22e-e740-4830-952a-99c968f2e19a",
+      "31c57f4a-b3df-4666-a0d2-9297a19469dc",
       "3617b9ea-425e-49c6-bb67-a04952ac921e",
       "c3fb95ed-e047-46ec-a400-3f08d3964e7c",
       "2574e809-55b6-4694-9108-2848ae7afb28"
@@ -22,10 +22,10 @@
     "password": "$2a$10$wxZyQXktb.NAT6SfDwB0auU0uO6Xgp52ul3pcWK9HBfyNNpCtJJwa",
     "role": "user",
     "createdAt": "2026-02-23T14:14:37.599Z",
-    "walletBalance": 23567.7,
+    "walletBalance": 22674.7,
     "referralCode": "74725916",
     "referredBy": null,
-    "loyaltyPoints": 3307,
+    "loyaltyPoints": 3331,
     "isBlocked": false,
     "blockedReason": null,
     "blockedBy": null,
@@ -34,15 +34,27 @@
     "walletCardNumber": "9432826350082793",
     "walletPaymentPasswordHash": null,
     "recentlyViewedProjectIds": [
-      "c208d7ef-c2fa-46f9-ba21-2d69006dbb87",
-      "2828e22e-e740-4830-952a-99c968f2e19a",
-      "2574e809-55b6-4694-9108-2848ae7afb28",
-      "3617b9ea-425e-49c6-bb67-a04952ac921e",
+      "8459e110-0756-40d2-91fc-c369a19280a9",
       "31c57f4a-b3df-4666-a0d2-9297a19469dc",
-      "834550b7-f9d1-4104-823f-7353c49719bd"
+      "13c1c09d-0357-4918-a60d-d935b86c1c5d",
+      "3617b9ea-425e-49c6-bb67-a04952ac921e",
+      "41ead4d5-de0a-4865-a8a7-9528bc6c0490",
+      "2828e22e-e740-4830-952a-99c968f2e19a"
     ],
     "walletCardSpendingLimit": null,
     "walletCardNotifications": [
+      {
+        "id": "bf6e4a8f-31d0-4118-835a-1683374bd1c1",
+        "title": "تم استخدام بطاقتك",
+        "message": "استخدمت بطاقتك في شراء 1 مشروع من السلة.",
+        "metadata": {
+          "attemptId": null,
+          "amount": 245,
+          "purposeLabel": "شراء 1 مشروع من السلة"
+        },
+        "unread": false,
+        "createdAt": "2026-06-04T10:06:28.663Z"
+      },
       {
         "id": "43d9d661-2a97-488e-b485-ba4f783aef96",
         "title": "تم استخدام بطاقتك",
@@ -70,6 +82,18 @@
     ],
     "walletCardUsageLog": [
       {
+        "id": "0d47d6ca-7a9b-47d3-9d66-85ad72036591",
+        "status": "completed",
+        "amount": 245,
+        "buyerUserId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+        "buyerName": "ahmed samir",
+        "purposeLabel": "شراء 1 مشروع من السلة",
+        "note": "تم الدفع مباشرة باستخدام بطاقتك الشخصية",
+        "attemptId": null,
+        "createdAt": "2026-06-04T10:06:28.663Z",
+        "updatedAt": "2026-06-04T10:06:28.663Z"
+      },
+      {
         "id": "dcf5df51-9c1b-4376-9470-28a873d102cb",
         "status": "completed",
         "amount": 11,
@@ -95,6 +119,30 @@
       }
     ],
     "notifications": [
+      {
+        "id": "156a3c18-fa17-4489-a6a4-3e6cca08771e",
+        "type": "abandoned-cart",
+        "title": "سلتك ما زالت بانتظارك",
+        "message": "لديك 1 عنصر في السلة. أكمل الشراء الآن.",
+        "metadata": {
+          "url": "/cart",
+          "itemCount": 1
+        },
+        "unread": false,
+        "createdAt": "2026-06-04T10:06:15.766Z"
+      },
+      {
+        "id": "b930ed4b-5ea7-4a4c-a4d2-df51e6aaba1b",
+        "type": "abandoned-cart",
+        "title": "سلتك ما زالت بانتظارك",
+        "message": "لديك 1 عنصر في السلة. أكمل الشراء الآن.",
+        "metadata": {
+          "url": "/cart",
+          "itemCount": 1
+        },
+        "unread": false,
+        "createdAt": "2026-06-02T15:25:13.199Z"
+      },
       {
         "id": "d1adf3a5-ecbf-459f-982e-369fc5a0960a",
         "type": "message-received",
@@ -553,7 +601,12 @@
     ],
     "githubId": "163656135",
     "githubLogin": "ahmedsamir55434",
-    "authProvider": "github"
+    "authProvider": "github",
+    "wishlistProjectIds": [
+      "41ead4d5-de0a-4865-a8a7-9528bc6c0490",
+      "c3fb95ed-e047-46ec-a400-3f08d3964e7c"
+    ],
+    "supportMode": "auto"
   },
   {
     "id": "e809661f-3c95-4777-995a-ac358e92fc5f",
@@ -563,9 +616,9 @@
     "role": "user",
     "createdAt": "2026-02-25T17:58:16.225Z",
     "referralCode": "62F1EB31",
-    "walletBalance": 0,
+    "walletBalance": 496600,
     "referredBy": null,
-    "loyaltyPoints": 7272077,
+    "loyaltyPoints": 7272417,
     "isBlocked": false,
     "blockedReason": null,
     "blockedBy": null,
@@ -574,9 +627,48 @@
     "walletCardNumber": "2565186290882378",
     "walletPaymentPasswordHash": null,
     "walletCardSpendingLimit": null,
-    "walletCardNotifications": [],
-    "walletCardUsageLog": [],
+    "walletCardNotifications": [
+      {
+        "id": "3790749c-9764-4266-b5cb-4538a36ba36f",
+        "title": "تم استخدام بطاقتك",
+        "message": "استخدمت بطاقتك في شراء 1 مشروع من السلة.",
+        "metadata": {
+          "attemptId": null,
+          "amount": 3400,
+          "purposeLabel": "شراء 1 مشروع من السلة"
+        },
+        "unread": false,
+        "createdAt": "2026-05-19T15:25:24.613Z"
+      }
+    ],
+    "walletCardUsageLog": [
+      {
+        "id": "cd46c934-abde-4750-b904-eecab3391de2",
+        "status": "completed",
+        "amount": 3400,
+        "buyerUserId": "e809661f-3c95-4777-995a-ac358e92fc5f",
+        "buyerName": "ahmed samir",
+        "purposeLabel": "شراء 1 مشروع من السلة",
+        "note": "تم الدفع مباشرة باستخدام بطاقتك الشخصية",
+        "attemptId": null,
+        "createdAt": "2026-05-19T15:25:24.613Z",
+        "updatedAt": "2026-05-19T15:25:24.613Z"
+      }
+    ],
     "notifications": [
+      {
+        "id": "4535edbf-add9-4b75-a53f-860b0b216f56",
+        "type": "purchase-approved",
+        "title": "تمت الموافقة على طلبك",
+        "message": "تمت الموافقة على شراء ChatForge ويمكنك متابعة الطلب من مشترياتي.",
+        "metadata": {
+          "purchaseId": "59cc5e7d-b9dd-448b-8259-ed1b4f34f8cc",
+          "orderId": "18b191ea-5965-445c-9295-eab4c1bf8080",
+          "projectTitle": "ChatForge"
+        },
+        "unread": false,
+        "createdAt": "2026-05-19T15:25:36.661Z"
+      },
       {
         "id": "55514626-622f-4fde-ac2a-47ce17976899",
         "type": "abandoned-cart",
@@ -586,13 +678,16 @@
           "url": "/cart",
           "itemCount": 1
         },
-        "unread": true,
+        "unread": false,
         "createdAt": "2026-05-09T17:10:25.024Z"
       }
     ],
     "googleId": "116427301876856242996",
     "authProvider": "google",
     "recentlyViewedProjectIds": [
+      "31c57f4a-b3df-4666-a0d2-9297a19469dc"
+    ],
+    "wishlistProjectIds": [
       "31c57f4a-b3df-4666-a0d2-9297a19469dc"
     ]
   },
@@ -741,6 +836,18 @@
     "walletCardNotifications": [],
     "notifications": [
       {
+        "id": "8ff33c19-9015-4126-872e-ba5810ca5f99",
+        "type": "abandoned-cart",
+        "title": "سلتك ما زالت بانتظارك",
+        "message": "لديك 2 عناصر في السلة. أكمل الشراء الآن.",
+        "metadata": {
+          "url": "/cart",
+          "itemCount": 2
+        },
+        "unread": false,
+        "createdAt": "2026-05-16T17:01:49.325Z"
+      },
+      {
         "id": "acc23da5-94cc-4e6c-a051-14214d11773c",
         "type": "abandoned-cart",
         "title": "سلتك ما زالت بانتظارك",
@@ -757,9 +864,9 @@
     "googleId": "102550036950743721733",
     "authProvider": "google",
     "recentlyViewedProjectIds": [
+      "2828e22e-e740-4830-952a-99c968f2e19a",
       "834550b7-f9d1-4104-823f-7353c49719bd",
       "3617b9ea-425e-49c6-bb67-a04952ac921e",
-      "2828e22e-e740-4830-952a-99c968f2e19a",
       "c208d7ef-c2fa-46f9-ba21-2d69006dbb87"
     ],
     "wishlistProjectIds": [
@@ -776,7 +883,7 @@
     "password": "$2a$10$awqqGbpyTgwur/d9y5VajuUZottGu5DvugsWRJNx5RuGans/Szh1i",
     "role": "user",
     "referralCode": "2A760C1C",
-    "walletBalance": 5943.4,
+    "walletBalance": 5451,
     "walletCardNumber": "2198097813280750",
     "walletPaymentPasswordHash": "$2a$10$tg/mf2kvcTslKijg5HcKiuEOegP4830PEP7ocDZGnIrLUv7LABzPK",
     "referredBy": null,
@@ -798,6 +905,18 @@
       }
     ],
     "notifications": [
+      {
+        "id": "eafeb9ac-5dd0-48a8-ba36-8514cb23876b",
+        "type": "abandoned-cart",
+        "title": "سلتك ما زالت بانتظارك",
+        "message": "لديك 2 عناصر في السلة. أكمل الشراء الآن.",
+        "metadata": {
+          "url": "/cart",
+          "itemCount": 2
+        },
+        "unread": false,
+        "createdAt": "2026-06-12T13:27:45.189Z"
+      },
       {
         "id": "0ea89ea4-3dce-444b-a26a-ad8f50a407b2",
         "type": "abandoned-cart",
@@ -859,7 +978,8 @@
       "2828e22e-e740-4830-952a-99c968f2e19a",
       "31c57f4a-b3df-4666-a0d2-9297a19469dc"
     ],
-    "walletCardFrozen": false
+    "walletCardFrozen": false,
+    "supportMode": "human"
   },
   {
     "id": "9cdd341f-c043-4e10-80be-f2ec4167208c",
@@ -879,7 +999,11 @@
     "walletCardSpendingLimit": null,
     "walletCardNotifications": [],
     "notifications": [],
-    "walletCardUsageLog": []
+    "walletCardUsageLog": [],
+    "recentlyViewedProjectIds": [
+      "2828e22e-e740-4830-952a-99c968f2e19a"
+    ],
+    "supportMode": "human"
   },
   {
     "id": "ccf671dd-44c8-4c3b-a674-d36a413381ae",
@@ -936,6 +1060,19 @@
       }
     ],
     "notifications": [
+      {
+        "id": "5153a5d7-d648-4b06-9e21-9965f1394cc0",
+        "type": "purchase-approved",
+        "title": "تمت الموافقة على طلبك",
+        "message": "تمت الموافقة على شراء  قالب بورتفوليو حديث  ويمكنك متابعة الطلب من مشترياتي.",
+        "metadata": {
+          "purchaseId": "6c2ad518-3657-4d61-9e52-16265e7e9d24",
+          "orderId": "0d10b8ff-07eb-439f-aab1-a73753c01ff8",
+          "projectTitle": " قالب بورتفوليو حديث "
+        },
+        "unread": false,
+        "createdAt": "2026-05-24T10:12:00.847Z"
+      },
       {
         "id": "1bda1caf-0b2c-44c7-85b1-30262ec6d21c",
         "type": "purchase-approved",
@@ -1008,7 +1145,8 @@
       "2828e22e-e740-4830-952a-99c968f2e19a",
       "c3fb95ed-e047-46ec-a400-3f08d3964e7c",
       "31c57f4a-b3df-4666-a0d2-9297a19469dc"
-    ]
+    ],
+    "supportMode": "human"
   },
   {
     "id": "098f2217-54cf-4d6d-9838-2ba657b533bd",
@@ -1160,6 +1298,44 @@
     "recentlyViewedProjectIds": [
       "834550b7-f9d1-4104-823f-7353c49719bd",
       "3617b9ea-425e-49c6-bb67-a04952ac921e"
+    ]
+  },
+  {
+    "id": "298cf8d6-fc81-465c-bfdf-fe8d44139c60",
+    "name": "hgjv",
+    "email": "hgcfygh@4.com",
+    "password": "$2a$10$omnG4ChZK2c7KbV/c/D9/u0sAFUyxZ0AWIet0aOI6PQpA4wdFZKF2",
+    "role": "user",
+    "referralCode": "BE98C876",
+    "walletBalance": 0,
+    "walletCardNumber": "0034086644499010",
+    "walletPaymentPasswordHash": "$2a$10$P9NYhHRdZo6.zeu/hqqnyeXV5EQAknpGKJPfcZnPeg5ieHBozVHhG",
+    "referredBy": null,
+    "loyaltyPoints": 0,
+    "createdAt": "2026-06-02T15:54:05.587Z",
+    "walletCardSpendingLimit": null,
+    "walletCardNotifications": [],
+    "notifications": [
+      {
+        "id": "5edf7ce2-053f-4faf-b100-567388143dbe",
+        "type": "abandoned-cart",
+        "title": "سلتك ما زالت بانتظارك",
+        "message": "لديك 1 عنصر في السلة. أكمل الشراء الآن.",
+        "metadata": {
+          "url": "/cart",
+          "itemCount": 1
+        },
+        "unread": true,
+        "createdAt": "2026-06-02T16:11:06.359Z"
+      }
+    ],
+    "walletCardUsageLog": [],
+    "wishlistProjectIds": [
+      "31c57f4a-b3df-4666-a0d2-9297a19469dc",
+      "834550b7-f9d1-4104-823f-7353c49719bd"
+    ],
+    "recentlyViewedProjectIds": [
+      "2828e22e-e740-4830-952a-99c968f2e19a"
     ]
   }
 ]

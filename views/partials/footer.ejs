@@ -20,6 +20,24 @@
 <script src="/js/theme.js"></script>
 <script src="/js/site-nav.js"></script>
 
+<%
+  const speculationPrerenderUrls = ['/', '/subscriptions', '/community', '/cart', '/my-purchases', '/notifications', '/ai-advisor'];
+  const speculationPrefetchUrls = ['/', '/subscriptions', '/community', '/cart', '/my-purchases', '/notifications', '/ai-advisor', '/login', '/register'];
+  if (user && user.role === 'admin') {
+    speculationPrefetchUrls.push('/admin', '/admin/purchases', '/admin/subscription-plans', '/admin/users');
+  }
+%>
+<script type="speculationrules">
+{
+  "prerender": [
+    { "source": "list", "urls": <%- JSON.stringify(speculationPrerenderUrls) %> }
+  ],
+  "prefetch": [
+    { "source": "list", "urls": <%- JSON.stringify(speculationPrefetchUrls) %> }
+  ]
+}
+</script>
+
 <% if (user && user.role === 'admin') { %>
   <script src="/js/admin-nav.js"></script>
 <% } %>

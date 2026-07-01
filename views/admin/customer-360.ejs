@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer 360 - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/users">المستخدمين</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+        <div>
+          <h1 style="margin-bottom:6px;">Customer 360</h1>
+          <div style="opacity:.8;">
+            <strong><%= target.name || '-' %></strong> — <span class="ltr"><%= target.email || '-' %></span>
+          </div>
+          <div class="ltr" style="opacity:.65; font-size:12px; margin-top:4px;"><%= target.id %></div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a class="btn btn-sm btn-secondary" href="/admin/users">رجوع</a>
+          <a class="btn btn-sm btn-secondary" href="/admin/purchases">المشتريات</a>
+        </div>
+      </div>
+
+      <div class="stats-grid" style="margin-top:14px;">
+        <div class="stat-card"><div class="stat-value"><%= summary.purchasesTotal %></div><div class="stat-label">مشتريات</div></div>
+        <div class="stat-card"><div class="stat-value"><%= summary.purchasesApproved %></div><div class="stat-label">مقبولة</div></div>
+        <div class="stat-card"><div class="stat-value"><%= summary.purchasesPending %></div><div class="stat-label">معلقة</div></div>
+        <div class="stat-card"><div class="stat-value"><%= summary.purchasesRejected %></div><div class="stat-label">مرفوضة</div></div>
+        <div class="stat-card"><div class="stat-value"><%= summary.downloadsTotal %></div><div class="stat-label">تحميلات</div></div>
+        <div class="stat-card"><div class="stat-value"><%= summary.ipsCount %>/<%= summary.devicesCount %></div><div class="stat-label">IP / Devices</div></div>
+        <div class="stat-card"><div class="stat-value"><%= summary.loyaltyPoints %></div><div class="stat-label">نقاط</div></div>
+        <div class="stat-card"><div class="stat-value"><%= displayMoney(summary.walletBalance) %></div><div class="stat-label">رصيد محفظة</div></div>
+      </div>
+
+      <div class="glass-card" style="padding:14px; margin-top:14px;">
+        <h3 style="margin:0 0 10px;">الأجهزة (Push Tokens)</h3>
+        <% if (!pushDevices || pushDevices.length === 0) { %>
+          <div style="opacity:.75;">لا توجد أجهزة مسجلة.</div>
+        <% } else { %>
+          <div style="overflow:auto;">
+            <table class="admin-table">
+              <thead><tr><th>النوع</th><th>التوكن</th><th>آخر تحديث</th></tr></thead>
+              <tbody>
+                <% pushDevices.forEach(d => { %>
+                  <tr>
+                    <td><%= d.platform || '-' %></td>
+                    <td class="ltr" style="max-width:540px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><%= d.pushToken || '-' %></td>
+                    <td><%= d.updatedAt ? new Date(d.updatedAt).toLocaleString('ar-EG') : '-' %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="glass-card" style="padding:14px; margin-top:14px;">
+        <h3 style="margin:0 0 10px;">IPs / Devices (آخر 80 تحميل)</h3>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <div style="flex:1; min-width:240px;">
+            <div style="font-weight:800; margin-bottom:6px;">IPs</div>
+            <div class="ltr" style="opacity:.85;"><%= (uniqIps && uniqIps.length) ? uniqIps.join(' , ') : '-' %></div>
+          </div>
+          <div style="flex:1; min-width:240px;">
+            <div style="font-weight:800; margin-bottom:6px;">Devices</div>
+            <div style="opacity:.85;"><%= (uniqDevices && uniqDevices.length) ? uniqDevices.join(' , ') : '-' %></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card" style="padding:14px; margin-top:14px;">
+        <h3 style="margin:0 0 10px;">المشتريات (آخر 200)</h3>
+        <% if (!purchaseRows || purchaseRows.length === 0) { %>
+          <div style="opacity:.75;">لا توجد مشتريات.</div>
+        <% } else { %>
+          <div style="overflow:auto;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>المشروع</th>
+                  <th>الحالة</th>
+                  <th>السعر</th>
+                  <th>كوبون</th>
+                  <th>تاريخ</th>
+                  <th>فاتورة</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% purchaseRows.forEach(p => { %>
+                  <tr>
+                    <td class="ltr"><%= p.orderId || p.id %></td>
+                    <td><%= p.projectTitleResolved %></td>
+                    <td><%= p.status || '-' %></td>
+                    <td><%= displayMoney(Number(p.price || 0)) %></td>
+                    <td class="ltr"><%= p.couponCode || '-' %></td>
+                    <td><%= (p.approvedAt || p.purchasedAt || p.createdAt) ? new Date(p.approvedAt || p.purchasedAt || p.createdAt).toLocaleString('ar-EG') : '-' %></td>
+                    <td><%= p.invoiceNumber ? p.invoiceNumber : '-' %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="glass-card" style="padding:14px; margin-top:14px;">
+        <h3 style="margin:0 0 10px;">الرسائل (آخر 60)</h3>
+        <% if (!messagesForUser || messagesForUser.length === 0) { %>
+          <div style="opacity:.75;">لا توجد رسائل.</div>
+        <% } else { %>
+          <% messagesForUser.forEach(m => { %>
+            <div style="padding:10px 0; border-bottom:1px solid rgba(255,255,255,.08);">
+              <div style="opacity:.8; font-size:12px;">
+                <span class="ltr"><%= m.senderId %></span> → <span class="ltr"><%= m.receiverId %></span>
+                • <%= m.createdAt ? new Date(m.createdAt).toLocaleString('ar-EG') : '' %>
+              </div>
+              <div style="margin-top:6px; line-height:1.8;"><%= m.content || '' %></div>
+              <% if (m.purchaseId) { %>
+                <div style="opacity:.75; font-size:12px; margin-top:6px;">purchaseId: <span class="ltr"><%= m.purchaseId %></span></div>
+              <% } %>
+            </div>
+          <% }) %>
+        <% } %>
+      </div>
+
+      <div class="glass-card" style="padding:14px; margin-top:14px;">
+        <h3 style="margin:0 0 10px;">طلبات المشاريع المخصصة (آخر 60)</h3>
+        <% if (!customForUser || customForUser.length === 0) { %>
+          <div style="opacity:.75;">لا توجد طلبات.</div>
+        <% } else { %>
+          <div style="overflow:auto;">
+            <table class="admin-table">
+              <thead><tr><th>العنوان</th><th>الحالة</th><th>السعر</th><th>تاريخ</th></tr></thead>
+              <tbody>
+                <% customForUser.forEach(r => { %>
+                  <tr>
+                    <td><%= r.title || r.id %></td>
+                    <td><%= r.status || '-' %></td>
+                    <td><%= displayMoney(Number(r.price || 0)) %></td>
+                    <td><%= r.createdAt ? new Date(r.createdAt).toLocaleString('ar-EG') : '-' %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="glass-card" style="padding:14px; margin-top:14px;">
+        <h3 style="margin:0 0 10px;">سجل التحميلات (آخر 80)</h3>
+        <% if (!downloadForUser || downloadForUser.length === 0) { %>
+          <div style="opacity:.75;">لا توجد تحميلات.</div>
+        <% } else { %>
+          <div style="overflow:auto;">
+            <table class="admin-table">
+              <thead><tr><th>المشروع</th><th>IP</th><th>Device</th><th>وقت</th></tr></thead>
+              <tbody>
+                <% downloadForUser.forEach(e => { %>
+                  <tr>
+                    <td class="ltr"><%= e.projectId || '-' %></td>
+                    <td class="ltr"><%= e.ip || '-' %></td>
+                    <td><%= e.device || '-' %></td>
+                    <td><%= e.createdAt ? new Date(e.createdAt).toLocaleString('ar-EG') : '-' %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } %>
+      </div>
+
+    </main>
+  </div>
+</body>
+</html>

@@ -26,5 +26,40 @@
     "cartUpdatedAt": "2026-05-13T15:32:40.971Z",
     "itemCount": 1,
     "sentAt": "2026-05-13T15:35:43.062Z"
+  },
+  {
+    "id": "80a9a47a-049c-4d2f-8ae6-6688dab116fc",
+    "userId": "2324abb2-fc85-459e-b20a-c01220fae4e8",
+    "cartUpdatedAt": "2026-05-13T16:08:06.191Z",
+    "itemCount": 2,
+    "sentAt": "2026-05-16T17:01:49.327Z"
+  },
+  {
+    "id": "77cbb65b-8433-4418-aacc-227d0142337e",
+    "userId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "cartUpdatedAt": "2026-06-02T15:15:17.310Z",
+    "itemCount": 1,
+    "sentAt": "2026-06-02T15:25:13.203Z"
+  },
+  {
+    "id": "c5a34901-6d17-4165-bb1e-a7d305d48f29",
+    "userId": "298cf8d6-fc81-465c-bfdf-fe8d44139c60",
+    "cartUpdatedAt": "2026-06-02T16:05:56.277Z",
+    "itemCount": 1,
+    "sentAt": "2026-06-02T16:11:06.361Z"
+  },
+  {
+    "id": "0529f648-e668-4587-a508-bb75943cf799",
+    "userId": "30f6356d-f109-439a-b18f-aa11196bcc99",
+    "cartUpdatedAt": "2026-06-04T09:57:00.928Z",
+    "itemCount": 1,
+    "sentAt": "2026-06-04T10:06:15.772Z"
+  },
+  {
+    "id": "c3f54006-0383-40b3-93da-9ad33db9e610",
+    "userId": "09a629dc-10d4-4b75-9eb2-efe5b4bd1aea",
+    "cartUpdatedAt": "2026-06-04T11:06:24.375Z",
+    "itemCount": 2,
+    "sentAt": "2026-06-12T13:27:45.191Z"
   }
 ]

@@ -1764,6 +1764,7 @@ const DATA_DIR = IS_VERCEL ? path.join(RUNTIME_ROOT_DIR, 'data') : BUNDLED_DATA_
 const UPLOADS_DIR = IS_VERCEL ? path.join(RUNTIME_ROOT_DIR, 'uploads') : BUNDLED_UPLOADS_DIR;
 const MEETING_RECORDINGS_DIR = path.join(UPLOADS_DIR, 'meeting-recordings');
 const ADMIN_TEAM_UPLOADS_DIR = path.join(UPLOADS_DIR, 'admin-team');
+const SUPPORT_ATTACHMENTS_DIR = path.join(UPLOADS_DIR, 'support-attachments');
 const PRIVATE_UPLOADS_DIR = IS_VERCEL ? path.join(RUNTIME_ROOT_DIR, 'private_uploads') : BUNDLED_PRIVATE_UPLOADS_DIR;
 const COMMUNITY_MEDIA_DIR = path.join(UPLOADS_DIR, 'community-media');
 const COMMUNITY_CVS_DIR = path.join(PRIVATE_UPLOADS_DIR, 'community-cvs');
@@ -1779,7 +1780,7 @@ const copyFileIfMissing = (sourcePath, targetPath) => {
 };
 
 // Ensure directories exist
-[DATA_DIR, UPLOADS_DIR, MEETING_RECORDINGS_DIR, ADMIN_TEAM_UPLOADS_DIR, PRIVATE_UPLOADS_DIR, COMMUNITY_MEDIA_DIR, COMMUNITY_CVS_DIR].forEach(ensureDirectory);
+[DATA_DIR, UPLOADS_DIR, MEETING_RECORDINGS_DIR, ADMIN_TEAM_UPLOADS_DIR, SUPPORT_ATTACHMENTS_DIR, PRIVATE_UPLOADS_DIR, COMMUNITY_MEDIA_DIR, COMMUNITY_CVS_DIR].forEach(ensureDirectory);
 
 if (IS_VERCEL && fs.existsSync(BUNDLED_DATA_DIR)) {
   fs.readdirSync(BUNDLED_DATA_DIR).forEach((entry) => {
@@ -2378,17 +2379,23 @@ const getActiveSubscriptionForUser = ({ userId }) => {
 
 const getSubscriptionPlanById = ({ planId }) => {
   if (!planId) return null;
-  const plans = db.subscriptionPlans();
+  const plans = ensureSubscriptionPlans();
   return plans.find(p => p && p.id === planId && p.active) || null;
+};
+
+const normalizeSubscriptionTier = (planId) => {
+  const value = String(planId || '').toLowerCase();
+  if (value === 'premium' || value === 'business') return 'business';
+  if (value === 'basic' || value === 'starter') return 'starter';
+  if (value === 'pro') return 'pro';
+  return 'none';
 };
 
 const getUserSubscriptionTier = ({ sessionUser }) => {
   if (!sessionUser || sessionUser.role !== 'user') return 'none';
   const sub = sessionUser.subscription;
   if (!sub || sub.status !== 'active') return 'none';
-  if (sub.planId === 'premium') return 'premium';
-  if (sub.planId === 'basic') return 'basic';
-  return 'none';
+  return normalizeSubscriptionTier(sub.planId);
 };
 
 const isProjectVisibleToUser = ({ project, sessionUser }) => {
@@ -2397,8 +2404,10 @@ const isProjectVisibleToUser = ({ project, sessionUser }) => {
   if (visibility === 'public') return true;
 
   const tier = getUserSubscriptionTier({ sessionUser });
-  if (visibility === 'basic') return tier === 'basic' || tier === 'premium';
-  if (visibility === 'premium') return tier === 'premium';
+  if (visibility === 'subscribers') return tier !== 'none';
+  if (visibility === 'starter' || visibility === 'basic') return tier === 'starter' || tier === 'pro' || tier === 'business';
+  if (visibility === 'pro') return tier === 'pro' || tier === 'business';
+  if (visibility === 'business' || visibility === 'premium') return tier === 'business';
   return true;
 };
 
@@ -2512,8 +2521,9 @@ const getRecentlyViewedProjects = ({ req, availableProjects }) => {
 
 const getSubscriberDiscountPercent = ({ sessionUser }) => {
   const tier = getUserSubscriptionTier({ sessionUser });
-  if (tier === 'premium') return 20;
-  if (tier === 'basic') return 10;
+  if (tier === 'business') return 30;
+  if (tier === 'pro') return 20;
+  if (tier === 'starter') return 10;
   return 0;
 };
 
@@ -2906,6 +2916,36 @@ const summarizeCart = ({ cart, couponCode, sessionUser }) => {
   };
 };
 
+const buildMembershipBoosters = ({ summary, sessionUser }) => {
+  const baseAfterCoupon = Math.max(0, Math.round((Number(summary.totalBefore || 0) - Number(summary.couponDiscount || 0)) * 100) / 100);
+  const currentTier = getUserSubscriptionTier({ sessionUser });
+  const rank = (tier) => ({ none: 0, starter: 1, pro: 2, business: 3 }[tier] || 0);
+  const discountByTier = { starter: 10, pro: 20, business: 30 };
+
+  return ensureSubscriptionPlans()
+    .filter(plan => plan && plan.active)
+    .map((plan) => {
+      const tier = normalizeSubscriptionTier(plan.id);
+      const discountPercent = discountByTier[tier] || 0;
+      const savings = Math.round((baseAfterCoupon * (discountPercent / 100)) * 100) / 100;
+      const planPrice = Number(plan.price || 0);
+      const netBenefit = Math.round((savings - planPrice) * 100) / 100;
+      return {
+        planId: plan.id,
+        planName: plan.name,
+        tier,
+        discountPercent,
+        savings,
+        planPrice,
+        netBenefit,
+        isCurrent: tier !== 'none' && tier === currentTier,
+        isUpgrade: rank(tier) > rank(currentTier),
+        isSmartDeal: savings >= planPrice && planPrice > 0
+      };
+    })
+    .filter(item => item.discountPercent > 0);
+};
+
 const calculateDiscount = ({ priceBefore, coupon }) => {
   const base = Number(priceBefore || 0);
   if (!coupon) return { discountAmount: 0, priceAfter: base };
@@ -3121,6 +3161,7 @@ const buildSessionUser = (user) => {
     walletCardFrozen: user.role === 'user' ? Boolean(user.walletCardFrozen) : false,
     loyaltyPoints: user.role === 'user' ? normalizeLoyaltyPoints(user.loyaltyPoints) : 0,
     unreadNotificationsCount: user.role === 'user' ? getUnreadNotificationCount(user) : 0,
+    supportMode: user.role === 'user' ? (user.supportMode || 'auto') : null,
     subscription: activeSubscription ? {
       planId: activeSubscription.planId,
       status: activeSubscription.status,
@@ -4370,6 +4411,44 @@ const ensurePresentationPlans = () => {
   return seeded;
 };
 
+const DEFAULT_SUBSCRIPTION_PLANS = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    price: 149,
+    durationDays: 30,
+    currency: 'USD',
+    active: true,
+    features: ['خصم 10% على المشتريات', 'وصول إلى المنتجات المخصصة للمشتركين', 'ملصق عضو مشترك', 'إشعارات حصرية بالمنتجات الجديدة', 'دعم أساسي', 'حفظ سجل الاشتراك']
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: 299,
+    durationDays: 30,
+    currency: 'USD',
+    active: true,
+    features: ['خصم 20% على المشتريات', 'وصول إلى منتجات Pro الحصرية', 'منتجات مبكرة قبل الإطلاق', 'كوبونات شهرية خاصة', 'أولوية أعلى في الدعم', 'مزايا إضافية للمشتركين']
+  },
+  {
+    id: 'business',
+    name: 'Business',
+    price: 499,
+    durationDays: 30,
+    currency: 'USD',
+    active: true,
+    features: ['خصم 30% على المشتريات', 'وصول إلى منتجات Business الحصرية', 'دعم VIP', 'أولوية في تنفيذ الطلبات', 'تحديثات وإصلاحات أسرع', 'محتوى وملفات قبل الجميع']
+  }
+];
+
+const ensureSubscriptionPlans = () => {
+  const current = db.subscriptionPlans();
+  if (Array.isArray(current) && current.length) return current;
+  const seeded = cloneDeep(DEFAULT_SUBSCRIPTION_PLANS);
+  db.saveSubscriptionPlans(seeded);
+  return seeded;
+};
+
 const getActivePresentationSubscriptionForUser = ({ userId }) => {
   if (!userId) return null;
   const subscriptions = db.presentationSubscriptions();
@@ -4981,6 +5060,18 @@ const adminTeamUploadStorage = multer.diskStorage({
   }
 });
 const adminTeamUpload = multer({ storage: adminTeamUploadStorage, limits: { fileSize: 200 * 1024 * 1024 } }); // 200MB max
+
+const supportAttachmentStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, SUPPORT_ATTACHMENTS_DIR),
+  filename: (req, file, cb) => {
+    const safeOriginal = (file.originalname || 'support-file').replace(/[^a-zA-Z0-9._-]+/g, '_');
+    cb(null, `${uuidv4()}-${safeOriginal}`);
+  }
+});
+const supportAttachmentUpload = multer({
+  storage: supportAttachmentStorage,
+  limits: { fileSize: 200 * 1024 * 1024 }
+});
 
 const communityMediaStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, COMMUNITY_MEDIA_DIR),
@@ -7522,7 +7613,7 @@ app.get('/api/invoice/:orderId.pdf', (req, res) => {
 
 // Mobile API - Subscriptions
 app.get('/api/subscriptions/plans', requireApiUserAuth, (req, res) => {
-  const plans = db.subscriptionPlans().filter(p => p && p.active);
+  const plans = ensureSubscriptionPlans().filter(p => p && p.active);
   const coupons = db.subscriptionCoupons().filter(c => c && c.active);
   const activeSubscription = getActiveSubscriptionForUser({ userId: req.apiUser.id });
   res.json({ plans, coupons, activeSubscription });
@@ -7531,7 +7622,7 @@ app.get('/api/subscriptions/plans', requireApiUserAuth, (req, res) => {
 app.post('/api/subscriptions/subscribe', requireApiUserAuth, (req, res) => {
   const { planId, couponCode } = req.body;
   
-  const plans = db.subscriptionPlans().filter(p => p && p.active);
+  const plans = ensureSubscriptionPlans().filter(p => p && p.active);
   const plan = plans.find(p => p.id === planId);
   if (!plan) return res.status(400).json({ error: 'الخطة غير صحيحة' });
 
@@ -8437,12 +8528,14 @@ app.get('/cart', requireAuth, (req, res) => {
 
   const couponCode = (req.query.couponCode || '').toString();
   const summary = summarizeCart({ cart, couponCode, sessionUser: req.session.user });
+  const membershipBoosters = buildMembershipBoosters({ summary, sessionUser: req.session.user });
   const activeCouponPromos = getActiveCouponPromoCards(db.coupons(), getCouponEligibility);
 
   res.render('cart', {
     user: req.session.user,
     cart,
     summary,
+    membershipBoosters,
     couponCode,
     activeCouponPromos,
     walletCardNumber: currentUser ? formatWalletCardNumber(currentUser.walletCardNumber) : '',
@@ -8895,7 +8988,7 @@ app.get('/my-purchases', requireAuth, (req, res) => {
     };
   });
   const invoices = db.invoices().filter(i => i && i.userId === req.session.user.id);
-  const subscriptionPlans = db.subscriptionPlans();
+  const subscriptionPlans = ensureSubscriptionPlans();
   const subscriptions = db.subscriptions().filter(s => s && s.userId === req.session.user.id);
   const subscriptionPayments = db.subscriptionPayments().filter(p => p && p.userId === req.session.user.id);
   const walletTopups = db.walletTopups()
@@ -10186,6 +10279,55 @@ app.get('/admin/command-center', requireAdmin, (req, res) => {
   });
 });
 
+app.get('/admin/support-load', requireAdmin, (req, res) => {
+  const messages = db.messages().filter(Boolean);
+  const appointmentsData = migrateAppointmentsBookingsMeetingLinks();
+  const bookings = (appointmentsData && Array.isArray(appointmentsData.bookings)) ? appointmentsData.bookings : [];
+  const customProjects = db.customProjectRequests().filter(Boolean);
+
+  const now = Date.now();
+  const sinceDays = 14;
+  const sinceTs = now - (sinceDays * 24 * 60 * 60 * 1000);
+  const byHour = Array.from({ length: 24 }, (_, hour) => ({ hour, score: 0, messages: 0, bookings: 0, custom: 0 }));
+
+  const addAt = (iso, kind) => {
+    const ts = Date.parse(iso || 0);
+    if (!Number.isFinite(ts) || ts < sinceTs) return;
+    const h = new Date(ts).getHours();
+    const row = byHour[h];
+    if (!row) return;
+    if (kind === 'message') { row.messages += 1; row.score += 1; }
+    if (kind === 'booking') { row.bookings += 1; row.score += 2; }
+    if (kind === 'custom') { row.custom += 1; row.score += 3; }
+  };
+
+  messages.forEach((m) => addAt(m.createdAt, 'message'));
+  bookings.forEach((b) => addAt(b.createdAt || b.updatedAt || b.slotStart, 'booking'));
+  customProjects.forEach((c) => addAt(c.createdAt || c.updatedAt, 'custom'));
+
+  const ranked = byHour
+    .map((r) => ({ ...r, level: r.score >= 18 ? 'peak' : r.score >= 9 ? 'busy' : r.score >= 4 ? 'normal' : 'low' }))
+    .sort((a, b) => b.score - a.score);
+
+  const topPeak = ranked.slice(0, 6);
+  const recommendations = topPeak.map((slot) => {
+    const needed = slot.level === 'peak' ? 3 : slot.level === 'busy' ? 2 : 1;
+    return {
+      hour: slot.hour,
+      level: slot.level,
+      neededAdmins: needed,
+      reason: `رسائل ${slot.messages} | حجوزات ${slot.bookings} | طلبات مخصصة ${slot.custom}`
+    };
+  });
+
+  res.render('admin/support-load', {
+    user: req.session.user,
+    sinceDays,
+    byHour,
+    recommendations
+  });
+});
+
 app.get('/admin/live-feed', requireAdmin, (req, res) => {
   const audit = db.adminAuditLog();
   const seedEvents = (Array.isArray(audit) ? audit : [])
@@ -10202,6 +10344,62 @@ app.get('/admin/live-feed', requireAdmin, (req, res) => {
       createdAt: entry.createdAt
     }));
   res.render('admin/live-feed', { user: req.session.user, seedEvents, maxEvents: MAX_LIVE_FEED_EVENTS });
+});
+
+app.get('/admin/audit-replay', requireAdmin, (req, res) => {
+  const audit = Array.isArray(db.adminAuditLog()) ? db.adminAuditLog() : [];
+  const entityFilter = String(req.query.entity || '').trim().toLowerCase();
+  const actionFilter = String(req.query.action || '').trim().toLowerCase();
+
+  const rows = audit
+    .filter((entry) => {
+      if (entityFilter && String(entry.entity || '').toLowerCase() !== entityFilter) return false;
+      if (actionFilter && String(entry.action || '').toLowerCase() !== actionFilter) return false;
+      return true;
+    })
+    .slice(0, 500);
+
+  const entities = Array.from(new Set(audit.map((e) => String(e.entity || '')).filter(Boolean))).sort();
+  const actions = Array.from(new Set(audit.map((e) => String(e.action || '')).filter(Boolean))).sort();
+
+  res.render('admin/audit-replay', {
+    user: req.session.user,
+    rows,
+    filters: { entity: entityFilter, action: actionFilter },
+    entities,
+    actions
+  });
+});
+
+app.get('/admin/audit-replay.csv', requireAdmin, (req, res) => {
+  const audit = Array.isArray(db.adminAuditLog()) ? db.adminAuditLog() : [];
+  const entityFilter = String(req.query.entity || '').trim().toLowerCase();
+  const actionFilter = String(req.query.action || '').trim().toLowerCase();
+  const rows = audit
+    .filter((entry) => {
+      if (entityFilter && String(entry.entity || '').toLowerCase() !== entityFilter) return false;
+      if (actionFilter && String(entry.action || '').toLowerCase() !== actionFilter) return false;
+      return true;
+    })
+    .slice(0, 2000);
+
+  const esc = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+  const header = ['createdAt', 'adminEmail', 'action', 'entity', 'entityId', 'ip'];
+  const lines = [header.join(',')];
+  for (const r of rows) {
+    lines.push([
+      esc(r.createdAt || ''),
+      esc(r.adminEmail || ''),
+      esc(r.action || ''),
+      esc(r.entity || ''),
+      esc(r.entityId || ''),
+      esc(r.ip || '')
+    ].join(','));
+  }
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename=\"audit-replay.csv\"');
+  res.send('\uFEFF' + lines.join('\n'));
 });
 
 // Admin Payments Inbox (failures / disputes / refunds)
@@ -11098,6 +11296,7 @@ app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), 
   try {
     const { title, description, price, category, technologies } = req.body;
     const priceUsd = Number(price);
+    const priceGuardConfirmed = String(req.body.priceGuardConfirm || '') === '1';
     const visibility = (req.body.visibility || 'public').trim();
     const saleType = (req.body.saleType || '').trim();
     const saleValue = Number(req.body.saleValue || 0);
@@ -11105,6 +11304,15 @@ app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), 
     const saleDurationDays = normalizeOptionalDurationDays(req.body.saleDurationDays);
     const saleExpiresAt = resolveCouponExpiry({ expiresAt: parseOptionalIsoDate(req.body.saleExpiresAt), durationDays: saleDurationDays });
     const saleActive = Boolean(req.body.saleActive) && (saleType === 'percent' || saleType === 'fixed') && Number.isFinite(saleValue) && saleValue > 0;
+
+    // Price Guard: prevent obvious pricing mistakes unless explicitly confirmed.
+    const priceGuardReasons = [];
+    if (!Number.isFinite(priceUsd) || priceUsd <= 0) priceGuardReasons.push('السعر 0 أو غير صحيح');
+    if (saleActive && saleType === 'percent' && saleValue > 90) priceGuardReasons.push('خصم نسبة أكبر من 90%');
+    if (saleActive && saleType === 'fixed' && Number.isFinite(priceUsd) && saleValue >= priceUsd) priceGuardReasons.push('خصم ثابت أكبر/يساوي السعر');
+    if (priceGuardReasons.length && !priceGuardConfirmed) {
+      return res.redirect(`/admin/projects/new?error=${encodeURIComponent('Price Guard: ' + priceGuardReasons.join(' - ') + '. اضغط حفظ مرة أخرى لتأكيد.')}`);
+    }
     
     const projects = db.projects();
     
@@ -11130,7 +11338,7 @@ app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), 
       price: convertUsdToEgp(priceUsd),
       category,
       technologies: technologies ? technologies.split(',').map(t => t.trim()) : [],
-      visibility: (visibility === 'basic' || visibility === 'premium') ? visibility : 'public',
+      visibility: (visibility === 'subscribers' || visibility === 'starter' || visibility === 'pro' || visibility === 'business' || visibility === 'basic' || visibility === 'premium') ? visibility : 'public',
       downloadsLocked: Boolean(req.body.downloadsLocked),
       downloadsLockReason: normalizeOptionalText(req.body.downloadsLockReason) || null,
       downloadsLockedAt: Boolean(req.body.downloadsLocked) ? new Date().toISOString() : null,
@@ -11189,6 +11397,7 @@ app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.project
   try {
     const { title, description, price, category, technologies } = req.body;
     const priceUsd = Number(price);
+    const priceGuardConfirmed = String(req.body.priceGuardConfirm || '') === '1';
     const saleType = (req.body.saleType || '').trim();
     const saleValue = Number(req.body.saleValue || 0);
     const saleOccasion = normalizeOptionalText(req.body.saleOccasion);
@@ -11199,6 +11408,15 @@ app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.project
     const index = projects.findIndex(p => p.id === req.params.id);
     
     if (index === -1) return res.status(404).send('Project not found');
+
+    // Price Guard: prevent obvious pricing mistakes unless explicitly confirmed.
+    const priceGuardReasons = [];
+    if (!Number.isFinite(priceUsd) || priceUsd <= 0) priceGuardReasons.push('السعر 0 أو غير صحيح');
+    if (saleActive && saleType === 'percent' && saleValue > 90) priceGuardReasons.push('خصم نسبة أكبر من 90%');
+    if (saleActive && saleType === 'fixed' && Number.isFinite(priceUsd) && saleValue >= priceUsd) priceGuardReasons.push('خصم ثابت أكبر/يساوي السعر');
+    if (priceGuardReasons.length && !priceGuardConfirmed) {
+      return res.redirect(`/admin/projects/${encodeURIComponent(req.params.id)}/edit?error=${encodeURIComponent('Price Guard: ' + priceGuardReasons.join(' - ') + '. اضغط حفظ مرة أخرى لتأكيد.')}`);
+    }
     
     // Handle images
     let images = projects[index].images || [];
@@ -11251,7 +11469,7 @@ app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.project
       price: convertUsdToEgp(priceUsd),
       category,
       technologies: technologies ? technologies.split(',').map(t => t.trim()) : [],
-      visibility: (((req.body.visibility || projects[index].visibility || 'public').trim() === 'basic' || (req.body.visibility || projects[index].visibility || 'public').trim() === 'premium')
+      visibility: (((req.body.visibility || projects[index].visibility || 'public').trim() === 'subscribers' || (req.body.visibility || projects[index].visibility || 'public').trim() === 'starter' || (req.body.visibility || projects[index].visibility || 'public').trim() === 'pro' || (req.body.visibility || projects[index].visibility || 'public').trim() === 'business' || (req.body.visibility || projects[index].visibility || 'public').trim() === 'basic' || (req.body.visibility || projects[index].visibility || 'public').trim() === 'premium')
         ? (req.body.visibility || projects[index].visibility || 'public').trim()
         : 'public'),
       downloadsLocked: Boolean(req.body.downloadsLocked),
@@ -11404,6 +11622,65 @@ app.get('/admin/purchases', requireAdminPermission(ADMIN_PERMISSIONS.purchases),
   const projects = db.projects();
   const invoices = db.invoices();
   res.render('admin/purchases', { purchases, users, projects, invoices, user: req.session.user });
+});
+
+app.get('/admin/purchases-export.csv', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
+  const purchases = Array.isArray(db.purchases()) ? db.purchases() : [];
+  const users = Array.isArray(db.users()) ? db.users() : [];
+  const projects = Array.isArray(db.projects()) ? db.projects() : [];
+  const invoices = Array.isArray(db.invoices()) ? db.invoices() : [];
+
+  const userById = new Map(users.map((u) => [u.id, u]));
+  const projectById = new Map(projects.map((p) => [p.id, p]));
+  const invoiceByOrderId = new Map(invoices.map((inv) => [inv.orderId, inv]));
+
+  const esc = (v) => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+  const header = [
+    'purchase_id', 'order_id', 'status', 'created_at', 'approved_at', 'rejected_at',
+    'project_id', 'project_title', 'project_category',
+    'user_id', 'user_name', 'user_email', 'user_role',
+    'price', 'wallet_debit_amount', 'discount_amount', 'coupon_code', 'referral_code',
+    'invoice_number', 'invoice_currency', 'invoice_payment_method', 'invoice_payment_account', 'invoice_card_mask',
+    'download_locked', 'download_lock_reason'
+  ];
+
+  const lines = [header.join(',')];
+  for (const p of purchases) {
+    const u = userById.get(p.userId) || null;
+    const proj = projectById.get(p.projectId) || null;
+    const inv = invoiceByOrderId.get(p.orderId) || null;
+    lines.push([
+      esc(p.id || ''),
+      esc(p.orderId || ''),
+      esc(p.status || ''),
+      esc(p.createdAt || ''),
+      esc(p.approvedAt || ''),
+      esc(p.rejectedAt || ''),
+      esc(p.projectId || ''),
+      esc(p.projectTitle || (proj && proj.title) || ''),
+      esc((proj && proj.category) || ''),
+      esc((u && u.id) || p.userId || ''),
+      esc((u && u.name) || ''),
+      esc((u && u.email) || ''),
+      esc((u && u.role) || ''),
+      esc(Number(p.price || 0)),
+      esc(Number(p.walletDebitAmount || 0)),
+      esc(Number(p.discountAmount || 0)),
+      esc(p.couponCode || ''),
+      esc(p.referralCode || ''),
+      esc((inv && (inv.number || inv.id)) || ''),
+      esc((inv && inv.currency) || ''),
+      esc((inv && inv.paymentMethod) || ''),
+      esc((inv && inv.paidFromAccount) || ''),
+      esc((inv && inv.cardMasked) || ''),
+      esc(Boolean(p.downloadLocked)),
+      esc(p.downloadLockReason || '')
+    ].join(','));
+  }
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename=\"all-sales-export.csv\"');
+  res.send('\uFEFF' + lines.join('\n'));
 });
 
 app.post('/admin/projects/:id/lock-downloads', requireAdminPermission(ADMIN_PERMISSIONS.projects), (req, res) => {
@@ -11701,6 +11978,80 @@ app.get('/admin/coupons', requireAdminPermission(ADMIN_PERMISSIONS.coupons), (re
   res.render('admin/coupons', { coupons, user: req.session.user, error: null });
 });
 
+app.get('/admin/coupon-fraud', requireAdminPermission(ADMIN_PERMISSIONS.coupons), (req, res) => {
+  const users = db.users();
+  const purchases = db.purchases();
+  const now = Date.now();
+  const oneDayAgo = now - (24 * 60 * 60 * 1000);
+  const sevenDaysAgo = now - (7 * 24 * 60 * 60 * 1000);
+
+  const userLabelById = new Map(users.filter(Boolean).map((u) => [u.id, u.email || u.name || u.id]));
+  const rowsByCoupon = new Map();
+
+  for (const p of purchases) {
+    if (!p || p.status !== 'approved') continue;
+    const code = normalizeCouponCode(p.couponCode);
+    if (!code) continue;
+    const ts = Date.parse(p.approvedAt || p.purchasedAt || p.createdAt || 0);
+    if (!Number.isFinite(ts)) continue;
+
+    if (!rowsByCoupon.has(code)) {
+      rowsByCoupon.set(code, {
+        code,
+        totalUses7d: 0,
+        uses24h: 0,
+        totalDiscount: 0,
+        users: new Map()
+      });
+    }
+    const row = rowsByCoupon.get(code);
+    if (ts >= sevenDaysAgo) row.totalUses7d += 1;
+    if (ts >= oneDayAgo) row.uses24h += 1;
+    row.totalDiscount += Number(p.discountAmount || 0);
+    if (p.userId) {
+      row.users.set(p.userId, (row.users.get(p.userId) || 0) + 1);
+    }
+  }
+
+  const reports = Array.from(rowsByCoupon.values()).map((r) => {
+    const userEntries = Array.from(r.users.entries())
+      .sort((a, b) => b[1] - a[1]);
+    const topUser = userEntries[0] ? { userId: userEntries[0][0], count: userEntries[0][1], label: userLabelById.get(userEntries[0][0]) || userEntries[0][0] } : null;
+    const uniqueUsers = r.users.size;
+    const topUserShare = topUser && r.totalUses7d > 0 ? Math.round((topUser.count / r.totalUses7d) * 100) : 0;
+
+    let risk = 'low';
+    const reasons = [];
+    if (r.uses24h >= 12) reasons.push('استخدام مرتفع خلال 24 ساعة');
+    if (topUserShare >= 60 && r.totalUses7d >= 5) reasons.push('مستخدم واحد يهيمن على الاستخدام');
+    if (uniqueUsers <= 2 && r.totalUses7d >= 8) reasons.push('انتشار ضعيف للكوبون');
+    if (reasons.length >= 2) risk = 'high';
+    else if (reasons.length === 1) risk = 'medium';
+
+    return {
+      code: r.code,
+      totalUses7d: r.totalUses7d,
+      uses24h: r.uses24h,
+      uniqueUsers,
+      topUser,
+      topUserShare,
+      totalDiscount: Math.round(r.totalDiscount * 100) / 100,
+      risk,
+      reasons
+    };
+  })
+    .filter((r) => r.totalUses7d > 0)
+    .sort((a, b) => {
+      const score = (x) => (x.risk === 'high' ? 2 : x.risk === 'medium' ? 1 : 0);
+      return (score(b) - score(a)) || (b.totalUses7d - a.totalUses7d);
+    });
+
+  res.render('admin/coupon-fraud', {
+    user: req.session.user,
+    reports
+  });
+});
+
 // Admin - Subscription Coupons
 app.get('/admin/subscription-coupons', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionCoupons), (req, res) => {
   const coupons = db.subscriptionCoupons();
@@ -11774,7 +12125,7 @@ app.post('/admin/subscription-coupons/:id/delete', requireAdminPermission(ADMIN_
 // Admin - Subscription Reports
 app.get('/admin/subscription-reports', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionReports), (req, res) => {
   const users = db.users();
-  const plans = db.subscriptionPlans();
+  const plans = ensureSubscriptionPlans();
   const paymentsAll = db.subscriptionPayments();
 
   const fromStr = (req.query.from || '').trim();
@@ -11843,7 +12194,7 @@ app.get('/admin/subscription-reports', requireAdminPermission(ADMIN_PERMISSIONS.
 
 // Admin - Subscription Plans
 app.get('/admin/subscription-plans', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionPlans), (req, res) => {
-  const plans = db.subscriptionPlans();
+  const plans = ensureSubscriptionPlans();
   res.render('admin/subscription-plans', {
     user: req.session.user,
     plans,
@@ -11853,7 +12204,7 @@ app.get('/admin/subscription-plans', requireAdminPermission(ADMIN_PERMISSIONS.su
 });
 
 app.post('/admin/subscription-plans/:id', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionPlans), (req, res) => {
-  const plans = db.subscriptionPlans();
+  const plans = ensureSubscriptionPlans();
   const idx = plans.findIndex(p => p && p.id === req.params.id);
   if (idx === -1) return res.redirect('/admin/subscription-plans?error=' + encodeURIComponent('الخطة غير موجودة'));
 
@@ -11886,7 +12237,7 @@ app.post('/admin/subscription-plans/:id', requireAdminPermission(ADMIN_PERMISSIO
 });
 
 app.post('/admin/subscription-plans/:id/toggle', requireAdminPermission(ADMIN_PERMISSIONS.subscriptionPlans), (req, res) => {
-  const plans = db.subscriptionPlans();
+  const plans = ensureSubscriptionPlans();
   const idx = plans.findIndex(p => p && p.id === req.params.id);
   if (idx === -1) return res.redirect('/admin/subscription-plans?error=' + encodeURIComponent('الخطة غير موجودة'));
   plans[idx].active = !plans[idx].active;
@@ -11974,6 +12325,84 @@ app.post('/admin/reviews/:id/delete', requireAdmin, (req, res) => {
 app.get('/admin/users', requireAdminPermission(ADMIN_PERMISSIONS.users), (req, res) => {
   const users = db.users();
   res.render('admin/users', { users, user: req.session.user, success: req.query.success || null, error: req.query.error || null });
+});
+
+app.get('/admin/users/:id/360', requireAdminPermission(ADMIN_PERMISSIONS.users), (req, res) => {
+  const users = db.users();
+  const purchases = db.purchases();
+  const projects = db.projects();
+  const invoices = db.invoices();
+  const downloadEvents = db.downloadEvents();
+  const messages = db.messages();
+  const customRequests = db.customProjectRequests();
+
+  const target = users.find((u) => u && u.id === req.params.id) || null;
+  if (!target) return res.redirect('/admin/users?error=' + encodeURIComponent('المستخدم غير موجود'));
+
+  const purchasesForUser = (Array.isArray(purchases) ? purchases : []).filter((p) => p && (p.userId === target.id || p.payerUserId === target.id));
+  const projectsById = new Map((Array.isArray(projects) ? projects : []).filter(Boolean).map((p) => [p.id, p]));
+  const invoicesByOrderId = new Map((Array.isArray(invoices) ? invoices : []).filter(Boolean).map((inv) => [inv.orderId, inv]));
+
+  const downloadForUser = (Array.isArray(downloadEvents) ? downloadEvents : [])
+    .filter((e) => e && e.userId === target.id)
+    .slice()
+    .sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0))
+    .slice(0, 80);
+
+  const uniqIps = new Set(downloadForUser.map((e) => e.ip).filter(Boolean));
+  const uniqDevices = new Set(downloadForUser.map((e) => e.device).filter(Boolean));
+
+  const messagesForUser = (Array.isArray(messages) ? messages : [])
+    .filter((m) => m && (m.senderId === target.id || m.receiverId === target.id))
+    .slice()
+    .sort((a, b) => Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0))
+    .slice(0, 60);
+
+  const customForUser = (Array.isArray(customRequests) ? customRequests : [])
+    .filter((r) => r && r.userId === target.id)
+    .slice()
+    .sort((a, b) => Date.parse(b.createdAt || b.createdAt || 0) - Date.parse(a.createdAt || a.createdAt || 0))
+    .slice(0, 60);
+
+  const summary = {
+    purchasesTotal: purchasesForUser.length,
+    purchasesApproved: purchasesForUser.filter((p) => p.status === 'approved').length,
+    purchasesRejected: purchasesForUser.filter((p) => p.status === 'rejected').length,
+    purchasesPending: purchasesForUser.filter((p) => p.status === 'pending').length,
+    downloadsTotal: (Array.isArray(downloadEvents) ? downloadEvents : []).filter((e) => e && e.userId === target.id).length,
+    ipsCount: uniqIps.size,
+    devicesCount: uniqDevices.size,
+    loyaltyPoints: normalizeLoyaltyPoints(target.loyaltyPoints),
+    walletBalance: Math.round(Number(target.walletBalance || 0) * 100) / 100
+  };
+
+  const purchaseRows = purchasesForUser
+    .slice()
+    .sort((a, b) => Date.parse(b.approvedAt || b.purchasedAt || b.createdAt || 0) - Date.parse(a.approvedAt || a.purchasedAt || a.createdAt || 0))
+    .slice(0, 200)
+    .map((p) => {
+      const proj = projectsById.get(p.projectId) || null;
+      const inv = invoicesByOrderId.get(p.orderId) || null;
+      return {
+        ...p,
+        projectTitleResolved: p.projectTitle || (proj && proj.title) || p.projectId || '-',
+        invoiceNumber: inv ? (inv.number || inv.id) : null,
+        invoiceCurrency: inv ? inv.currency : null
+      };
+    });
+
+  res.render('admin/customer-360', {
+    user: req.session.user,
+    target,
+    summary,
+    purchaseRows,
+    downloadForUser,
+    uniqIps: Array.from(uniqIps).slice(0, 20),
+    uniqDevices: Array.from(uniqDevices).slice(0, 20),
+    messagesForUser,
+    customForUser,
+    pushDevices: Array.isArray(target.pushDevices) ? target.pushDevices.slice(0, 20) : []
+  });
 });
 
 app.post('/admin/users/:id/block', requireAdminPermission(ADMIN_PERMISSIONS.users), (req, res) => {
@@ -12521,7 +12950,8 @@ app.post('/admin/modifications/:id/complete', requireAdminPermission(ADMIN_PERMI
 app.get('/messages', requireAuth, (req, res) => {
   const messages = db.messages().filter(m => 
     (m.senderId === req.session.user.id && m.receiverId === 'admin') ||
-    (m.senderId === 'admin' && m.receiverId === req.session.user.id)
+    (m.senderId === 'admin' && m.receiverId === req.session.user.id) ||
+    (m.senderId === 'ai-support' && m.receiverId === req.session.user.id)
   );
   res.render('messages', { messages, user: req.session.user, purchaseChat: null });
 });
@@ -12533,7 +12963,8 @@ app.get('/messages/purchase/:purchaseId', requireAuth, (req, res) => {
   const messages = db.messages().filter((message) => (
     message && message.purchaseId === purchaseChat.purchaseId && (
       (message.senderId === req.session.user.id && message.receiverId === 'admin') ||
-      (message.senderId === 'admin' && message.receiverId === req.session.user.id)
+      (message.senderId === 'admin' && message.receiverId === req.session.user.id) ||
+      (message.senderId === 'ai-support' && message.receiverId === req.session.user.id)
     )
   ));
 
@@ -12553,7 +12984,7 @@ app.get('/messages/purchase/:purchaseId', requireAuth, (req, res) => {
 app.get('/subscriptions', requireAuth, (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
 
-  const plans = db.subscriptionPlans().filter(p => p && p.active);
+  const plans = ensureSubscriptionPlans().filter(p => p && p.active);
   const activeSubscription = getActiveSubscriptionForUser({ userId: req.session.user.id });
   const activePlan = activeSubscription ? plans.find(p => p.id === activeSubscription.planId) : null;
   const activeSubscriptionCouponPromos = getActiveCouponPromoCards(db.subscriptionCoupons(), getSubscriptionCouponEligibility);
@@ -12569,11 +13000,33 @@ app.get('/subscriptions', requireAuth, (req, res) => {
   });
 });
 
+app.get('/membership', requireAuth, (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
+
+  const plans = ensureSubscriptionPlans().filter((plan) => plan && plan.active);
+  const activeSubscription = getActiveSubscriptionForUser({ userId: req.session.user.id });
+  const activePlan = activeSubscription ? plans.find((plan) => plan.id === activeSubscription.planId) || null : null;
+  const tier = getUserSubscriptionTier({ sessionUser: req.session.user });
+  const tierLabel = tier === 'business' ? 'Business' : tier === 'pro' ? 'Pro' : tier === 'starter' ? 'Starter' : 'بدون اشتراك';
+  const discountPercent = getSubscriberDiscountPercent({ user: req.session.user });
+
+  res.render('membership', {
+    user: req.session.user,
+    plans,
+    activeSubscription,
+    activePlan,
+    tierLabel,
+    discountPercent,
+    error: req.query.error || null,
+    success: req.query.success || null
+  });
+});
+
 app.post('/subscriptions/subscribe', requireAuth, (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
 
   const planId = req.body.planId;
-  const plans = db.subscriptionPlans().filter(p => p && p.active);
+  const plans = ensureSubscriptionPlans().filter(p => p && p.active);
   const plan = plans.find(p => p.id === planId);
   if (!plan) return res.redirect('/subscriptions?error=' + encodeURIComponent('الخطة غير صحيحة'));
 
@@ -12685,6 +13138,101 @@ app.post('/subscriptions/cancel', requireAuth, (req, res) => {
 
   req.session.user.subscription = null;
   res.redirect('/subscriptions?success=' + encodeURIComponent('تم إلغاء الاشتراك'));
+});
+
+app.post('/subscriptions/upgrade', requireAuth, (req, res) => {
+  if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
+
+  const targetPlanId = req.body.planId;
+  const plans = ensureSubscriptionPlans().filter((plan) => plan && plan.active);
+  const targetPlan = plans.find((plan) => plan.id === targetPlanId);
+  if (!targetPlan) return res.redirect('/subscriptions?error=' + encodeURIComponent('الخطة غير صحيحة'));
+
+  const activeSubscription = getActiveSubscriptionForUser({ userId: req.session.user.id });
+  if (!activeSubscription) return res.redirect('/subscriptions?error=' + encodeURIComponent('لا يوجد اشتراك نشط للترقية'));
+
+  const tierRank = (tier) => {
+    const value = String(tier || '').toLowerCase();
+    if (value === 'starter' || value === 'basic') return 1;
+    if (value === 'pro') return 2;
+    if (value === 'business' || value === 'premium') return 3;
+    return 0;
+  };
+
+  const currentRank = tierRank(activeSubscription.planId);
+  const targetRank = tierRank(targetPlan.id);
+  if (targetRank <= currentRank) {
+    return res.redirect('/subscriptions?error=' + encodeURIComponent('الترقية متاحة فقط للخطة الأعلى'));
+  }
+
+  const users = db.users();
+  const idx = users.findIndex((u) => u.id === req.session.user.id);
+  if (idx === -1) return res.redirect('/subscriptions?error=' + encodeURIComponent('المستخدم غير موجود'));
+
+  const currentPlan = plans.find((plan) => plan.id === activeSubscription.planId) || null;
+  const currentPrice = Number(currentPlan ? currentPlan.price : 0);
+  const targetPrice = Number(targetPlan.price || 0);
+  const upgradePrice = Math.max(0, Math.round((targetPrice - currentPrice) * 100) / 100);
+
+  const balance = Number(users[idx].walletBalance || 0);
+  if (balance < upgradePrice) {
+    return res.redirect('/subscriptions?error=' + encodeURIComponent('الرصيد غير كافي للترقية'));
+  }
+
+  const now = new Date();
+  const end = new Date(now.getTime() + (Number(targetPlan.durationDays || 30) * 24 * 60 * 60 * 1000));
+
+  const subs = db.subscriptions();
+  const activeIndex = subs.findIndex((sub) => sub && sub.id === activeSubscription.id);
+  if (activeIndex === -1) {
+    return res.redirect('/subscriptions?error=' + encodeURIComponent('الاشتراك الحالي غير موجود'));
+  }
+
+  subs[activeIndex].status = 'canceled';
+  subs[activeIndex].canceledAt = now.toISOString();
+
+  const newSub = {
+    id: uuidv4(),
+    userId: req.session.user.id,
+    planId: targetPlan.id,
+    status: 'active',
+    currentPeriodStart: now.toISOString(),
+    currentPeriodEnd: end.toISOString(),
+    canceledAt: null,
+    createdAt: now.toISOString(),
+    upgradedFrom: activeSubscription.planId
+  };
+  subs.push(newSub);
+  db.saveSubscriptions(subs);
+
+  users[idx].walletBalance = Math.round((balance - upgradePrice) * 100) / 100;
+  db.saveUsers(users);
+
+  const payments = db.subscriptionPayments();
+  payments.push({
+    id: uuidv4(),
+    subscriptionId: newSub.id,
+    userId: newSub.userId,
+    planId: newSub.planId,
+    amount: upgradePrice,
+    currency: targetPlan.currency || 'EGP',
+    method: 'wallet',
+    priceBefore: currentPrice,
+    discountAmount: 0,
+    couponCode: null,
+    createdAt: now.toISOString(),
+    type: 'upgrade'
+  });
+  db.saveSubscriptionPayments(payments);
+
+  req.session.user.walletBalance = Number(users[idx].walletBalance || 0);
+  req.session.user.subscription = {
+    planId: newSub.planId,
+    status: newSub.status,
+    currentPeriodEnd: newSub.currentPeriodEnd
+  };
+
+  res.redirect('/subscriptions?success=' + encodeURIComponent('تمت الترقية بنجاح'));
 });
 
 app.get('/codentra-presentations', (req, res) => {
@@ -13013,48 +13561,770 @@ app.get('/codentra-presentations/decks/:deckId/download.pptx', requireAuth, asyn
   }
 });
 
-// User - Send message to admin
-app.post('/messages', requireAuth, (req, res) => {
-  const { content, purchaseId } = req.body;
-  
-  const messages = db.messages();
-  messages.push({
+const buildSupportAttachments = (files = []) => files.map((file) => {
+  const storedPath = `uploads/support-attachments/${file.filename}`;
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  let extractedText = '';
+
+  if (['.txt', '.md', '.json', '.csv', '.log'].includes(ext)) {
+    try {
+      extractedText = fs.readFileSync(file.path, 'utf8').slice(0, 3000);
+    } catch (error) {
+      extractedText = '';
+    }
+  } else if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'].includes(ext)) {
+    extractedText = `صورة مرفقة: ${file.originalname || 'ملف صورة'}.`;    
+  } else if (['.mp4', '.mov', '.webm', '.ogg', '.mkv'].includes(ext)) {
+    extractedText = `فيديو مرفق: ${file.originalname || 'ملف فيديو'}. يحتوي على تسجيل مرئي أو شرح للمشكلة.`;
+  } else {
+    extractedText = `مرفق: ${file.originalname || 'ملف'} (${file.mimetype || 'غير معروف'}).`;
+  }
+
+  return {
     id: uuidv4(),
+    originalName: file.originalname || 'support-file',
+    fileName: file.filename,
+    filePath: storedPath,
+    mimeType: file.mimetype || 'application/octet-stream',
+    size: file.size || 0,
+    extractedText
+  };
+});
+
+const SUPPORT_AI_TOPIC_STOP_WORDS = new Set([
+  'ا', 'و', 'في', 'من', 'على', 'الى', 'إلى', 'عن', 'مع', 'هذا', 'هذه', 'ذلك', 'الذي', 'التي', 'المنتج',
+  'المنتجات', 'مشروع', 'مشاريع', 'اشتراك', 'اشتراكات', 'الدعم', 'الدعم', 'عايز', 'اريد', 'أريد', 'ممكن',
+  'please', 'help', 'need', 'want', 'tell', 'show', 'buy', 'purchase', 'product', 'projects', 'subscription',
+  'support', 'cart', 'wallet', 'card', 'invoice', 'price'
+].map((value) => String(value || '').toLowerCase()));
+
+const tokenizeSupportText = (text) => {
+  const matches = String(text || '')
+    .toLowerCase()
+    .match(/[a-z0-9+#.-]+|[\u0600-\u06FF0-9+#.-]+/g) || [];
+  return matches.filter((token) => token.length > 1 && !SUPPORT_AI_TOPIC_STOP_WORDS.has(token));
+};
+
+const getUserVisibleProjects = ({ userId }) => {
+  const user = db.users().find((item) => item && item.id === userId) || null;
+  if (!user) return [];
+  return db.projects()
+    .filter((project) => isProjectVisibleToUser({ project, sessionUser: buildSessionUser(user) }))
+    .map((project) => decorateProjectPricing(project))
+    .filter(Boolean);
+};
+
+const getSupportSubscriptionPlans = () => ensureSubscriptionPlans()
+  .filter((plan) => plan && plan.active)
+  .map((plan) => ({
+    id: plan.id,
+    name: plan.name,
+    price: Number(plan.price || 0),
+    durationDays: Number(plan.durationDays || 0),
+    currency: plan.currency || 'USD',
+    features: Array.isArray(plan.features) ? plan.features.slice(0, 8) : []
+  }));
+
+const pickBestSupportProjects = ({ content, projects }) => {
+  const tokens = new Set(tokenizeSupportText(content));
+  const scored = (Array.isArray(projects) ? projects : []).map((project) => {
+    const haystack = [
+      project.title,
+      project.category,
+      Array.isArray(project.technologies) ? project.technologies.join(' ') : '',
+      project.description,
+      Array.isArray(project.tags) ? project.tags.join(' ') : ''
+    ].join(' ');
+    const projectTokens = tokenizeSupportText(haystack);
+    let score = 0;
+    projectTokens.forEach((token) => {
+      if (tokens.has(token)) score += 3;
+    });
+    if (project.visibility && project.visibility !== 'public') score += 1;
+    if (project.sale && project.sale.isOnSale) score += 1;
+    return {
+      project,
+      score
+    };
+  });
+
+  return scored
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(({ project, score }) => ({
+      projectId: project.id,
+      projectTitle: project.title,
+      price: Number(project.finalPrice || project.price || 0),
+      originalPrice: Number(project.originalPrice || project.price || 0),
+      reason: project.sale && project.sale.isOnSale
+        ? 'هذا المشروع عليه عرض حالي وقد يكون اختيارًا مناسبًا الآن.'
+        : 'هذا المشروع يطابق الكلمات التي ذكرتها في رسالتك.',
+      score,
+      visibility: project.visibility || 'public'
+    }));
+};
+
+const pickBestSupportPlans = ({ content, plans, sessionUser }) => {
+  const tokens = new Set(tokenizeSupportText(content));
+  const currentTier = getUserSubscriptionTier({ sessionUser });
+  const rank = (tier) => ({ none: 0, starter: 1, pro: 2, business: 3 }[tier] || 0);
+
+  return (Array.isArray(plans) ? plans : [])
+    .map((plan) => {
+      const tier = normalizeSubscriptionTier(plan.id);
+      const planTokens = tokenizeSupportText([
+        plan.name,
+        Array.isArray(plan.features) ? plan.features.join(' ') : '',
+        tier
+      ].join(' '));
+      let score = 0;
+      planTokens.forEach((token) => {
+        if (tokens.has(token)) score += 3;
+      });
+      if (rank(tier) > rank(currentTier)) score += 1;
+      if (rank(tier) === rank(currentTier) && currentTier !== 'none') score += 2;
+      return {
+        plan,
+        tier,
+        score
+      };
+    })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map(({ plan, tier, score }) => ({
+      planId: plan.id,
+      planName: plan.name,
+      price: Number(plan.price || 0),
+      durationDays: Number(plan.durationDays || 0),
+      reason: tier === currentTier
+        ? 'هذه هي الخطة الحالية لديك ويمكنني توضيح المزايا المرتبطة بها.'
+        : 'هذه الخطة مناسبة إذا كنت تريد مزايا أكثر أو خصمًا أعلى على مشترياتك.',
+      score,
+      tier
+    }));
+};
+
+const shouldReturnJson = (req) => {
+  return String(req.headers.accept || '').includes('application/json') || req.query.json === '1';
+};
+
+const getIntentSummary = ({ lastMessage, unreadCount, pendingHandoff }) => {
+  const content = String(lastMessage && lastMessage.content ? lastMessage.content : '').trim();
+  const purchaseSignal = /(شراء|اشتراك|سلة|دفع|checkout|payment|buy|purchase|عرض خاص|خصم)/i.test(content);
+  const subscriptionSignal = /(عرض|خصم|ترقية|upgrade|premium|business|pro|starter|plan|subscription)/i.test(content);
+  const urgentSignal = /(مستعجل|عاجل|ضروري|سريع|urgent)/i.test(content);
+  let score = 0;
+  if (purchaseSignal) score += 2;
+  if (subscriptionSignal) score += 1;
+  if (pendingHandoff) score += 2;
+  if (unreadCount > 1) score += 1;
+  if (urgentSignal) score += 1;
+  if (score >= 4) {
+    return { intentLevel: 'مرتفع', intentClass: 'high', intentReason: 'العميل يظهر نية شراء قوية أو طلب دعم عاجل.' };
+  }
+  if (score >= 2) {
+    return { intentLevel: 'متوسط', intentClass: 'medium', intentReason: 'العميل مهتم بالشراء أو الاشتراك ويحتاج متابعة.' };
+  }
+  return { intentLevel: 'منخفض', intentClass: 'low', intentReason: 'الرسائل الحالية تبدو استعلامية بشكل أكبر، يمكن تقديم عرض مناسب.' };
+};
+
+const buildAdminConversationUpdateForUser = (userId) => {
+  const safeUserId = String(userId || '');
+  const messages = db.messages().filter((msg) => msg && (msg.senderId === safeUserId || msg.receiverId === safeUserId));
+  const lastMsg = messages[messages.length - 1] || null;
+  const unreadCount = messages.filter((m) => m.senderId === safeUserId && m.receiverId === 'admin' && !m.read).length;
+  const pendingHandoff = messages.some((m) => m.senderId === 'ai-support' && m.receiverId === safeUserId && m.escalatedToHuman);
+  const intent = getIntentSummary({ lastMessage: lastMsg, unreadCount, pendingHandoff });
+  return {
+    userId: safeUserId,
+    lastMessage: lastMsg ? String(lastMsg.content || '').substring(0, 120) : '',
+    unreadCount,
+    pendingHandoff,
+    updatedAt: new Date().toISOString(),
+    intentLevel: intent.intentLevel,
+    intentClass: intent.intentClass,
+    intentReason: intent.intentReason
+  };
+};
+
+const getLatestAiSupportMessage = (messages) => {
+  return (Array.isArray(messages) ? messages.slice().reverse() : []).find((msg) => msg && msg.senderId === 'ai-support') || null;
+};
+
+const collectUserAttachments = (messages, userId) => {
+  const attachments = [];
+  (Array.isArray(messages) ? messages : []).forEach((msg) => {
+    if (msg && msg.senderId === userId && Array.isArray(msg.attachments)) {
+      attachments.push(...msg.attachments.filter((attachment) => attachment));
+    }
+  });
+  const types = Array.from(new Set(attachments.map((attachment) => String(attachment.mimeType || '').split('/')[0]).filter(Boolean)));
+  return {
+    totalAttachments: attachments.length,
+    types,
+    attachments
+  };
+};
+
+const inferConversationInsights = ({ messages, chatUser }) => {
+  const userId = chatUser ? chatUser.id : '';
+  const userMessages = (Array.isArray(messages) ? messages : []).filter((msg) => msg && msg.senderId === userId && (msg.receiverId === 'admin' || msg.receiverId === 'ai-support'));
+  const latestUserMessage = userMessages.slice().reverse()[0] || null;
+  const latestAiMessage = getLatestAiSupportMessage(messages);
+  const attachmentInfo = collectUserAttachments(messages, userId);
+  const purchaseSignal = /(شراء|اشتراك|سلة|دفع|checkout|payment|buy|purchase|عرض خاص|خصم)/i.test(String(latestUserMessage && latestUserMessage.content || ''));
+  const subscriptionSignal = /(عرض|خصم|ترقية|upgrade|premium|business|pro|starter|plan|subscription)/i.test(String(latestUserMessage && latestUserMessage.content || ''));
+  const urgentSignal = /(مستعجل|عاجل|ضروري|سريع|urgent)/i.test(String(latestUserMessage && latestUserMessage.content || ''));
+  const pendingHandoff = (Array.isArray(messages) ? messages : []).some((m) => m && m.senderId === 'ai-support' && m.receiverId === userId && m.escalatedToHuman);
+  let score = 0;
+  if (purchaseSignal) score += 2;
+  if (subscriptionSignal) score += 1;
+  if (pendingHandoff) score += 2;
+  if (urgentSignal) score += 1;
+  const unreadCount = userMessages.filter((m) => m.senderId === userId && m.receiverId === 'admin' && !m.read).length;
+  if (unreadCount > 1) score += 1;
+  const intent = score >= 4
+    ? { level: 'مرتفع', class: 'high', reason: 'العميل أظهر نية شراء قوية أو طلب دعم عاجل.' }
+    : score >= 2
+      ? { level: 'متوسط', class: 'medium', reason: 'العميل مهتم بالشراء أو الاشتراك ويحتاج متابعة.' }
+      : { level: 'منخفض', class: 'low', reason: 'الرسائل الحالية تبدو استعلامية بشكل أكبر، يمكن تقديم عرض مناسب.' };
+
+  const traits = [];
+  if (chatUser && chatUser.supportMode === 'human') traits.push('طلب دعم بشري');
+  if (chatUser && chatUser.subscription) traits.push('مشترك حالي');
+  if (pendingHandoff) traits.push('محادثة ساخنة');
+  if (purchaseSignal) traits.push('نية شراء');
+  if (subscriptionSignal) traits.push('مهتم باشتراك');
+  if (attachmentInfo.totalAttachments > 0) traits.push('أرسل مرفقات');
+  if (!traits.length) traits.push('عميل يحتاج توجيه واضح');
+
+  const topProject = latestAiMessage && Array.isArray(latestAiMessage.aiSuggestedProjects) ? latestAiMessage.aiSuggestedProjects[0] : null;
+  const topPlan = latestAiMessage && Array.isArray(latestAiMessage.aiSuggestedPlans) ? latestAiMessage.aiSuggestedPlans[0] : null;
+  const aiActions = latestAiMessage && Array.isArray(latestAiMessage.aiActions) ? latestAiMessage.aiActions.slice(0, 4) : [];
+
+  return {
+    intentLevel: intent.level,
+    intentClass: intent.class,
+    intentReason: intent.reason,
+    traits,
+    mediaCount: attachmentInfo.totalAttachments,
+    mediaTypes: attachmentInfo.types,
+    topProject,
+    topPlan,
+    aiActions,
+    latestUserMessage: latestUserMessage ? String(latestUserMessage.content || '').substring(0, 160) : null
+  };
+};
+
+const CHAT_ROOM_PREFIX_USER = 'user-';
+const CHAT_ROOM_PREFIX_ADMIN_USER = 'admin-user-';
+const CHAT_ROOM_ADMIN_LIST = 'admin-list';
+
+const emitChatSignal = ({ userId, message, purchaseId }) => {
+  if (!userId || !message || !io) return;
+  const roomUser = `${CHAT_ROOM_PREFIX_USER}${userId}`;
+  const roomAdminUser = `${CHAT_ROOM_PREFIX_ADMIN_USER}${userId}`;
+  io.to(roomUser).emit('new-chat-message', { message, userId, purchaseId });
+  io.to(roomAdminUser).emit('new-chat-message', { message, userId, purchaseId });
+  const summary = buildAdminConversationUpdateForUser(userId);
+  io.to(CHAT_ROOM_ADMIN_LIST).emit('admin-conversation-updated', summary);
+};
+
+const getSupportActionsForReply = ({ suggestions, planSuggestions, escalated }) => {
+  const actions = [];
+  (Array.isArray(suggestions) ? suggestions : []).forEach((suggestion) => {
+    if (!suggestion || !suggestion.projectId) return;
+    actions.push({
+      type: 'open-project',
+      label: `فتح ${suggestion.projectTitle}`,
+      href: `/project/${suggestion.projectId}`
+    });
+    actions.push({
+      type: 'add-to-cart',
+      label: `إضافة ${suggestion.projectTitle} للسلة`,
+      href: '/cart/add',
+      projectId: suggestion.projectId
+    });
+  });
+  if (Array.isArray(planSuggestions) && planSuggestions.length) {
+    actions.push({
+      type: 'open-subscriptions',
+      label: 'عرض الاشتراكات',
+      href: '/subscriptions'
+    });
+  }
+  actions.push({
+    type: 'open-cart',
+    label: 'فتح السلة',
+    href: '/cart'
+  });
+  if (escalated) {
+    actions.push({
+      type: 'handoff-human',
+      label: 'حولني للدعم البشري',
+      href: '/messages'
+    });
+  }
+  return actions;
+};
+
+const buildLocalSupportAgentReply = ({ content, attachments, userId, purchaseChat = null }) => {
+  const text = String(content || '').trim();
+  const normalized = text.toLowerCase();
+  const attachmentCount = Array.isArray(attachments) ? attachments.length : 0;
+  const readableAttachments = (attachments || []).filter((item) => item.extractedText);
+  const sessionUser = buildSessionUser(db.users().find((item) => item && item.id === userId) || null);
+  const visibleProjects = getUserVisibleProjects({ userId });
+  const supportPlans = getSupportSubscriptionPlans();
+  const projectSuggestions = pickBestSupportProjects({ content: text, projects: visibleProjects });
+  const planSuggestions = pickBestSupportPlans({ content: text, plans: supportPlans, sessionUser });
+  const attachmentSummary = readableAttachments.length
+    ? readableAttachments.map((item) => item.extractedText.slice(0, 700)).join('\n\n')
+    : '';
+
+  const isAdminRequest = /(admin|أدمن|صلاحيات اداري|تحكم كامل|حظر مستخدم|موافقة ادارية|refund all|export all|delete user|grant admin|admin route|لوحة الادمن|ادمن)/i.test(normalized);
+  if (isAdminRequest) {
+    return {
+      handled: false,
+      action: 'handoff',
+      content: 'أقدر أساعدك فقط في صلاحيات المستخدم العادية داخل الموقع. أما الصلاحيات الإدارية أو إدارة الحسابات الحساسة فسأحوّلك فيها إلى فريق الدعم البشري.',
+      suggestedProjects: projectSuggestions,
+      suggestedPlans: planSuggestions,
+      aiActions: getSupportActionsForReply({ suggestions: projectSuggestions, planSuggestions, escalated: true })
+    };
+  }
+
+  if (/(جمد|جمّد|freeze|اقفل|وقف).*(بطاق|card)|(?:بطاق|card).*(جمد|جمّد|freeze|اقفل|وقف)/i.test(text)) {
+    const users = db.users();
+    const userIndex = users.findIndex((user) => user && user.id === userId && user.role === 'user');
+    if (userIndex !== -1) {
+      users[userIndex].walletCardFrozen = true;
+      db.saveUsers(users);
+    }
+    return {
+      handled: true,
+      action: 'freeze_wallet_card',
+      content: 'تم تجميد بطاقة المحفظة الخاصة بحسابك فورًا. لا يمكن استخدامها في الدفع الآن. لو حبيت تفك التجميد تقدر تعمل ده من إعدادات البطاقة أو تكتب لي "فك تجميد بطاقتي".',
+      suggestedProjects: projectSuggestions,
+      suggestedPlans: planSuggestions,
+      aiActions: getSupportActionsForReply({ suggestions: projectSuggestions, planSuggestions, escalated: false })
+    };
+  }
+
+  if (/(فك|الغ|إلغاء|unfreeze).*(بطاق|card)|(?:بطاق|card).*(فك|unfreeze)/i.test(text)) {
+    return {
+      handled: false,
+      action: 'handoff',
+      content: 'فك تجميد البطاقة إجراء حساس، لذلك حولتك لخدمة العملاء. انتظر حتى يرد عليك أحد أفراد الدعم.',
+      suggestedProjects: projectSuggestions,
+      suggestedPlans: planSuggestions,
+      aiActions: getSupportActionsForReply({ suggestions: projectSuggestions, planSuggestions, escalated: true })
+    };
+  }
+
+  if (/(حولني|خدمة العملاء|دعم بشري|موظف|انسان|human|agent)/i.test(text)) {
+    return {
+      handled: false,
+      action: 'handoff',
+      content: 'تمام، حولتك لخدمة العملاء. انتظر حتى يرد عليك أحد أفراد الدعم.',
+      suggestedProjects: projectSuggestions,
+      suggestedPlans: planSuggestions,
+      aiActions: getSupportActionsForReply({ suggestions: projectSuggestions, planSuggestions, escalated: true })
+    };
+  }
+
+  const purchaseMentions = /(اشتر|شراء|اشتري|buy|purchase|add to cart|سلة|cart|كمّل الشراء|payment|checkout)/i.test(normalized);
+  const subscriptionMentions = /(اشتراك|subscription|starter|pro|business|premium|membership|عضوية)/i.test(normalized);
+  const productMentions = /(منتج|مشروع|project|قالب|template|تطبيق|app|web|website|code|كود)/i.test(normalized);
+
+  if (attachmentCount > 0) {
+    const extra = readableAttachments.length
+      ? ' قرأت الملفات النصية المرفقة وسأضيف ملخصها للدعم لو احتاج يتابع معك.'
+      : ' استلمت المرفقات، ولو كانت صورة أو فيديو تسجيل شاشة سيتمكن الدعم من مراجعتها.';
+    return {
+      handled: true,
+      action: 'attachment_received',
+      content: `وصلني ${attachmentCount} مرفق.${extra} ${attachmentSummary ? `\n\nملخص سريع لما قرأته من الملفات: ${attachmentSummary}` : ''}`.trim(),
+      suggestedProjects: projectSuggestions,
+      suggestedPlans: planSuggestions,
+      aiActions: getSupportActionsForReply({ suggestions: projectSuggestions, planSuggestions, escalated: false })
+    };
+  }
+
+  if (purchaseMentions || subscriptionMentions || productMentions || /(دفع|شراء|رصيد|محفظ|بطاق|فاتور|تحميل|ملف|مشروع|اشتراك)/i.test(normalized)) {
+    const topProject = projectSuggestions[0] || null;
+    const topPlan = planSuggestions[0] || null;
+    const lines = [
+      'أنا أقدر أساعدك كعميل في كل ما يخص الموقع: ترشيح مشروع مناسب، شرح الفروقات، إضافته للسلة، توجيهك للاشتراك المناسب، أو تلخيص الملفات التي أرسلتها.',
+      topProject ? `أرى أن ${topProject.projectTitle} قد يكون مناسبًا لك${topProject.reason ? ` — ${topProject.reason}` : ''}.` : '',
+      topPlan ? `ولو هدفك التوفير أو الخصومات، فخطة ${topPlan.planName} تبدو مناسبة${topPlan.reason ? ` — ${topPlan.reason}` : ''}.` : '',
+      'إذا أردت، أقدر أفتح لك المنتج، أضيفه للسلة، أو أوجهك إلى الاشتراكات مباشرة.'
+    ].filter(Boolean);
+    return {
+      handled: true,
+      action: 'guided_help',
+      content: lines.join('\n'),
+      suggestedProjects: projectSuggestions,
+      suggestedPlans: planSuggestions,
+      aiActions: getSupportActionsForReply({ suggestions: projectSuggestions, planSuggestions, escalated: false })
+    };
+  }
+
+  return {
+    handled: true,
+    action: 'request_details',
+    content: 'شكراً لتواصلك. لو سمحت وضّح لي أكثر المشكلة أو ما الذي تريد إنجازه بالضبط، وسأساعدك مباشرة دون تحويل المحادثة إلى الدعم البشري إلا إذا طلبت ذلك صراحة.',
+    suggestedProjects: projectSuggestions,
+    suggestedPlans: planSuggestions,
+    aiActions: getSupportActionsForReply({ suggestions: projectSuggestions, planSuggestions, escalated: false })
+  };
+};
+
+const isUserHandoffRequest = (text) => {
+  return /(حولني للدعم البشري|حولني للدعم|خدمة العملاء|دعم بشري|موظف|انسان|human support|agent support|support human)/i.test(String(text || ''));
+};
+
+const buildSupportAiReply = async ({ content, attachments, userId, purchaseChat = null }) => {
+  const currentUser = db.users().find((item) => item && item.id === userId) || null;
+  const supportMode = currentUser ? String(currentUser.supportMode || 'auto').trim().toLowerCase() : 'auto';
+  if (supportMode === 'human') {
+    return null;
+  }
+
+  const localFallback = buildLocalSupportAgentReply({ content, attachments, userId, purchaseChat });
+  if (!GEMINI_API_KEY) return localFallback;
+
+  try {
+    const sessionUser = buildSessionUser(db.users().find((item) => item && item.id === userId) || null);
+    const visibleProjects = getUserVisibleProjects({ userId }).slice(0, 25);
+    const supportPlans = getSupportSubscriptionPlans();
+    const attachmentSummary = (attachments || [])
+      .map((item) => item.extractedText ? `${item.originalName}: ${item.extractedText.slice(0, 1000)}` : `${item.originalName} (${item.mimeType})`)
+      .join('\n');
+
+    const prompt = [
+      'أنت Codentra AI Support داخل صفحة الدعم للمستخدم فقط.',
+      'ممنوع تمامًا أي صلاحيات إدارية أو إدارة مستخدمين آخرين أو تعديل إعدادات الإدارة أو تصدير بيانات الإدارة أو قفل مشاريع للناس الآخرين.',
+      'مسموح لك فقط بمساعدة المستخدم على مستوى حسابه الشخصي وشراء المنتجات والتوجيه للاشتراكات والسلة وتجميد بطاقته الخاصة إذا طلب ذلك صراحة.',
+      'لو المستخدم طلب شراء منتج، ساعده في اختيار أفضل منتج له من المشاريع المتاحة التي يمكنه رؤيتها فقط، وقدم له اقتراحًا واضحًا مع سبب.',
+      'لو المستخدم ذكر الاشتراكات، اشرح له الخطة الأنسب ووضح التوفير والمزايا. يمكنك أن تقترح الترقية فقط.',
+      'لو الرسالة أو المرفقات تحتوي على ملفات نصية، اقرأها واستخرج ما يفيد في التشخيص.',
+      'أنت بائع ومساعد ذكي في موقع Codentra. قرأ الصور والفيديوهات والمرفقات، حلّل المشكلة، وقدم توصيات المنتجات والاشتراكات كأنك مندوب مبيعات ذكي داخل الموقع. استخدم جميع قدرات الموقع المتاحة للمستخدم: مشاريع متاحة، خطط اشتراك، سلة، دعم، وأساليب دفع داخل الحساب.',
+      'لا تحول المحادثة إلى دعم بشري إلا إذا طلب المستخدم ذلك صراحة بعبارات مثل "حولني للدعم البشري" أو "خدمة العملاء" أو "دعم بشري".',
+      'اكتب الرد بالعربية فقط وبأسلوب دعم مفيد ومقنع، وتصرّف كأنك البائع الذكي الخاص بالموقع.',
+      'أعد JSON فقط بدون markdown.',
+      '',
+      `المستخدم الحالي: ${JSON.stringify({ id: sessionUser.id, name: sessionUser.name, subscription: sessionUser.subscription ? { planId: sessionUser.subscription.planId, status: sessionUser.subscription.status } : null })}`,
+      `رسالة المستخدم: ${String(content || '').slice(0, 4000)}`,
+      `ملخص المرفقات: ${String(attachmentSummary || '').slice(0, 6000)}`,
+      '',
+      'المشاريع المرئية للمستخدم:',
+      JSON.stringify(visibleProjects.map((project) => ({
+        id: project.id,
+        title: project.title,
+        category: project.category || '',
+        technologies: Array.isArray(project.technologies) ? project.technologies.slice(0, 8) : [],
+        price: Number(project.finalPrice || project.price || 0),
+        originalPrice: Number(project.originalPrice || project.price || 0),
+        visibility: project.visibility || 'public',
+        description: String(project.description || '').slice(0, 350)
+      }))),
+      '',
+      'خطط الاشتراك:',
+      JSON.stringify(supportPlans.map((plan) => ({
+        id: plan.id,
+        name: plan.name,
+        price: plan.price,
+        durationDays: plan.durationDays,
+        features: plan.features
+      }))),
+      '',
+      'صيغة JSON المطلوبة:',
+      '{"handled":true,"action":"guided_help","content":"...","suggestedProjects":[{"projectId":"...","projectTitle":"...","price":0,"reason":"..."}],"suggestedPlans":[{"planId":"...","planName":"...","price":0,"reason":"..."}],"aiActions":[{"type":"open-project","label":"...","href":"..."}],"escalatedToHuman":false}'
+    ].join('\n');
+
+    const imageAttachments = (attachments || []).filter((item) => {
+      const mime = String(item && item.mimeType ? item.mimeType : '');
+      return mime.startsWith('image/') && item.filePath;
+    });
+
+    const userParts = [
+      { text: prompt }
+    ];
+
+    imageAttachments.slice(0, 3).forEach((attachment) => {
+      try {
+        const normalizedPath = normalizeStoredPath(attachment.filePath);
+        const absolutePath = normalizedPath ? path.join(APP_ROOT_DIR, normalizedPath) : null;
+        if (!absolutePath || !fs.existsSync(absolutePath)) return;
+        const data = fs.readFileSync(absolutePath);
+        userParts.push({
+          inlineData: {
+            mimeType: attachment.mimeType || 'image/png',
+            data: data.toString('base64')
+          }
+        });
+      } catch (error) {
+        // Ignore bad image attachments and keep the text-only fallback.
+      }
+    });
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': GEMINI_API_KEY
+      },
+      body: JSON.stringify({
+        contents: [{
+          role: 'user',
+          parts: userParts
+        }],
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: 'application/json'
+        }
+      })
+    });
+
+    if (!response.ok) throw new Error(`gemini_http_${response.status}`);
+    const payload = await response.json();
+    const responseText = extractGeminiTextResponse(payload);
+    if (!responseText) throw new Error('gemini_empty_response');
+    const parsed = parseGeminiJsonResponse(responseText);
+    if (!parsed || typeof parsed !== 'object') throw new Error('gemini_bad_json');
+
+    const sanitized = {
+      handled: Boolean(parsed.handled),
+      action: String(parsed.action || localFallback.action || 'guided_help'),
+      content: String(parsed.content || localFallback.content || '').trim(),
+      suggestedProjects: Array.isArray(parsed.suggestedProjects) ? parsed.suggestedProjects.slice(0, 3) : localFallback.suggestedProjects || [],
+      suggestedPlans: Array.isArray(parsed.suggestedPlans) ? parsed.suggestedPlans.slice(0, 3) : localFallback.suggestedPlans || [],
+      aiActions: Array.isArray(parsed.aiActions) ? parsed.aiActions.slice(0, 8) : localFallback.aiActions || [],
+      escalatedToHuman: Boolean(parsed.escalatedToHuman)
+    };
+
+    if (sanitized.escalatedToHuman && !isUserHandoffRequest(content)) {
+      sanitized.escalatedToHuman = false;
+      if (sanitized.action === 'handoff') {
+        sanitized.action = 'guided_help';
+      }
+      if (!sanitized.content || /حولتك|خدمة العملاء|دعم بشري/i.test(sanitized.content)) {
+        sanitized.content = localFallback.content;
+      }
+      sanitized.aiActions = getSupportActionsForReply({
+        suggestions: sanitized.suggestedProjects,
+        planSuggestions: sanitized.suggestedPlans,
+        escalated: false
+      });
+    }
+
+    if (!sanitized.aiActions.length) {
+      sanitized.aiActions = getSupportActionsForReply({
+        suggestions: sanitized.suggestedProjects,
+        planSuggestions: sanitized.suggestedPlans,
+        escalated: sanitized.escalatedToHuman
+      });
+    }
+    return sanitized;
+  } catch (error) {
+    return localFallback;
+  }
+};
+
+// User - Send message to admin
+app.post('/messages', requireAuth, supportAttachmentUpload.array('attachments', 5), async (req, res) => {
+  const { purchaseId, clientTempId } = req.body;
+  const content = String(req.body.content || '').trim();
+  const attachments = buildSupportAttachments(req.files || []);
+  if (!content && attachments.length === 0) return res.redirect('/messages');
+
+  const messages = db.messages();
+  const userMessage = {
+    id: String(clientTempId || uuidv4()).trim() || uuidv4(),
     senderId: req.session.user.id,
     senderName: req.session.user.name,
     receiverId: 'admin',
-    content,
+    content: content || 'تم إرسال مرفقات للدعم.',
     purchaseId: purchaseId || null,
+    attachments,
     read: false,
     createdAt: new Date().toISOString()
-  });
-  
+  };
+  messages.push(userMessage);
+
+  const agent = await buildSupportAiReply({ content, attachments, userId: req.session.user.id });
+  // Only persist human support mode when the user explicitly requests it.
+  const isHandoffRequest = String(req.body.handoff || '').trim() === '1' || isUserHandoffRequest(content);
+  if (isHandoffRequest) {
+    const users = db.users();
+    const userIndex = users.findIndex((user) => user && user.id === req.session.user.id && user.role === 'user');
+    if (userIndex !== -1) {
+      users[userIndex].supportMode = 'human';
+      db.saveUsers(users);
+      req.session.user = buildSessionUser(users[userIndex]);
+    }
+  }
+
+  let aiMessage = null;
+  if (agent) {
+    if (isHandoffRequest) {
+      agent.action = 'handoff';
+      agent.escalatedToHuman = true;
+      agent.content = String(agent.content || 'تم تحويلك للدعم البشري. انتظر رد الأدمن.').trim();
+    }
+    aiMessage = {
+      id: uuidv4(),
+      senderId: 'ai-support',
+      senderName: 'Codentra AI Support',
+      receiverId: req.session.user.id,
+      content: agent.content,
+      purchaseId: purchaseId || null,
+      aiAction: agent.action,
+      aiActions: agent.aiActions || [],
+      aiSuggestedProjects: agent.suggestedProjects || [],
+      aiSuggestedPlans: agent.suggestedPlans || [],
+      escalatedToHuman: agent.escalatedToHuman,
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    messages.push(aiMessage);
+  } else if (isHandoffRequest) {
+    aiMessage = {
+      id: uuidv4(),
+      senderId: 'ai-support',
+      senderName: 'Codentra AI Support',
+      receiverId: req.session.user.id,
+      content: 'تم تحويلك للدعم البشري. انتظر رد الأدمن.',
+      purchaseId: purchaseId || null,
+      aiAction: 'handoff',
+      aiActions: getSupportActionsForReply({ suggestions: [], planSuggestions: [], escalated: true }),
+      aiSuggestedProjects: [],
+      aiSuggestedPlans: [],
+      escalatedToHuman: true,
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    messages.push(aiMessage);
+  }
+
   db.saveMessages(messages);
+  if (agent && agent.action === 'freeze_wallet_card') {
+    const users = db.users();
+    const currentUser = users.find((user) => user && user.id === req.session.user.id);
+    if (currentUser) req.session.user = buildSessionUser(currentUser);
+  }
+
+  emitChatSignal({ userId: req.session.user.id, message: userMessage, purchaseId: purchaseId || null });
+  emitChatSignal({ userId: req.session.user.id, message: aiMessage, purchaseId: purchaseId || null });
+
+  if (shouldReturnJson(req)) {
+    return res.json({ userMessage, aiMessage, summary: buildAdminConversationUpdateForUser(req.session.user.id) });
+  }
+
   res.redirect('/messages');
 });
 
-app.post('/messages/purchase/:purchaseId', requireAuth, (req, res) => {
+app.post('/messages/purchase/:purchaseId', requireAuth, supportAttachmentUpload.array('attachments', 5), async (req, res) => {
   const purchaseChat = getPurchaseChatContextForUser(req.params.purchaseId, req.session.user.id);
   if (!purchaseChat) return res.status(404).send('Purchase not found');
 
+  const { clientTempId } = req.body;
   const content = String(req.body.content || '').trim();
-  if (!content) return res.redirect(`/messages/purchase/${purchaseChat.purchaseId}`);
+  const attachments = buildSupportAttachments(req.files || []);
+  if (!content && attachments.length === 0) return res.redirect(`/messages/purchase/${purchaseChat.purchaseId}`);
 
   const messages = db.messages();
-  messages.push({
-    id: uuidv4(),
+  const userMessage = {
+    id: String(clientTempId || uuidv4()).trim() || uuidv4(),
     senderId: req.session.user.id,
     senderName: req.session.user.name,
     receiverId: 'admin',
-    content,
+    content: content || 'تم إرسال مرفقات للدعم.',
     read: false,
+    attachments,
     purchaseId: purchaseChat.purchaseId,
     orderId: purchaseChat.orderId,
     projectTitle: purchaseChat.projectTitle,
     createdAt: new Date().toISOString()
+  };
+  messages.push(userMessage);
+
+  const agent = await buildSupportAiReply({
+    content,
+    attachments,
+    userId: req.session.user.id,
+    purchaseChat
   });
+  // Only persist human support mode when the user explicitly requests it.
+  const isHandoffRequest = String(req.body.handoff || '').trim() === '1' || isUserHandoffRequest(content);
+  if (isHandoffRequest) {
+    const users = db.users();
+    const userIndex = users.findIndex((user) => user && user.id === req.session.user.id && user.role === 'user');
+    if (userIndex !== -1) {
+      users[userIndex].supportMode = 'human';
+      db.saveUsers(users);
+      req.session.user = buildSessionUser(users[userIndex]);
+    }
+  }
+
+  let aiMessage = null;
+  if (agent) {
+    if (isHandoffRequest) {
+      agent.action = 'handoff';
+      agent.escalatedToHuman = true;
+      agent.content = String(agent.content || 'تم تحويلك للدعم البشري. انتظر رد الأدمن.').trim();
+    }
+    aiMessage = {
+      id: uuidv4(),
+      senderId: 'ai-support',
+      senderName: 'Codentra AI Support',
+      receiverId: req.session.user.id,
+      content: agent.content,
+      purchaseId: purchaseChat.purchaseId,
+      orderId: purchaseChat.orderId,
+      projectTitle: purchaseChat.projectTitle,
+      aiAction: agent.action,
+      aiActions: agent.aiActions || [],
+      aiSuggestedProjects: agent.suggestedProjects || [],
+      aiSuggestedPlans: agent.suggestedPlans || [],
+      escalatedToHuman: agent.escalatedToHuman,
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    messages.push(aiMessage);
+  } else if (isHandoffRequest) {
+    aiMessage = {
+      id: uuidv4(),
+      senderId: 'ai-support',
+      senderName: 'Codentra AI Support',
+      receiverId: req.session.user.id,
+      content: 'تم تحويلك للدعم البشري. انتظر رد الأدمن.',
+      purchaseId: purchaseChat.purchaseId,
+      orderId: purchaseChat.orderId,
+      projectTitle: purchaseChat.projectTitle,
+      aiAction: 'handoff',
+      aiActions: getSupportActionsForReply({ suggestions: [], planSuggestions: [], escalated: true }),
+      aiSuggestedProjects: [],
+      aiSuggestedPlans: [],
+      escalatedToHuman: true,
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    messages.push(aiMessage);
+  }
 
   db.saveMessages(messages);
+
+  emitChatSignal({ userId: req.session.user.id, message: userMessage, purchaseId: purchaseChat.purchaseId });
+  emitChatSignal({ userId: req.session.user.id, message: aiMessage, purchaseId: purchaseChat.purchaseId });
+
+  if (shouldReturnJson(req)) {
+    return res.json({ userMessage, aiMessage, summary: buildAdminConversationUpdateForUser(req.session.user.id) });
+  }
+
   res.redirect(`/messages/purchase/${purchaseChat.purchaseId}`);
 });
 
@@ -13063,28 +14333,51 @@ app.get('/admin/messages', requireAdminPermission(ADMIN_PERMISSIONS.messages), (
   const messages = db.messages();
   const users = db.users();
   
-  // Group messages by user
+  // Group messages by user, including AI messages that are part of a user conversation
   const conversations = {};
+  const conversationSummaries = {};
+
+  const getConversationUserId = (msg) => {
+    if (msg.senderId === 'admin') return msg.receiverId;
+    if (msg.receiverId === 'admin') return msg.senderId;
+    if (msg.senderId === 'ai-support') return msg.receiverId;
+    if (msg.receiverId === 'ai-support') return msg.senderId;
+    return null;
+  };
+
   messages.forEach(msg => {
-    const userId = msg.senderId === 'admin' ? msg.receiverId : msg.senderId;
+    const userId = getConversationUserId(msg);
+    if (!userId || userId === 'admin' || userId === 'ai-support') return;
     if (!conversations[userId]) {
       conversations[userId] = [];
     }
     conversations[userId].push(msg);
   });
+
+  Object.keys(conversations).forEach((userId) => {
+    const msgs = conversations[userId] || [];
+    const lastMsg = msgs[msgs.length - 1] || {};
+    conversationSummaries[userId] = {
+      unreadCount: msgs.filter((m) => m.senderId === userId && m.receiverId === 'admin' && !m.read).length,
+      pendingHandoff: msgs.some((m) => m.senderId === 'ai-support' && m.receiverId === userId && m.escalatedToHuman),
+      lastMessage: String(lastMsg.content || '').substring(0, 120)
+    };
+  });
   
-  res.render('admin/messages', { conversations, users, user: req.session.user });
+  res.render('admin/messages', { conversations, conversationSummaries, users, user: req.session.user });
 });
 
 // Admin - View specific conversation
 app.get('/admin/messages/:userId', requireAdmin, (req, res) => {
   const messages = db.messages().filter(m => 
-    (m.senderId === req.params.userId && m.receiverId === 'admin') ||
-    (m.senderId === 'admin' && m.receiverId === req.params.userId)
+    (m.senderId === req.params.userId && (m.receiverId === 'admin' || m.receiverId === 'ai-support')) ||
+    ((m.senderId === 'admin' || m.senderId === 'ai-support') && m.receiverId === req.params.userId)
   );
   
   const users = db.users();
   const chatUser = users.find(u => u.id === req.params.userId);
+  const needsHumanSupport = messages.some((m) => m.senderId === 'ai-support' && m.receiverId === req.params.userId && m.escalatedToHuman);
+  const conversationInsights = inferConversationInsights({ messages, chatUser });
   
   // Mark messages as read
   const allMessages = db.messages();
@@ -13095,7 +14388,14 @@ app.get('/admin/messages/:userId', requireAdmin, (req, res) => {
   });
   db.saveMessages(allMessages);
   
-  res.render('admin/conversation', { messages, chatUser, user: req.session.user, purchaseChat: null });
+  res.render('admin/conversation', {
+    messages,
+    chatUser,
+    user: req.session.user,
+    purchaseChat: null,
+    needsHumanSupport,
+    conversationInsights
+  });
 });
 
 app.get('/admin/purchases/:purchaseId/messages', requireAdminPermission(ADMIN_PERMISSIONS.messages), (req, res) => {
@@ -13104,8 +14404,8 @@ app.get('/admin/purchases/:purchaseId/messages', requireAdminPermission(ADMIN_PE
 
   const messages = db.messages().filter((message) => (
     message && message.purchaseId === purchaseChat.purchaseId && (
-      (message.senderId === purchaseChat.buyerId && message.receiverId === 'admin') ||
-      (message.senderId === 'admin' && message.receiverId === purchaseChat.buyerId)
+      (message.senderId === purchaseChat.buyerId && (message.receiverId === 'admin' || message.receiverId === 'ai-support')) ||
+      ((message.senderId === 'admin' || message.senderId === 'ai-support') && message.receiverId === purchaseChat.buyerId)
     )
   ));
 
@@ -13122,7 +14422,15 @@ app.get('/admin/purchases/:purchaseId/messages', requireAdminPermission(ADMIN_PE
   });
   if (changed) db.saveMessages(allMessages);
 
-  res.render('admin/conversation', { messages, chatUser, user: req.session.user, purchaseChat });
+  const conversationInsights = inferConversationInsights({ messages, chatUser });
+  res.render('admin/conversation', {
+    messages,
+    chatUser,
+    user: req.session.user,
+    purchaseChat,
+    conversationInsights,
+    needsHumanSupport
+  });
 });
 
 // Admin - Reply to user
@@ -13130,7 +14438,7 @@ app.post('/admin/messages/:userId', requireAdmin, (req, res) => {
   const { content } = req.body;
   
   const messages = db.messages();
-  messages.push({
+  const adminMessage = {
     id: uuidv4(),
     senderId: 'admin',
     senderName: 'Admin',
@@ -13138,9 +14446,15 @@ app.post('/admin/messages/:userId', requireAdmin, (req, res) => {
     content,
     read: false,
     createdAt: new Date().toISOString()
-  });
+  };
+  messages.push(adminMessage);
   
   db.saveMessages(messages);
+  emitChatSignal({ userId: req.params.userId, message: adminMessage, purchaseId: null });
+
+  if (shouldReturnJson(req)) {
+    return res.json({ message: adminMessage, summary: buildAdminConversationUpdateForUser(req.params.userId) });
+  }
 
   try {
     const users = db.users();
@@ -13157,6 +14471,41 @@ app.post('/admin/messages/:userId', requireAdmin, (req, res) => {
     }
   } catch (error) {
     // ignore notification errors
+  }
+
+  res.redirect(`/admin/messages/${req.params.userId}`);
+});
+
+app.post('/admin/messages/:userId/support-mode', requireAdmin, (req, res) => {
+  const mode = String(req.body.mode || 'auto').trim().toLowerCase() === 'human' ? 'human' : 'auto';
+  const users = db.users();
+  const targetIndex = users.findIndex((item) => item && item.id === req.params.userId && item.role === 'user');
+  if (targetIndex === -1) {
+    return res.status(404).send('User not found');
+  }
+
+  users[targetIndex].supportMode = mode;
+  db.saveUsers(users);
+
+  const messages = db.messages();
+  const systemMessage = {
+    id: uuidv4(),
+    senderId: 'admin',
+    senderName: 'Admin',
+    receiverId: req.params.userId,
+    content: mode === 'human'
+      ? 'تم تحويل المحادثة إلى الدعم البشري. سيقوم أحد أعضاء الفريق بالرد شخصياً.'
+      : 'تم إعادة المحادثة إلى دعم الذكاء الاصطناعي الذكي. سأعود للرد تلقائياً الآن.',
+    system: true,
+    read: false,
+    createdAt: new Date().toISOString()
+  };
+  messages.push(systemMessage);
+  db.saveMessages(messages);
+  emitChatSignal({ userId: req.params.userId, message: systemMessage, purchaseId: null });
+
+  if (shouldReturnJson(req)) {
+    return res.json({ success: true, mode, chatUser: users[targetIndex] });
   }
 
   res.redirect(`/admin/messages/${req.params.userId}`);
@@ -13184,6 +14533,11 @@ app.post('/admin/purchases/:purchaseId/messages', requireAdminPermission(ADMIN_P
   });
 
   db.saveMessages(messages);
+  emitChatSignal({ userId: purchaseChat.buyerId, message: messages[messages.length - 1], purchaseId: purchaseChat.purchaseId });
+
+  if (shouldReturnJson(req)) {
+    return res.json({ message: messages[messages.length - 1], summary: buildAdminConversationUpdateForUser(purchaseChat.buyerId) });
+  }
 
   try {
     const users = db.users();
@@ -13251,6 +14605,28 @@ io.on('connection', (socket) => {
 
   socket.on('join-admin-team', () => {
     socket.join('admin-team');
+  });
+
+  socket.on('join-chat-room', ({ userId, admin }) => {
+    if (!userId && !admin) return;
+    if (userId) {
+      socket.join(`user-${userId}`);
+    }
+    if (admin) {
+      socket.join('admin-list');
+      if (userId) {
+        socket.join(`admin-user-${userId}`);
+      }
+    }
+  });
+
+  socket.on('leave-chat-room', ({ userId, admin }) => {
+    if (!userId) return;
+    socket.leave(`user-${userId}`);
+    if (admin) {
+      socket.leave(`admin-user-${userId}`);
+      socket.leave('admin-list');
+    }
   });
 
   socket.on('admin-team-message', (payload) => {

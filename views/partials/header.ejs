@@ -1,7 +1,8 @@
-<%
+<% 
   const guestPrimaryLinks = [
     { href: '/', label: 'المشاريع' },
-    { href: '/community', label: 'Community' }
+    { href: '/community', label: 'Community' },
+    { href: '/ai-advisor', label: 'مستشار AI' }
   ];
 
   const userPrimaryLinks = [
@@ -15,9 +16,11 @@
   const userSecondaryLinks = [
     { href: '/appointments', label: 'الجلسات' },
     { href: '/custom-project', label: 'اطلب مشروعك' },
+    { href: '/ai-advisor', label: 'مستشار AI' },
     { href: '/messages', label: 'التواصل' },
     { href: '/cart', label: 'السلة' },
     { href: '/subscriptions', label: 'الاشتراكات' },
+    { href: '/membership', label: 'عضويتي' },
     { href: '/loyalty', label: 'نقاطي' },
     { href: '/my-appointments', label: 'مواعيدي' }
   ];
@@ -45,6 +48,24 @@
   const mobileLinks = [...primaryLinks, ...secondaryLinks].filter((link, index, items) =>
     items.findIndex((candidate) => candidate.href === link.href) === index
   );
+
+  const getSubscriptionLabel = (subscription) => {
+    if (!subscription || subscription.status !== 'active') return 'بدون اشتراك';
+    const planId = String(subscription.planId || '').toLowerCase();
+    if (planId === 'business' || planId === 'premium') return 'اشتراك Business';
+    if (planId === 'pro') return 'اشتراك Pro';
+    if (planId === 'starter' || planId === 'basic') return 'اشتراك Starter';
+    return 'اشتراك نشط';
+  };
+
+  const getSubscriptionTierClass = (subscription) => {
+    if (!subscription || subscription.status !== 'active') return 'none';
+    const planId = String(subscription.planId || '').toLowerCase();
+    if (planId === 'business' || planId === 'premium') return 'business';
+    if (planId === 'pro') return 'pro';
+    if (planId === 'starter' || planId === 'basic') return 'starter';
+    return 'active';
+  };
 %>
 <header class="main-header">
   <div class="container nav-shell">
@@ -90,6 +111,9 @@
           <div class="nav-user-chip">
             <span class="nav-user-label">مرحباً</span>
             <strong><%= user.name %></strong>
+            <span class="nav-user-subscription nav-user-subscription-<%= getSubscriptionTierClass(user.subscription) %>">
+              <%= getSubscriptionLabel(user.subscription) %>
+            </span>
           </div>
           <a href="/logout" class="btn btn-secondary nav-compact-btn">خروج</a>
         <% } else { %>
@@ -143,6 +167,7 @@
             <div class="mobile-nav-user">
               <span class="mobile-nav-user-label">الحساب الحالي</span>
               <strong><%= user.name %></strong>
+              <span class="mobile-nav-user-subscription mobile-nav-user-subscription-<%= getSubscriptionTierClass(user.subscription) %>"><%= getSubscriptionLabel(user.subscription) %></span>
             </div>
           <% } %>
 

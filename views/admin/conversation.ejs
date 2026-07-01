@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>محادثة مع <%= chatUser ? chatUser.name : 'مستخدم' %> - Codentra</title>
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
   <link rel="stylesheet" href="/css/messages.css">
   <link rel="stylesheet" href="/css/glass-v3.css">
 </head>
@@ -45,9 +46,54 @@
           <% } else { %>
             <p><%= chatUser ? chatUser.email : '' %></p>
           <% } %>
+          <div class="chat-status admin-chat-status">
+            <p>حالة الدعم: <strong><%= chatUser && chatUser.supportMode === 'human' ? 'بشري' : 'ذكي' %></strong></p>
+            <p><%= needsHumanSupport ? 'تم تلقي طلب دعم بشري من الذكاء الاصطناعي. راسل المستخدم الآن مباشرة.' : 'هذه المحادثة متاحة الآن للرد الفوري من الأدمن.' %></p>
+            <% if (chatUser) { %>
+              <button id="toggleSupportModeBtn" class="btn btn-secondary btn-sm">
+                <%= chatUser.supportMode === 'human' ? 'ارجاع للذكاء الاصطناعي' : 'تحويل للدعم البشري' %>
+              </button>
+            <% } %>
+          </div>
+          <% if (conversationInsights) { %>
+            <div class="conversation-insights-panel">
+              <div class="insight-row">
+                <div class="insight-card">
+                  <h4>مستوى النية</h4>
+                  <p class="insight-value insight-<%= conversationInsights.intentClass %>"><%= conversationInsights.intentLevel %></p>
+                  <p><%= conversationInsights.intentReason %></p>
+                </div>
+                <div class="insight-card">
+                  <h4>ملف العميل</h4>
+                  <p><%= conversationInsights.traits.join(' • ') %></p>
+                  <p>مرفقات: <strong><%= conversationInsights.mediaCount %></strong> (<%= conversationInsights.mediaTypes.join(', ') || 'بدون' %>)</p>
+                </div>
+              </div>
+              <% if (conversationInsights.topProject || conversationInsights.topPlan) { %>
+                <div class="insight-row recommendation-row">
+                  <% if (conversationInsights.topProject) { %>
+                    <div class="recommendation-card">
+                      <h4>مشروع مقترح</h4>
+                      <p><strong><%= conversationInsights.topProject.projectTitle %></strong></p>
+                      <p>السعر: <%= conversationInsights.topProject.price %></p>
+                      <p><%= conversationInsights.topProject.reason %></p>
+                    </div>
+                  <% } %>
+                  <% if (conversationInsights.topPlan) { %>
+                    <div class="recommendation-card">
+                      <h4>خطة مقترحة</h4>
+                      <p><strong><%= conversationInsights.topPlan.planName %></strong></p>
+                      <p>السعر: <%= conversationInsights.topPlan.price %></p>
+                      <p><%= conversationInsights.topPlan.reason %></p>
+                    </div>
+                  <% } %>
+                </div>
+              <% } %>
+            </div>
+          <% } %>
         </div>
 
-        <div class="chat-messages admin-chat">
+        <div class="chat-messages admin-chat" id="adminChatMessages" data-user-id="<%= chatUser ? chatUser.id : '' %>" data-purchase-id="<%= purchaseChat ? purchaseChat.purchaseId : '' %>">
           <% if (messages.length === 0) { %>
             <div class="empty-chat">
               <p>لا توجد رسائل</p>
@@ -59,7 +105,7 @@
                   <%= msg.content %>
                 </div>
                 <div class="message-meta">
-                  <span class="sender"><%= msg.senderId === 'admin' ? 'أنت' : (chatUser ? chatUser.name : 'المستخدم') %></span>
+                  <span class="sender"><%= msg.senderId === 'admin' ? 'أنت' : msg.senderId === 'ai-support' ? 'AI' : (chatUser ? chatUser.name : 'المستخدم') %></span>
                   <span class="time"><%= new Date(msg.createdAt).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' }) %></span>
                 </div>
               </div>
@@ -68,7 +114,7 @@
         </div>
 
         <div class="chat-input">
-          <form action="<%= purchaseChat ? `/admin/purchases/${purchaseChat.purchaseId}/messages` : `/admin/messages/${chatUser ? chatUser.id : ''}` %>" method="POST" class="message-form">
+          <form id="adminReplyForm" action="<%= purchaseChat ? `/admin/purchases/${purchaseChat.purchaseId}/messages` : `/admin/messages/${chatUser ? chatUser.id : ''}` %>" method="POST" class="message-form">
             <textarea name="content" placeholder="اكتب ردك هنا..." required rows="3"></textarea>
             <button type="submit" class="btn btn-primary">إرسال</button>
           </form>
@@ -78,5 +124,105 @@
   </div>
 
   <%- include('../partials/footer') %>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    (function() {
+      const socket = typeof io !== 'undefined' ? io() : null;
+      const chatMessages = document.getElementById('adminChatMessages');
+      const form = document.getElementById('adminReplyForm');
+      const textarea = form ? form.querySelector('textarea[name="content"]') : null;
+      const currentUserId = chatMessages ? chatMessages.dataset.userId : null;
+
+      function scrollToBottom() {
+        if (!chatMessages) return;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      const appendedMessageIds = new Set();
+
+      function escapeHtml(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function appendAdminMessage(message) {
+        if (!chatMessages || !message) return;
+        if (message.id && appendedMessageIds.has(message.id)) return;
+        if (message.id) appendedMessageIds.add(message.id);
+        const wrapper = document.createElement('div');
+        const isSent = message.senderId === 'admin';
+        wrapper.className = `message ${isSent ? 'sent' : 'received'}`;
+        wrapper.innerHTML = `<div class="message-content">${escapeHtml(message.content || '')}</div><div class="message-meta"><span class="sender">${isSent ? 'أنت' : 'المستخدم'}</span><span class="time">${new Date(message.createdAt).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}</span></div>`;
+        chatMessages.appendChild(wrapper);
+        scrollToBottom();
+      }
+
+      if (socket && currentUserId) {
+        socket.on('connect', () => {
+          socket.emit('join-chat-room', { userId: currentUserId, admin: true });
+        });
+
+        socket.on('new-chat-message', (payload) => {
+          if (!payload || payload.userId !== currentUserId) return;
+          appendAdminMessage(payload.message);
+        });
+      }
+
+      const toggleSupportModeBtn = document.getElementById('toggleSupportModeBtn');
+      if (toggleSupportModeBtn && currentUserId) {
+        toggleSupportModeBtn.addEventListener('click', async (event) => {
+          event.preventDefault();
+          const needsHuman = toggleSupportModeBtn.textContent.includes('تحويل للدعم البشري');
+          const mode = needsHuman ? 'human' : 'auto';
+          try {
+            const response = await fetch(`/admin/messages/${currentUserId}/support-mode`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: `mode=${encodeURIComponent(mode)}`
+            });
+            if (response.ok) {
+              window.location.reload();
+            } else {
+              console.error('Failed to update support mode');
+            }
+          } catch (err) {
+            console.error('Toggle support mode error', err);
+          }
+        });
+      }
+
+      if (form) {
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const data = new URLSearchParams(new FormData(form));
+          try {
+            const response = await fetch(form.action, {
+              method: 'POST',
+              body: data,
+              headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+              }
+            });
+            if (!response.ok) throw new Error('network');
+            const payload = await response.json();
+            if (payload.message) appendAdminMessage(payload.message);
+            if (textarea) textarea.value = '';
+            form.reset();
+          } catch (error) {
+            form.submit();
+          }
+        });
+      }
+
+      scrollToBottom();
+    })();
+  </script>
 </body>
 </html>

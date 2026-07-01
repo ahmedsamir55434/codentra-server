@@ -10,6 +10,14 @@
 <body>
   <%- include('partials/header') %>
   <% const safeRecentProjects = Array.isArray(recentProjects) ? recentProjects : []; %>
+  <% const getSubscriptionLabel = (subscription) => {
+    if (!subscription || subscription.status !== 'active') return null;
+    const planId = String(subscription.planId || '').toLowerCase();
+    if (planId === 'business' || planId === 'premium') return 'Business';
+    if (planId === 'pro') return 'Pro';
+    if (planId === 'starter' || planId === 'basic') return 'Starter';
+    return 'نشط';
+  }; %>
 
   <section class="release-banner-section" aria-label="Codentra v3 launch">
     <div class="container">
@@ -45,6 +53,13 @@
     <div class="container">
       <h1>مشاريع برمجية احترافية جاهزة</h1>
       <p>اشترِ مشاريع ويب وتطبيقات كاملة مع الكود المصدر فورًا</p>
+      <% if (user && user.role === 'user' && getSubscriptionLabel(user.subscription)) { %>
+        <div class="hero-subscription-chip">
+          <span class="hero-subscription-kicker">اشتراكك الحالي</span>
+          <strong><%= getSubscriptionLabel(user.subscription) %></strong>
+          <span>يوفر لك مزايا ووصولًا خاصًا داخل Codentra</span>
+        </div>
+      <% } %>
     </div>
   </main>
 
@@ -62,7 +77,7 @@
         <div class="projects-grid recent-projects-grid">
           <% safeRecentProjects.forEach(project => { %>
             <div class="project-card project-card-recent">
-              <div class="project-image <%= project.images && project.images.length > 0 ? 'has-cover' : '' %>">
+              <div class="project-image <%= project.images && project.images.length > 0 ? 'has-cover' : '' %>" style="position:relative;">
                 <% if (project.images && project.images.length > 0) { %>
                   <img src="/<%= project.images[0] %>" alt="<%= project.title %>" class="project-cover">
                 <% } else { %>
@@ -83,6 +98,13 @@
                 <% } %>
                 <span class="project-card-eyebrow">آخر زيارة</span>
                 <h3><%= project.title %></h3>
+                <% if (project.visibility && project.visibility !== 'public') { %>
+                  <div style="margin-top:6px;">
+                    <span class="trust-badge trust-badge-last">
+                      <% if (project.visibility === 'subscribers') { %>للمشتركين فقط<% } else if (project.visibility === 'starter' || project.visibility === 'basic') { %>Starter فما فوق<% } else if (project.visibility === 'pro') { %>Pro فما فوق<% } else if (project.visibility === 'business' || project.visibility === 'premium') { %>Business فقط<% } %>
+                    </span>
+                  </div>
+                <% } %>
                 <p class="project-desc"><%= project.description.substring(0, 100) %><%= project.description.length > 100 ? '...' : '' %></p>
                 <div class="project-tech">
                   <% project.technologies.slice(0, 3).forEach(tech => { %>
@@ -130,7 +152,20 @@
       <div class="projects-grid">
         <% projects.forEach(project => { %>
           <div class="project-card">
-            <div class="project-image <%= project.images && project.images.length > 0 ? 'has-cover' : '' %>">
+            <div class="project-image <%= project.images && project.images.length > 0 ? 'has-cover' : '' %>" style="position:relative;">
+              <% if (project.visibility && project.visibility !== 'public') { %>
+                <span class="sale-badge" style="position:absolute; top:12px; right:12px; z-index:2;">
+                  <% if (project.visibility === 'subscribers') { %>
+                    للمشتركين
+                  <% } else if (project.visibility === 'starter' || project.visibility === 'basic') { %>
+                    Starter
+                  <% } else if (project.visibility === 'pro') { %>
+                    Pro
+                  <% } else if (project.visibility === 'business' || project.visibility === 'premium') { %>
+                    Business
+                  <% } %>
+                </span>
+              <% } %>
               <% if (project.images && project.images.length > 0) { %>
                 <img src="/<%= project.images[0] %>" alt="<%= project.title %>" class="project-cover">
               <% } else { %>
@@ -150,6 +185,13 @@
                 </form>
               <% } %>
               <h3><%= project.title %></h3>
+              <% if (project.visibility && project.visibility !== 'public') { %>
+                <div style="margin-top:6px;">
+                  <span class="trust-badge trust-badge-last">
+                    <% if (project.visibility === 'subscribers') { %>للمشتركين فقط<% } else if (project.visibility === 'starter' || project.visibility === 'basic') { %>Starter فما فوق<% } else if (project.visibility === 'pro') { %>Pro فما فوق<% } else if (project.visibility === 'business' || project.visibility === 'premium') { %>Business فقط<% } %>
+                  </span>
+                </div>
+              <% } %>
               <% if (project.trustSignals && (project.trustSignals.isTopSeller || project.trustSignals.lastPurchaseText)) { %>
                 <div class="trust-signals">
                   <% if (project.trustSignals.isTopSeller) { %>

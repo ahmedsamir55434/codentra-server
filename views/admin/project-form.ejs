@@ -41,9 +41,16 @@
           <%= error %>
         </div>
       <% } %>
+
+      <% if (typeof success !== 'undefined' && success) { %>
+        <div class="glass-card" style="padding: 12px; border-radius: 16px; margin-bottom: 16px; border: 1px solid rgba(80,220,140,0.35); background: rgba(80,220,140,0.08);">
+          <%= success %>
+        </div>
+      <% } %>
       
       <div class="form-container">
         <form action="<%= project ? '/admin/projects/' + project.id : '/admin/projects' %>" method="POST" enctype="multipart/form-data" class="admin-form">
+          <input type="hidden" name="priceGuardConfirm" id="priceGuardConfirm" value="0">
           <div class="form-group">
             <label for="title">عنوان المشروع *</label>
             <input type="text" id="title" name="title" value="<%= project ? project.title : '' %>" required>
@@ -73,9 +80,12 @@
             <label for="visibility">رؤية المشروع *</label>
             <select id="visibility" name="visibility" required>
               <option value="public" <%= !project || !project.visibility || project.visibility === 'public' ? 'selected' : '' %>>عام</option>
-              <option value="basic" <%= project && project.visibility === 'basic' ? 'selected' : '' %>>Basic فقط</option>
-              <option value="premium" <%= project && project.visibility === 'premium' ? 'selected' : '' %>>Premium فقط</option>
+              <option value="subscribers" <%= project && project.visibility === 'subscribers' ? 'selected' : '' %>>لجميع المشتركين</option>
+              <option value="starter" <%= project && project.visibility === 'starter' ? 'selected' : '' %>>Starter فما فوق</option>
+              <option value="pro" <%= project && project.visibility === 'pro' ? 'selected' : '' %>>Pro فما فوق</option>
+              <option value="business" <%= project && project.visibility === 'business' ? 'selected' : '' %>>Business فقط</option>
             </select>
+            <small class="form-help">اختر "لجميع المشتركين" لو المنتج متاح لأي اشتراك نشط، أو اختر مستوى أعلى لو عايزه حصريًا.</small>
           </div>
           
           <div class="form-group">
@@ -145,6 +155,57 @@
             <label for="description">وصف المشروع *</label>
             <textarea id="description" name="description" rows="6" required><%= project ? project.description : '' %></textarea>
           </div>
+
+          <% if (project) { %>
+            <div class="admin-section" style="margin: 18px 0; padding: 18px; border: 1px solid rgba(255,255,255,.08); border-radius: 18px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+                <h3 style="margin:0;">AI تلخيص المنتج</h3>
+                <!-- Avoid nested <form> tags: use formaction/formmethod on a button inside the main form. -->
+                <button
+                  type="submit"
+                  class="btn btn-sm btn-primary"
+                  formaction="/admin/projects/<%= project.id %>/ai-summary"
+                  formmethod="POST"
+                  formnovalidate
+                >✨ توليد ملخص AI</button>
+              </div>
+
+              <% if (project.aiSummary && (project.aiSummary.short || project.aiSummary.long)) { %>
+                <div style="margin-top:10px; opacity:0.8; font-size:13px;">
+                  آخر تحديث: <%= project.aiSummary.updatedAt ? new Date(project.aiSummary.updatedAt).toLocaleString('ar') : '-' %>
+                  <% if (project.aiSummary.model) { %> | model: <%= project.aiSummary.model %> <% } %>
+                </div>
+                <div style="margin-top:12px;">
+                  <div style="font-weight:800; margin-bottom:6px;">ملخص قصير</div>
+                  <div style="opacity:0.9; line-height:1.8;"><%= project.aiSummary.short %></div>
+                </div>
+                <div style="margin-top:12px;">
+                  <div style="font-weight:800; margin-bottom:6px;">ملخص تفصيلي</div>
+                  <div style="opacity:0.9; line-height:1.8;"><%= project.aiSummary.long %></div>
+                </div>
+                <div style="margin-top:12px; display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px;">
+                  <div>
+                    <div style="font-weight:800; margin-bottom:6px;">نقاط قوة</div>
+                    <ul style="margin:0; padding:0 18px; opacity:0.9; line-height:1.8;">
+                      <% (project.aiSummary.strengths || []).forEach(s => { %>
+                        <li><%= s %></li>
+                      <% }) %>
+                    </ul>
+                  </div>
+                  <div>
+                    <div style="font-weight:800; margin-bottom:6px;">نقاط ضعف</div>
+                    <ul style="margin:0; padding:0 18px; opacity:0.9; line-height:1.8;">
+                      <% (project.aiSummary.weaknesses || []).forEach(s => { %>
+                        <li><%= s %></li>
+                      <% }) %>
+                    </ul>
+                  </div>
+                </div>
+              <% } else { %>
+                <div style="margin-top:10px; opacity:0.8;">لم يتم توليد ملخص AI بعد.</div>
+              <% } %>
+            </div>
+          <% } %>
           
           <div class="form-group">
             <label for="projectFile">ملف المشروع (ZIP) <%= project ? '- اتركه فارغًا للإبقاء على الملف الحالي' : '*' %></label>
@@ -232,6 +293,45 @@
         button.parentElement.remove();
       }
     }
+
+    // Price Guard (double confirmation for risky pricing)
+    (function() {
+      const form = document.querySelector('form.admin-form');
+      if (!form) return;
+      const priceInput = document.getElementById('price');
+      const saleActiveInput = form.querySelector('input[name="saleActive"]');
+      const saleTypeInput = document.getElementById('saleType');
+      const saleValueInput = document.getElementById('saleValue');
+      const confirmInput = document.getElementById('priceGuardConfirm');
+
+      const toNum = (el) => {
+        const n = Number(el && el.value != null ? el.value : NaN);
+        return Number.isFinite(n) ? n : NaN;
+      };
+
+      form.addEventListener('submit', function(ev) {
+        if (!confirmInput) return;
+        if (String(confirmInput.value) === '1') return;
+
+        const price = toNum(priceInput);
+        const saleActive = !!(saleActiveInput && saleActiveInput.checked);
+        const saleType = saleTypeInput ? String(saleTypeInput.value || '') : '';
+        const saleValue = toNum(saleValueInput);
+
+        const reasons = [];
+        if (!Number.isFinite(price) || price <= 0) reasons.push('السعر 0 أو غير صحيح');
+        if (saleActive && saleType === 'percent' && Number.isFinite(saleValue) && saleValue > 90) reasons.push('خصم نسبة أكبر من 90%');
+        if (saleActive && saleType === 'fixed' && Number.isFinite(price) && Number.isFinite(saleValue) && saleValue >= price) reasons.push('خصم ثابت أكبر/يساوي السعر');
+
+        if (!reasons.length) return;
+        const ok = window.confirm('Price Guard\\n\\n' + reasons.join('\\n') + '\\n\\nهل تريد المتابعة وحفظ هذا التسعير؟');
+        if (!ok) {
+          ev.preventDefault();
+          return;
+        }
+        confirmInput.value = '1';
+      });
+    })();
   </script>
 </body>
 </html>

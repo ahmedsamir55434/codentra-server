@@ -118,6 +118,7 @@
                   </td>
                   <td>
                     <% if (user.role === 'user') { %>
+                      <a href="/admin/users/<%= user.id %>/360" class="btn btn-small btn-secondary">Customer 360</a>
                       <% if (user.isBlocked) { %>
                         <form action="/admin/users/<%= user.id %>/unblock" method="POST" style="display:inline;">
                           <button type="submit" class="btn btn-small btn-success">فك الحظر</button>

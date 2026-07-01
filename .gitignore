@@ -11,3 +11,6 @@ public/.DS_Store
 CodentraIOS/.build/
 CodentraIOS/DerivedData/
 CodentraIOS/
+android app/.gradle/
+android app/.idea/
+android app/local.properties

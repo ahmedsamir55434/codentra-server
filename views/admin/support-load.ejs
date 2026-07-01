@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>توقع ضغط الدعم - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/support-load" class="active">توقع ضغط الدعم</a>
+        <a href="/admin/command-center">Command Center</a>
+      </nav>
+    </aside>
+    <main class="admin-content">
+      <h1>توقع ضغط الدعم</h1>
+      <div class="glass-card" style="padding:14px;margin-bottom:14px;">تحليل آخر <%= sinceDays %> يوم وتحديد ساعات الذروة مع اقتراح توزيع الأدمنز.</div>
+
+      <div class="glass-card" style="padding:16px;margin-bottom:14px;overflow:auto;">
+        <h3 style="margin-top:0;">الساعات الأعلى ضغطًا</h3>
+        <table class="admin-table">
+          <thead><tr><th>الساعة</th><th>المستوى</th><th>عدد الأدمنز المقترح</th><th>السبب</th></tr></thead>
+          <tbody>
+          <% recommendations.forEach(r => { %>
+            <tr>
+              <td><%= r.hour %>:00</td>
+              <td><%= r.level === 'peak' ? 'ذروة' : r.level === 'busy' ? 'مرتفع' : 'عادي' %></td>
+              <td><strong><%= r.neededAdmins %></strong></td>
+              <td><%= r.reason %></td>
+            </tr>
+          <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="glass-card" style="padding:16px;overflow:auto;">
+        <h3 style="margin-top:0;">تفاصيل كل ساعة</h3>
+        <table class="admin-table">
+          <thead><tr><th>الساعة</th><th>رسائل</th><th>حجوزات</th><th>طلبات مخصصة</th><th>Score</th></tr></thead>
+          <tbody>
+          <% byHour.forEach(r => { %>
+            <tr>
+              <td><%= r.hour %>:00</td>
+              <td><%= r.messages %></td>
+              <td><%= r.bookings %></td>
+              <td><%= r.custom %></td>
+              <td><strong><%= r.score %></strong></td>
+            </tr>
+          <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

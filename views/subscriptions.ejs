@@ -5,16 +5,44 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>الاشتراكات - Codentra</title>
   <link rel="stylesheet" href="/css/style.css" />
-  <link rel="stylesheet" href="/css/purchases.css" />
   <link rel="stylesheet" href="/css/glass-v3.css">
+  <link rel="stylesheet" href="/css/purchases.css" />
 </head>
 <body>
   <%- include('partials/header') %>
+  <% 
+    const getPlanTier = (planId) => {
+      const value = String(planId || '').toLowerCase();
+      if (value === 'business' || value === 'premium') return 'business';
+      if (value === 'pro') return 'pro';
+      if (value === 'starter' || value === 'basic') return 'starter';
+      return 'none';
+    };
+    const tierRank = (tier) => {
+      if (tier === 'starter') return 1;
+      if (tier === 'pro') return 2;
+      if (tier === 'business') return 3;
+      return 0;
+    };
+    const currentTier = getPlanTier(activeSubscription && activeSubscription.planId);
+    const currentTierRank = tierRank(currentTier);
+    const planFeaturesMap = {
+      starter: ['خصم 10%', 'وصول للمنتجات المخصصة للمشتركين', 'إشعارات حصرية', 'دعم أساسي'],
+      pro: ['خصم 20%', 'منتجات Pro الحصرية', 'إصدارات مبكرة', 'أولوية في الدعم'],
+      business: ['خصم 30%', 'منتجات Business الحصرية', 'دعم VIP', 'أولوية تنفيذ']
+    };
+  %>
 
-  <main class="page purchases-page" style="padding: 30px 0;">
-    <div class="container">
-      <h1 style="margin-bottom: 10px;">الاشتراكات الشهرية</h1>
-      <p style="opacity: .9; margin-bottom: 20px;">الاجتماعات مجانية للجميع. الاشتراك يضيف مزايا عامة (بدون علاقة بالاجتماعات).</p>
+  <main class="subscriptions-page">
+    <div class="container subscriptions-layout">
+      <section class="subscriptions-hero">
+        <div>
+          <span class="subscriptions-kicker">Codentra Membership</span>
+          <h1>الاشتراكات الشهرية</h1>
+          <p>اختر مستوى العضوية المناسب لك وافتح خصومات، منتجات حصرية، ودعم أسرع بدون زحمة في الصفحة.</p>
+        </div>
+        <a href="/membership" class="btn btn-secondary">عرض عضويتي</a>
+      </section>
 
       <% if (error) { %>
         <div class="error-message"><%= error %></div>
@@ -23,45 +51,123 @@
         <div class="success-message"><%= success %></div>
       <% } %>
 
-      <section class="purchase-card" style="margin-bottom: 18px;">
-        <h2 style="margin-bottom: 8px;">حالة اشتراكك</h2>
+      <section class="subscription-status-panel">
+        <div>
+          <span class="subscriptions-kicker">الحالة الحالية</span>
+          <h2>اشتراكك</h2>
+        </div>
         <% if (activeSubscription) { %>
-          <div style="display:flex; flex-direction:column; gap:6px;">
-            <div>الخطة: <strong><%= activePlan ? activePlan.name : activeSubscription.planId %></strong></div>
-            <div>ينتهي في: <strong><%= activeSubscription.currentPeriodEnd ? new Date(activeSubscription.currentPeriodEnd).toLocaleString('ar-EG') : '-' %></strong></div>
+          <div class="subscription-status-data">
+            <span>الخطة <strong><%= activePlan ? activePlan.name : activeSubscription.planId %></strong></span>
+            <span>المستوى <strong><%= currentTier === 'starter' ? 'Starter' : currentTier === 'pro' ? 'Pro' : currentTier === 'business' ? 'Business' : 'مشترك' %></strong></span>
+            <span>ينتهي <strong><%= activeSubscription.currentPeriodEnd ? new Date(activeSubscription.currentPeriodEnd).toLocaleDateString('ar-EG') : '-' %></strong></span>
           </div>
-          <form method="POST" action="/subscriptions/cancel" style="margin-top: 12px;">
+          <form method="POST" action="/subscriptions/cancel">
             <button type="submit" class="btn btn-secondary">إلغاء الاشتراك</button>
           </form>
         <% } else { %>
-          <div>لا يوجد اشتراك نشط حالياً</div>
+          <p class="subscription-muted">لا يوجد اشتراك نشط حاليًا. اختار خطة من الكروت بالأسفل.</p>
         <% } %>
       </section>
 
-      <section class="purchases-grid">
+      <section class="subscription-plans-grid" aria-label="خطط الاشتراك">
         <% plans.forEach(plan => { %>
-          <div class="purchase-card">
-            <h2 style="margin-bottom: 6px;"><%= plan.name %></h2>
-            <div style="margin-bottom: 10px; opacity: .9;">السعر: <strong><%= displayMoney(plan.price) %></strong> / <%= plan.durationDays %> يوم</div>
+          <% const planTier = getPlanTier(plan.id); const planRank = tierRank(planTier); %>
+          <article class="subscription-plan-card subscription-plan-card-<%= plan.id %>" style="
+            --tier-accent:<%= plan.id === 'starter' ? 'rgba(110,180,255,.95)' : plan.id === 'pro' ? 'rgba(185,120,255,.95)' : 'rgba(255,190,90,.98)' %>;
+            --tier-accent-soft:<%= plan.id === 'starter' ? 'rgba(110,180,255,.12)' : plan.id === 'pro' ? 'rgba(185,120,255,.14)' : 'rgba(255,190,90,.16)' %>;
+            --tier-glow:<%= plan.id === 'starter' ? 'rgba(110,180,255,.22)' : plan.id === 'pro' ? 'rgba(185,120,255,.26)' : 'rgba(255,190,90,.32)' %>;
+            --tier-border:<%= plan.id === 'starter' ? 'rgba(110,180,255,.32)' : plan.id === 'pro' ? 'rgba(185,120,255,.38)' : 'rgba(255,190,90,.48)' %>;
+          ">
+            <% if (plan.id === 'pro') { %>
+              <span class="subscription-plan-ribbon">الأكثر طلبًا</span>
+            <% } else if (plan.id === 'business') { %>
+              <span class="subscription-plan-ribbon">VIP</span>
+            <% } %>
+            <div class="subscription-plan-head">
+              <div>
+                <span class="subscription-plan-pill">خطة <%= plan.name %></span>
+                <h2><%= plan.name %></h2>
+                <p class="subscription-plan-note">
+                  <% if (plan.id === 'starter') { %>
+                    بداية أنيقة للمستخدم الجديد
+                  <% } else if (plan.id === 'pro') { %>
+                    خيار متوازن للمستخدم النشط
+                  <% } else { %>
+                    تجربة فخمة كاملة للمحترفين
+                  <% } %>
+                </p>
+              </div>
+              <div class="subscription-plan-mark"><%= plan.id === 'starter' ? '01' : plan.id === 'pro' ? '02' : '03' %></div>
+            </div>
 
+            <div class="subscription-plan-price">
+              <strong><%= displayMoney(plan.price) %></strong>
+              <span>/<%= plan.durationDays %> يوم</span>
+            </div>
             <% if (Array.isArray(plan.features) && plan.features.length) { %>
-              <ul style="margin:0; padding:0 18px 0 0; line-height: 1.9;">
+              <ul class="subscription-plan-features">
                 <% plan.features.forEach(f => { %>
                   <li><%= f %></li>
                 <% }) %>
               </ul>
             <% } %>
 
-            <form method="POST" action="/subscriptions/subscribe" style="margin-top: 14px;">
+            <form method="POST" action="/subscriptions/subscribe" class="subscription-plan-form">
               <input type="hidden" name="planId" value="<%= plan.id %>" />
-              <div class="form-group" style="margin-bottom: 10px;">
+              <div class="form-group">
                 <label for="subCoupon_<%= plan.id %>">كوبون خصم للاشتراك (اختياري)</label>
                 <input type="text" id="subCoupon_<%= plan.id %>" name="couponCode" placeholder="مثال: SUB10">
               </div>
-              <button type="submit" class="btn btn-primary" <%= activeSubscription ? 'disabled' : '' %>>اشترك الآن</button>
+              <% if (!activeSubscription) { %>
+                <button type="submit" class="btn btn-primary">اشترك الآن</button>
+              <% } else if (planRank > currentTierRank) { %>
+                <button type="submit" formaction="/subscriptions/upgrade" class="btn btn-primary">ترقية للخطة الأعلى</button>
+              <% } else if (planRank === currentTierRank) { %>
+                <button type="button" class="btn btn-secondary" disabled>الخطة الحالية</button>
+              <% } else { %>
+                <button type="button" class="btn btn-secondary" disabled>أنت على خطة أعلى</button>
+              <% } %>
             </form>
-          </div>
+            <% if (planRank > currentTierRank) { %>
+              <p class="subscription-upgrade-note">يمكنك الترقية لهذا المستوى من بطاقتك الحالية</p>
+            <% } %>
+          </article>
         <% }) %>
+      </section>
+
+      <section class="subscription-compare-section">
+        <div class="subscription-section-head">
+          <span class="subscriptions-kicker">مقارنة</span>
+          <h2>مقارنة واضحة بين الخطط</h2>
+          <p>نفس المعلومات القديمة لكن بشكل ثابت ومناسب للهاتف واللابتوب.</p>
+        </div>
+        <div class="subscription-compare-grid">
+          <div class="subscription-compare-row">
+            <span>الخصم</span>
+            <strong>Starter 10%</strong>
+            <strong>Pro 20%</strong>
+            <strong>Business 30%</strong>
+          </div>
+          <div class="subscription-compare-row">
+            <span>المنتجات الخاصة</span>
+            <strong>للمشتركين</strong>
+            <strong>منتجات Pro</strong>
+            <strong>منتجات Business</strong>
+          </div>
+          <div class="subscription-compare-row">
+            <span>الدعم</span>
+            <strong>أساسي</strong>
+            <strong>أولوية</strong>
+            <strong>VIP</strong>
+          </div>
+          <div class="subscription-compare-row">
+            <span>الإصدارات المبكرة</span>
+            <strong>غير متاح</strong>
+            <strong>متاح</strong>
+            <strong>متاح</strong>
+          </div>
+        </div>
       </section>
     </div>
   </main>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI كشف التسريب - Codentra</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/glass-v3.css">
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <a href="/admin">الرئيسية</a>
+        <a href="/admin/leak-ai" class="active">AI كشف التسريب</a>
+        <a href="/admin/leak-radar">Leak Radar</a>
+        <a href="/admin/leak-reports">بلاغات التسريب</a>
+        <a href="/admin/purchases">المشتريات</a>
+        <a href="/">العودة للموقع</a>
+      </nav>
+    </aside>
+
+    <main class="admin-content">
+      <h1>AI كشف التسريب</h1>
+      <div class="glass-card" style="padding:14px; margin-bottom:14px; opacity:0.9; line-height:1.7;">
+        تحليل تلقائي (Heuristic) لأحداث التحميل خلال آخر <strong><%= windowHours %></strong> ساعة ويخرج “درجة خطر” + توصية.
+        <% if (!geminiEnabled) { %>
+          <div style="opacity:0.75; font-size:12px; margin-top:6px;">ملاحظة: GEMINI غير مفعّل، التحليل يعتمد على قواعد داخلية.</div>
+        <% } %>
+      </div>
+
+      <% if (!rows || rows.length === 0) { %>
+        <div class="glass-card" style="padding:16px; opacity:0.85;">لا توجد بيانات كافية.</div>
+      <% } else { %>
+        <div class="glass-card" style="padding:16px;">
+          <div style="overflow:auto;">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>الخطر</th>
+                  <th>المستخدم</th>
+                  <th>المشروع</th>
+                  <th>Downloads</th>
+                  <th>IPs</th>
+                  <th>Devices</th>
+                  <th>توصية</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% rows.forEach(r => { %>
+                  <tr>
+                    <td>
+                      <span class="glass-badge" style="<%= r.score >= 80 ? 'background:rgba(255,80,80,0.18);border-color:rgba(255,80,80,0.35);' : r.score >= 55 ? 'background:rgba(255,190,80,0.18);border-color:rgba(255,190,80,0.35);' : 'background:rgba(80,220,140,0.18);border-color:rgba(80,220,140,0.35);' %>">
+                        <%= r.score %>/100
+                      </span>
+                    </td>
+                    <td>
+                      <div><strong><%= r.userLabel %></strong></div>
+                      <div class="ltr" style="opacity:0.7;font-size:12px;"><%= r.userId %></div>
+                    </td>
+                    <td>
+                      <div><strong><%= r.projectTitle %></strong></div>
+                      <div class="ltr" style="opacity:0.7;font-size:12px;"><%= r.projectId || '-' %></div>
+                    </td>
+                    <td><%= r.downloadCount %></td>
+                    <td style="max-width:260px;">
+                      <div class="ltr" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><%= r.ipList.join(', ') %></div>
+                    </td>
+                    <td><%= r.deviceList.join(', ') %></td>
+                    <td style="max-width:420px; line-height:1.7;">
+                      <div><strong><%= r.recommendation.title %></strong></div>
+                      <div style="opacity:0.85;"><%= r.recommendation.message %></div>
+                      <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <% if (r.recommendation.action === 'lock_purchase' && r.purchaseId) { %>
+                          <form action="/admin/purchases/<%= r.purchaseId %>/lock-download" method="POST" class="inline-form">
+                            <input type="hidden" name="reason" value="AI Leak Risk: قفل النسخة بسبب سلوك تحميل مشبوه">
+                            <button class="btn btn-sm btn-danger" type="submit">🔒 قفل النسخة</button>
+                          </form>
+                        <% } %>
+                        <% if (r.projectId && (r.recommendation.action === 'lock_project' || r.score >= 90)) { %>
+                          <form action="/admin/projects/<%= r.projectId %>/lock-downloads" method="POST" class="inline-form">
+                            <input type="hidden" name="reason" value="AI Leak Risk: قفل تنزيلات المشروع مؤقتًا للتحقق">
+                            <button class="btn btn-sm btn-warning" type="submit">⛔ قفل المشروع</button>
+                          </form>
+                        <% } %>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      <% } %>
+    </main>
+  </div>
+</body>
+</html>
+

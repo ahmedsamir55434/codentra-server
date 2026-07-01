@@ -604,3 +604,7 @@ html[data-theme="light"] .section-title {
 .project-image-item:nth-child(3) { animation-delay: 0.3s; }
 .project-image-item:nth-child(4) { animation-delay: 0.4s; }
 .project-image-item:nth-child(5) { animation-delay: 0.5s; }
+
+.related-projects-section {
+  padding-top: 18px;
+}

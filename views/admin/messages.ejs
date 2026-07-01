@@ -85,17 +85,25 @@
               const msgs = conversations[userId];
               const lastMsg = msgs[msgs.length - 1];
               const chatUser = users.find(u => u.id === userId);
-              const unreadCount = msgs.filter(m => m.senderId === userId && !m.read).length;
+              const summary = conversationSummaries[userId] || {};
+              const unreadCount = summary.unreadCount || 0;
+              const pendingHandoff = summary.pendingHandoff;
           %>
             <a href="/admin/messages/<%= userId %>" class="conversation-card <%= unreadCount > 0 ? 'has-unread' : '' %>">
               <div class="conversation-info">
                 <h3><%= chatUser ? chatUser.name : 'مستخدم غير معروف' %></h3>
-                <p class="last-message"><%= lastMsg.content.substring(0, 50) %>...</p>
+                <p class="last-message"><%= summary.lastMessage || (lastMsg.content ? lastMsg.content.substring(0, 50) + '...' : 'لا توجد رسائل بعد') %></p>
                 <span class="conversation-date"><%= new Date(lastMsg.createdAt).toLocaleString('ar-EG') %></span>
+                <div class="intent-badge intent-<%= summary.intentClass %>">نية: <%= summary.intentLevel %></div>
               </div>
-              <% if (unreadCount > 0) { %>
-                <span class="unread-badge"><%= unreadCount %></span>
-              <% } %>
+              <div class="conversation-badges">
+                <% if (pendingHandoff) { %>
+                  <span class="handoff-badge">دعم بشري مطلوب</span>
+                <% } %>
+                <% if (unreadCount > 0) { %>
+                  <span class="unread-badge"><%= unreadCount %></span>
+                <% } %>
+              </div>
             </a>
           <% }) %>
         </div>
@@ -104,7 +112,7 @@
   </div>
 
   <%- include('../partials/footer') %>
-  
+  <script src="/socket.io/socket.io.js"></script>
   <script>
     // Mobile sidebar toggle
     const adminNavToggle = document.getElementById('adminNavToggle');
@@ -122,6 +130,16 @@
             adminSidebar.classList.remove('active');
           }
         }
+      });
+    }
+
+    if (typeof io !== 'undefined') {
+      const socket = io();
+      socket.on('connect', () => {
+        socket.emit('join-chat-room', { userId: null, admin: true });
+      });
+      socket.on('admin-conversation-updated', () => {
+        window.location.reload();
       });
     }
   </script>
