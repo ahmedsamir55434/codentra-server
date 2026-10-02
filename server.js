@@ -20,28 +20,50 @@ const { Pool } = require('pg');
 const PptxGenJS = require('pptxgenjs');
 const { AccessToken } = require('livekit-server-sdk');
 const WatermarkProcessor = require('./utils/watermark');
+const { buildEnv } = require('./src/config/env');
+const { buildRuntimePaths } = require('./src/config/paths');
+const {
+  normalizeStoredPath,
+  ensureDirectory,
+  createStoredPathResolver,
+  prepareRuntimeDirectories
+} = require('./src/infrastructure/storage/fileStorage');
+const { createApiAuth } = require('./src/modules/auth/apiAuth');
+const { registerUserApiRoutes } = require('./src/api/userRoutes');
+const { registerProjectApiRoutes } = require('./src/api/projectRoutes');
+const { registerCartReadApiRoutes } = require('./src/api/cartRoutes');
+const { registerAccountReadApiRoutes } = require('./src/api/accountRoutes');
+const { registerDeviceApiRoutes } = require('./src/api/deviceRoutes');
+const {
+  registerGeneralMessageApiRoutes,
+  registerPurchaseMessageApiRoutes
+} = require('./src/api/messageRoutes');
+const { registerPurchaseDownloadApiRoutes } = require('./src/api/purchaseRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-const SESSION_SECRET = process.env.SESSION_SECRET || 'codentra-secret-key-2024';
-const AUTH_COOKIE_NAME = 'codentra_auth';
-const AUTH_COOKIE_MAX_AGE = 1000 * 60 * 60 * 24 * 7;
-const DATABASE_URL = String(process.env.DATABASE_URL || '').trim();
-const GEMINI_API_KEY = String(process.env.GEMINI_API_KEY || '').trim();
-const GEMINI_MODEL = String(process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim() || 'gemini-2.5-flash';
-const LIVEKIT_URL = String(process.env.LIVEKIT_URL || '').trim();
-const LIVEKIT_API_KEY = String(process.env.LIVEKIT_API_KEY || '').trim();
-const LIVEKIT_API_SECRET = String(process.env.LIVEKIT_API_SECRET || '').trim();
-const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || '').trim();
-const GOOGLE_CLIENT_SECRET = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
-const GITHUB_CLIENT_ID = String(process.env.GITHUB_CLIENT_ID || '').trim();
-const GITHUB_CLIENT_SECRET = String(process.env.GITHUB_CLIENT_SECRET || '').trim();
-const ATLOS_API_URL = String(process.env.ATLOS_API_URL || 'https://api.atlos.io/gateway/rest').trim().replace(/\/+$/, '');
-const ATLOS_MERCHANT_ID = String(process.env.ATLOS_MERCHANT_ID || process.env.ATLOS_API_KEY || '').trim();
-const ATLOS_API_SECRET = String(process.env.ATLOS_API_SECRET || '').trim();
-const ATLOS_WEBHOOK_SECRET = String(process.env.ATLOS_WEBHOOK_SECRET || '').trim();
-const FX_API_BASE_URL = String(process.env.FX_API_BASE_URL || 'https://api.frankfurter.dev/v1').trim().replace(/\/+$/, '');
-const FALLBACK_EGP_TO_USD_RATE = Number(process.env.FALLBACK_EGP_TO_USD_RATE || 0.02);
+const env = buildEnv();
+const PORT = env.port;
+const SESSION_SECRET = env.sessionSecret;
+const AUTH_COOKIE_NAME = env.authCookieName;
+const AUTH_COOKIE_MAX_AGE = env.authCookieMaxAge;
+const DATABASE_URL = env.databaseUrl;
+const GEMINI_API_KEY = env.geminiApiKey;
+const GEMINI_MODEL = env.geminiModel;
+const LIVEKIT_URL = env.livekitUrl;
+const LIVEKIT_API_KEY = env.livekitApiKey;
+const LIVEKIT_API_SECRET = env.livekitApiSecret;
+const GOOGLE_CLIENT_ID = env.googleClientId;
+const GOOGLE_CLIENT_SECRET = env.googleClientSecret;
+const GITHUB_CLIENT_ID = env.githubClientId;
+const GITHUB_CLIENT_SECRET = env.githubClientSecret;
+const JWT_SECRET = env.jwtSecret;
+const JWT_EXPIRES_IN = env.jwtExpiresIn;
+const ATLOS_API_URL = env.atlosApiUrl;
+const ATLOS_MERCHANT_ID = env.atlosMerchantId;
+const ATLOS_API_SECRET = env.atlosApiSecret;
+const ATLOS_WEBHOOK_SECRET = env.atlosWebhookSecret;
+const FX_API_BASE_URL = env.fxApiBaseUrl;
+const FALLBACK_EGP_TO_USD_RATE = env.fallbackEgpToUsdRate;
 
 // CORS middleware
 app.use((req, res, next) => {
@@ -57,12 +79,13 @@ app.use((req, res, next) => {
 
 // Initialize watermark processor
 const watermarkProcessor = new WatermarkProcessor();
-const IS_VERCEL = Boolean(process.env.VERCEL);
+const IS_VERCEL = env.isVercel;
 const APP_ROOT_DIR = __dirname;
-const BUNDLED_DATA_DIR = path.join(APP_ROOT_DIR, 'data');
-const BUNDLED_UPLOADS_DIR = path.join(APP_ROOT_DIR, 'uploads');
-const BUNDLED_PRIVATE_UPLOADS_DIR = path.join(APP_ROOT_DIR, 'private_uploads');
-const AUTH_COOKIE_SECRET = process.env.AUTH_COOKIE_SECRET || `${SESSION_SECRET}-auth`;
+const runtimePaths = buildRuntimePaths({ appRootDir: APP_ROOT_DIR, isVercel: IS_VERCEL });
+const BUNDLED_DATA_DIR = runtimePaths.bundledDataDir;
+const BUNDLED_UPLOADS_DIR = runtimePaths.bundledUploadsDir;
+const BUNDLED_PRIVATE_UPLOADS_DIR = runtimePaths.bundledPrivateUploadsDir;
+const AUTH_COOKIE_SECRET = env.authCookieSecret;
 const AUTH_COOKIE_OPTIONS = {
   httpOnly: true,
   sameSite: 'lax',
@@ -71,36 +94,18 @@ const AUTH_COOKIE_OPTIONS = {
   maxAge: AUTH_COOKIE_MAX_AGE
 };
 
-const normalizeStoredPath = (storedPath) => {
-  if (!storedPath) return null;
-  if (typeof storedPath !== 'string') return null;
-  return storedPath.startsWith('/') ? storedPath.slice(1) : storedPath;
-};
-
-const toAbsolutePath = (storedPath) => {
-  const normalized = normalizeStoredPath(storedPath);
-  if (!normalized) return null;
-
-  const candidates = [];
-
-  if (normalized.startsWith('uploads/')) {
-    const relativeUploadPath = normalized.slice('uploads/'.length);
-    candidates.push(path.join(UPLOADS_DIR, relativeUploadPath));
-    if (IS_VERCEL) candidates.push(path.join(BUNDLED_UPLOADS_DIR, relativeUploadPath));
-  } else if (normalized.startsWith('private_uploads/')) {
-    const relativePrivatePath = normalized.slice('private_uploads/'.length);
-    candidates.push(path.join(PRIVATE_UPLOADS_DIR, relativePrivatePath));
-    if (IS_VERCEL) candidates.push(path.join(BUNDLED_PRIVATE_UPLOADS_DIR, relativePrivatePath));
-  } else {
-    candidates.push(path.join(APP_ROOT_DIR, normalized));
-  }
-
-  for (const candidate of candidates) {
-    if (candidate && fs.existsSync(candidate)) return candidate;
-  }
-
-  return candidates[0] || path.join(APP_ROOT_DIR, normalized);
-};
+const toAbsolutePath = createStoredPathResolver({
+  appRootDir: APP_ROOT_DIR,
+  uploadsDir: runtimePaths.uploadsDir,
+  bundledUploadsDir: BUNDLED_UPLOADS_DIR,
+  privateUploadsDir: runtimePaths.privateUploadsDir,
+  bundledPrivateUploadsDir: BUNDLED_PRIVATE_UPLOADS_DIR,
+  isVercel: IS_VERCEL
+});
+const { generateToken, verifyToken, requireApiUserAuth } = createApiAuth({
+  jwtSecret: JWT_SECRET,
+  jwtExpiresIn: JWT_EXPIRES_IN
+});
 
 const formatMoney = (v) => {
   const n = Number(v || 0);
@@ -1696,45 +1701,6 @@ const finalizeWalletCardOwnerActivity = ({ payerUserId, buyerUser, amount, kind,
   return true;
 };
 
-// JWT Helpers
-const JWT_SECRET = 'codentra-jwt-secret-2024';
-const JWT_EXPIRES_IN = '7d';
-
-const generateToken = (user) => {
-  const payload = {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role
-  };
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-};
-
-const verifyToken = (token) => {
-  try {
-    return jwt.verify(token, JWT_SECRET);
-  } catch (e) {
-    return null;
-  }
-};
-
-const requireApiUserAuth = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid token' });
-  }
-  const token = authHeader.split(' ')[1];
-  const decoded = verifyToken(token);
-  if (!decoded) {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-  if (decoded.role !== 'user') {
-    return res.status(403).json({ error: 'API for users only' });
-  }
-  req.apiUser = decoded;
-  next();
-};
-
 const calculateRefundForRejectedItem = ({ rejectedPurchase, allPurchases }) => {
   // For single-item purchases, refund its own walletDebitAmount (if set)
   if (!rejectedPurchase.orderId) {
@@ -1759,36 +1725,17 @@ const calculateRefundForRejectedItem = ({ rejectedPurchase, allPurchases }) => {
 };
 
 // Data storage paths
-const RUNTIME_ROOT_DIR = IS_VERCEL ? path.join('/tmp', 'codentra-runtime') : APP_ROOT_DIR;
-const DATA_DIR = IS_VERCEL ? path.join(RUNTIME_ROOT_DIR, 'data') : BUNDLED_DATA_DIR;
-const UPLOADS_DIR = IS_VERCEL ? path.join(RUNTIME_ROOT_DIR, 'uploads') : BUNDLED_UPLOADS_DIR;
-const MEETING_RECORDINGS_DIR = path.join(UPLOADS_DIR, 'meeting-recordings');
-const ADMIN_TEAM_UPLOADS_DIR = path.join(UPLOADS_DIR, 'admin-team');
-const SUPPORT_ATTACHMENTS_DIR = path.join(UPLOADS_DIR, 'support-attachments');
-const PRIVATE_UPLOADS_DIR = IS_VERCEL ? path.join(RUNTIME_ROOT_DIR, 'private_uploads') : BUNDLED_PRIVATE_UPLOADS_DIR;
-const COMMUNITY_MEDIA_DIR = path.join(UPLOADS_DIR, 'community-media');
-const COMMUNITY_CVS_DIR = path.join(PRIVATE_UPLOADS_DIR, 'community-cvs');
-const ensureDirectory = (dirPath) => {
-  if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath, { recursive: true });
-};
+const RUNTIME_ROOT_DIR = runtimePaths.runtimeRootDir;
+const DATA_DIR = runtimePaths.dataDir;
+const UPLOADS_DIR = runtimePaths.uploadsDir;
+const MEETING_RECORDINGS_DIR = runtimePaths.meetingRecordingsDir;
+const ADMIN_TEAM_UPLOADS_DIR = runtimePaths.adminTeamUploadsDir;
+const SUPPORT_ATTACHMENTS_DIR = runtimePaths.supportAttachmentsDir;
+const PRIVATE_UPLOADS_DIR = runtimePaths.privateUploadsDir;
+const COMMUNITY_MEDIA_DIR = runtimePaths.communityMediaDir;
+const COMMUNITY_CVS_DIR = runtimePaths.communityCvsDir;
 
-const copyFileIfMissing = (sourcePath, targetPath) => {
-  if (!sourcePath || !targetPath) return;
-  if (!fs.existsSync(sourcePath) || fs.existsSync(targetPath)) return;
-  ensureDirectory(path.dirname(targetPath));
-  fs.copyFileSync(sourcePath, targetPath);
-};
-
-// Ensure directories exist
-[DATA_DIR, UPLOADS_DIR, MEETING_RECORDINGS_DIR, ADMIN_TEAM_UPLOADS_DIR, SUPPORT_ATTACHMENTS_DIR, PRIVATE_UPLOADS_DIR, COMMUNITY_MEDIA_DIR, COMMUNITY_CVS_DIR].forEach(ensureDirectory);
-
-if (IS_VERCEL && fs.existsSync(BUNDLED_DATA_DIR)) {
-  fs.readdirSync(BUNDLED_DATA_DIR).forEach((entry) => {
-    const sourcePath = path.join(BUNDLED_DATA_DIR, entry);
-    if (!fs.statSync(sourcePath).isFile()) return;
-    copyFileIfMissing(sourcePath, path.join(DATA_DIR, entry));
-  });
-}
+prepareRuntimeDirectories({ runtimePaths, isVercel: IS_VERCEL });
 
 const cloneStoredValue = (value) => JSON.parse(JSON.stringify(value));
 
@@ -6373,52 +6320,31 @@ app.post('/api/auth/register', (req, res) => {
   });
 });
 
-app.get('/api/me', requireApiUserAuth, (req, res) => {
-  const users = db.users();
-  const user = users.find(u => u.id === req.apiUser.id);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      walletBalance: Number(user.walletBalance || 0),
-      loyaltyPoints: normalizeLoyaltyPoints(user.loyaltyPoints),
-      referralCode: user.referralCode || null,
-      unreadNotificationsCount: getUnreadNotificationCount(user),
-      walletCardNumberMasked: maskWalletCardNumber(user.walletCardNumber),
-      walletCardSpendingLimit: sanitizeWalletCardSpendingLimit(user.walletCardSpendingLimit),
-      subscription: buildSessionUser(user).subscription
-    }
-  });
+registerUserApiRoutes({
+  app,
+  requireApiUserAuth,
+  db,
+  normalizeLoyaltyPoints,
+  getUnreadNotificationCount,
+  maskWalletCardNumber,
+  sanitizeWalletCardSpendingLimit,
+  buildSessionUser
 });
 
-app.get('/api/projects', requireApiUserAuth, (req, res) => {
-  const projects = db.projects().filter(p => isProjectVisibleToUser({ project: p, sessionUser: { role: 'user', id: req.apiUser.id } })).map(decorateProjectPricing);
-  res.json({ projects });
+registerProjectApiRoutes({
+  app,
+  requireApiUserAuth,
+  db,
+  isProjectVisibleToUser,
+  decorateProjectPricing
 });
 
-app.get('/api/projects/:id', requireApiUserAuth, (req, res) => {
-  const projects = db.projects();
-  const project = decorateProjectPricing(projects.find(p => p.id === req.params.id));
-  if (!project) return res.status(404).json({ error: 'Project not found' });
-  if (!isProjectVisibleToUser({ project, sessionUser: { role: 'user', id: req.apiUser.id } })) {
-    return res.status(403).json({ error: 'Not allowed' });
-  }
-  res.json({ project });
-});
-
-app.get('/api/cart', requireApiUserAuth, (req, res) => {
-  const { cart } = getOrCreateCartForUser({ userId: req.apiUser.id });
-  res.json({ cart });
-});
-
-app.get('/api/cart/summary', requireApiUserAuth, (req, res) => {
-  const { cart } = getOrCreateCartForUser({ userId: req.apiUser.id });
-  const couponCode = normalizeCouponCode(req.query.couponCode);
-  const summary = summarizeCart({ cart, couponCode, sessionUser: { role: 'user', id: req.apiUser.id } });
-  res.json({ summary });
+registerCartReadApiRoutes({
+  app,
+  requireApiUserAuth,
+  getOrCreateCartForUser,
+  normalizeCouponCode,
+  summarizeCart
 });
 
 app.post('/api/cart/add', requireApiUserAuth, (req, res) => {
@@ -6556,290 +6482,53 @@ app.post('/api/cart/checkout', requireApiUserAuth, (req, res) => {
   res.json({ orderId, message: 'Order created' });
 });
 
-app.get('/api/purchases', requireApiUserAuth, (req, res) => {
-  const purchases = db.purchases().filter(p => p.userId === req.apiUser.id);
-  const invoices = db.invoices();
-  res.json({ purchases, invoices });
+registerAccountReadApiRoutes({
+  app,
+  requireApiUserAuth,
+  db,
+  ensureUserPaymentProfile,
+  serializeNotificationItem,
+  getNotificationCenterItems,
+  getUnreadNotificationCount,
+  markAllNotificationsAsRead,
+  getLoyaltyRedeemSettings,
+  normalizeLoyaltyPoints,
+  getUserRealtimeSummary
 });
 
-app.get('/api/notifications', requireApiUserAuth, (req, res) => {
-  const users = db.users();
-  const userIndex = users.findIndex((item) => item && item.id === req.apiUser.id && item.role === 'user');
-  if (userIndex === -1) return res.status(404).json({ error: 'User not found' });
-
-  const currentUser = users[userIndex];
-  if (ensureUserPaymentProfile({ user: currentUser, users })) {
-    db.saveUsers(users);
-  }
-
-  if (String(req.query.markRead || '').trim() === '1') {
-    if (markAllNotificationsAsRead(currentUser)) {
-      db.saveUsers(users);
-    }
-  }
-
-  return res.json({
-    notifications: getNotificationCenterItems(currentUser).map(serializeNotificationItem).filter(Boolean),
-    unreadCount: getUnreadNotificationCount(currentUser)
-  });
+registerDeviceApiRoutes({
+  app,
+  requireApiUserAuth,
+  db
 });
 
-app.get('/api/loyalty', requireApiUserAuth, (req, res) => {
-  const users = db.users();
-  const currentUser = users.find((item) => item && item.id === req.apiUser.id && item.role === 'user');
-  if (!currentUser) return res.status(404).json({ error: 'User not found' });
-
-  const redeem = getLoyaltyRedeemSettings();
-  return res.json({
-    loyaltyPoints: normalizeLoyaltyPoints(currentUser.loyaltyPoints),
-    walletBalance: Number(currentUser.walletBalance || 0),
-    minPoints: normalizeLoyaltyPoints(redeem.minPoints),
-    egpPerPoint: Number(redeem.egpPerPoint || 0)
-  });
+registerGeneralMessageApiRoutes({
+  app,
+  requireApiUserAuth,
+  db,
+  uuidv4
 });
 
-app.get('/api/live/summary', requireApiUserAuth, (req, res) => {
-  return res.json({
-    summary: getUserRealtimeSummary({ userId: req.apiUser.id }),
-    serverTime: Date.now()
-  });
+registerPurchaseMessageApiRoutes({
+  app,
+  requireApiUserAuth,
+  db,
+  uuidv4,
+  getPurchaseChatContextForUser
 });
 
-app.post('/api/device/register', requireApiUserAuth, (req, res) => {
-  const pushToken = String(req.body.pushToken || '').trim();
-  const platform = String(req.body.platform || 'ios').trim() || 'ios';
-  if (!pushToken) return res.status(400).json({ error: 'pushToken is required' });
-
-  const users = db.users();
-  const userIndex = users.findIndex((item) => item && item.id === req.apiUser.id && item.role === 'user');
-  if (userIndex === -1) return res.status(404).json({ error: 'User not found' });
-
-  const devices = Array.isArray(users[userIndex].pushDevices) ? users[userIndex].pushDevices : [];
-  const existingIndex = devices.findIndex((item) => item && item.pushToken === pushToken);
-  const payload = {
-    pushToken,
-    platform,
-    updatedAt: new Date().toISOString()
-  };
-
-  if (existingIndex === -1) {
-    devices.push(payload);
-  } else {
-    devices[existingIndex] = { ...devices[existingIndex], ...payload };
-  }
-
-  users[userIndex].pushDevices = devices;
-  db.saveUsers(users);
-  return res.json({ success: true });
-});
-
-app.post('/api/device/unregister', requireApiUserAuth, (req, res) => {
-  const pushToken = String(req.body.pushToken || '').trim();
-  if (!pushToken) return res.status(400).json({ error: 'pushToken is required' });
-
-  const users = db.users();
-  const userIndex = users.findIndex((item) => item && item.id === req.apiUser.id && item.role === 'user');
-  if (userIndex === -1) return res.status(404).json({ error: 'User not found' });
-
-  const devices = Array.isArray(users[userIndex].pushDevices) ? users[userIndex].pushDevices : [];
-  users[userIndex].pushDevices = devices.filter((item) => item && item.pushToken !== pushToken);
-  db.saveUsers(users);
-  return res.json({ success: true });
-});
-
-app.get('/api/messages', requireApiUserAuth, (req, res) => {
-  const messages = db.messages()
-    .filter((message) => message && (
-      (message.senderId === req.apiUser.id && message.receiverId === 'admin') ||
-      (message.senderId === 'admin' && message.receiverId === req.apiUser.id)
-    ))
-    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
-    .map((message) => ({
-      id: message.id,
-      content: message.content || '',
-      senderId: message.senderId || null,
-      senderName: message.senderName || null,
-      receiverId: message.receiverId || null,
-      isMine: message.senderId === req.apiUser.id,
-      purchaseId: message.purchaseId || null,
-      customProjectRequestId: message.customProjectRequestId || null,
-      projectTitle: message.projectTitle || null,
-      createdAt: message.createdAt || null,
-      read: Boolean(message.read)
-    }));
-
-  return res.json({ messages });
-});
-
-app.post('/api/messages', requireApiUserAuth, (req, res) => {
-  const content = String(req.body.content || '').trim();
-  if (!content) return res.status(400).json({ error: 'محتوى الرسالة مطلوب' });
-
-  const users = db.users();
-  const currentUser = users.find((item) => item && item.id === req.apiUser.id && item.role === 'user');
-  if (!currentUser) return res.status(404).json({ error: 'User not found' });
-
-  const message = {
-    id: uuidv4(),
-    senderId: currentUser.id,
-    senderName: currentUser.name,
-    receiverId: 'admin',
-    content,
-    read: false,
-    createdAt: new Date().toISOString()
-  };
-
-  const messages = db.messages();
-  messages.push(message);
-  db.saveMessages(messages);
-
-  return res.status(201).json({
-    message: {
-      id: message.id,
-      content: message.content,
-      senderId: message.senderId,
-      senderName: message.senderName,
-      receiverId: message.receiverId,
-      isMine: true,
-      createdAt: message.createdAt,
-      read: false
-    }
-  });
-});
-
-app.get('/api/purchases/:id/messages', requireApiUserAuth, (req, res) => {
-  const purchaseChat = getPurchaseChatContextForUser(req.params.id, req.apiUser.id);
-  if (!purchaseChat) return res.status(404).json({ error: 'Purchase not found' });
-
-  const messages = db.messages()
-    .filter((message) => (
-      message &&
-      message.purchaseId === purchaseChat.purchaseId && (
-        (message.senderId === req.apiUser.id && message.receiverId === 'admin') ||
-        (message.senderId === 'admin' && message.receiverId === req.apiUser.id)
-      )
-    ))
-    .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0))
-    .map((message) => ({
-      id: message.id,
-      content: message.content || '',
-      senderId: message.senderId || null,
-      senderName: message.senderName || null,
-      receiverId: message.receiverId || null,
-      isMine: message.senderId === req.apiUser.id,
-      purchaseId: message.purchaseId || null,
-      projectTitle: message.projectTitle || purchaseChat.projectTitle,
-      createdAt: message.createdAt || null,
-      read: Boolean(message.read)
-    }));
-
-  const allMessages = db.messages();
-  let changed = false;
-  allMessages.forEach((message) => {
-    if (message && message.purchaseId === purchaseChat.purchaseId && message.senderId === 'admin' && message.receiverId === req.apiUser.id && !message.read) {
-      message.read = true;
-      changed = true;
-    }
-  });
-  if (changed) db.saveMessages(allMessages);
-
-  return res.json({ purchase: purchaseChat, messages });
-});
-
-app.post('/api/purchases/:id/messages', requireApiUserAuth, (req, res) => {
-  const purchaseChat = getPurchaseChatContextForUser(req.params.id, req.apiUser.id);
-  if (!purchaseChat) return res.status(404).json({ error: 'Purchase not found' });
-
-  const content = String(req.body.content || '').trim();
-  if (!content) return res.status(400).json({ error: 'محتوى الرسالة مطلوب' });
-
-  const messages = db.messages();
-  const newMessage = {
-    id: uuidv4(),
-    senderId: req.apiUser.id,
-    senderName: req.apiUser.name,
-    receiverId: 'admin',
-    content,
-    read: false,
-    purchaseId: purchaseChat.purchaseId,
-    orderId: purchaseChat.orderId,
-    projectTitle: purchaseChat.projectTitle,
-    createdAt: new Date().toISOString()
-  };
-  messages.push(newMessage);
-  db.saveMessages(messages);
-
-  return res.status(201).json({ message: {
-    id: newMessage.id,
-    content: newMessage.content,
-    senderId: newMessage.senderId,
-    senderName: newMessage.senderName,
-    receiverId: newMessage.receiverId,
-    isMine: true,
-    purchaseId: newMessage.purchaseId,
-    projectTitle: newMessage.projectTitle,
-    createdAt: newMessage.createdAt,
-    read: false
-  }});
-});
-
-app.get('/api/purchases/:id/download-url', requireApiUserAuth, (req, res) => {
-  const purchase = db.purchases().find((item) => item && item.id === req.params.id && item.userId === req.apiUser.id);
-  if (!purchase) return res.status(404).json({ error: 'Purchase not found' });
-  if (purchase.status !== 'approved') return res.status(400).json({ error: 'الملف غير متاح للتحميل بعد' });
-  if (purchase.downloadLocked) {
-    return res.status(403).json({ error: purchase.downloadLockReason || 'تم قفل هذه النسخة من المشروع بواسطة الأدمن' });
-  }
-
-  if (purchase.projectId) {
-    const project = db.projects().find((p) => p && p.id === purchase.projectId);
-    if (project && isProjectDownloadsLocked(project)) {
-      return res.status(403).json({ error: getProjectDownloadsLockReason(project) || 'تم قفل تنزيلات هذا المشروع مؤقتاً' });
-    }
-  }
-
-  return res.json({
-    url: `/api/download/${purchase.id}`,
-    fileName: getDownloadFileName(purchase)
-  });
-});
-
-app.get('/api/download/:purchaseId', (req, res) => {
-  const token = String(req.query.token || '').trim();
-  const decoded = token ? verifyToken(token) : null;
-  if (!decoded || decoded.role !== 'user') {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-
-  const purchase = db.purchases().find((item) => item && item.id === req.params.purchaseId && item.userId === decoded.id);
-  if (!purchase) return res.status(404).json({ error: 'Purchase not found' });
-  if (purchase.status !== 'approved') return res.status(400).json({ error: 'File not available' });
-  if (purchase.downloadLocked) {
-    return res.status(403).json({ error: purchase.downloadLockReason || 'Download locked' });
-  }
-
-  if (purchase.projectId) {
-    const project = db.projects().find((p) => p && p.id === purchase.projectId);
-    if (project && isProjectDownloadsLocked(project)) {
-      return res.status(403).json({ error: getProjectDownloadsLockReason(project) || 'Project downloads are locked' });
-    }
-  }
-
-  const absoluteFilePath = path.resolve(__dirname, purchase.filePath);
-  if (!fs.existsSync(absoluteFilePath)) {
-    return res.status(404).json({ error: 'File not found' });
-  }
-
-  recordDownloadEvent({
-    req,
-    kind: 'purchase',
-    userId: decoded.id,
-    purchaseId: purchase.id,
-    projectId: purchase.projectId || null,
-    meta: { via: 'api-token' }
-  });
-
-  return res.download(absoluteFilePath, getDownloadFileName(purchase));
+registerPurchaseDownloadApiRoutes({
+  app,
+  requireApiUserAuth,
+  db,
+  verifyToken,
+  path,
+  fs,
+  appRootDir: __dirname,
+  isProjectDownloadsLocked,
+  getProjectDownloadsLockReason,
+  getDownloadFileName,
+  recordDownloadEvent
 });
 
 app.get('/api/community', requireApiUserAuth, (req, res) => {

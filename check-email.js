@@ -32,7 +32,6 @@ if (config.SMTP_HOST) {
 } else {
   console.log('❌ SMTP: NOT CONFIGURED');
 }
-
 console.log('\n=== Status ===');
 if (hasResend) {
   console.log('🟢 Resend is ready');
