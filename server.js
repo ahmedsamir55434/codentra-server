@@ -3845,7 +3845,7 @@ const buildAiAdvisorPromptText = ({ projects, userInput }) => {
     title: p.title,
     category: p.category || '',
     technologies: Array.isArray(p.technologies) ? p.technologies : [],
-    price: Number(p.finalPrice || p.price || 0),
+    price: convertEgpToUsd(Number(p.finalPrice || p.price || 0)),
     description: String(p.description || '').slice(0, 800)
   }));
 
@@ -3854,6 +3854,7 @@ const buildAiAdvisorPromptText = ({ projects, userInput }) => {
     'اختر أفضل مشروع أو مشروعين فقط من القائمة المتاحة، بناءً على هدف العميل.',
     'ثم اكتب خطة تنفيذ عملية من خطوات واضحة.',
     'يجب أن تكون الترشيحات من نفس المشاريع المرسلة فقط.',
+    'جميع الأسعار في قائمة المشاريع بالدولار الأمريكي (USD)، فلا تذكر الجنيه المصري.',
     'أعد JSON فقط بدون markdown.',
     '',
     `هدف العميل: ${String(userInput.goal || '').slice(0, 400)}`,
@@ -7027,7 +7028,10 @@ app.post('/api/ai-advisor/recommend', express.json(), async (req, res) => {
               projectTitle: p.title,
               reason: String((r && r.reason) || '').trim(),
               fitScore: Math.max(0, Math.min(100, Math.round(Number((r && r.fitScore) || 0)))),
-              price: Number(p.finalPrice || p.price || 0),
+              price: convertEgpToUsd(
+                Number(p.finalPrice || p.price || 0),
+                res.locals.displayCurrencyRate,
+              ),
               category: p.category || '',
               technologies: Array.isArray(p.technologies) ? p.technologies : []
             };
