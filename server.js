@@ -4813,6 +4813,7 @@ ensureStorageReady().catch((error) => {
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
+app.use('/frames', express.static(path.join(__dirname, 'Frames')));
 app.get('/uploads/*', (req, res, next) => {
   const requestedPath = req.params[0];
   if (!requestedPath || requestedPath.includes('..')) return next();

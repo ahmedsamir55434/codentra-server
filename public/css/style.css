@@ -1140,3 +1140,10 @@ html[data-theme="light"] .sale-badge {
 .sale-countdown-ended {
   color: #ff6b6b;
 }
+
+.frame-sequence { position: relative; height: 500vh; background: rgb(201,201,201); isolation: isolate; }
+.frame-sequence-stage { position: sticky; top: 0; height: 100vh; overflow: hidden; background: rgb(201,201,201); box-shadow: inset 0 -32px 70px rgba(9,12,20,.08); }
+.frame-sequence-canvas { display: block; width: 100%; height: 100%; }
+.frame-sequence-overlay { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 90px rgba(5,8,16,.08), inset 0 -25px 55px rgba(5,8,16,.09); }
+html:not([data-theme="light"]) .frame-sequence-overlay { box-shadow: inset 0 0 110px rgba(0,0,0,.18), inset 0 -30px 65px rgba(0,0,0,.24); }
+@media (max-width: 700px) { .frame-sequence { height: 420vh; } .frame-sequence-stage { height: 100svh; } }
