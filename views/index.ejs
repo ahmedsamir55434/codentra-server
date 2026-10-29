@@ -79,7 +79,8 @@
             <div class="project-card project-card-recent">
               <div class="project-image <%= project.images && project.images.length > 0 ? 'has-cover' : '' %>" style="position:relative;">
                 <% if (project.images && project.images.length > 0) { %>
-                  <img src="/<%= project.images[0] %>" alt="<%= project.title %>" class="project-cover">
+                  <img src="/<%= project.images[0] %>" alt="<%= project.title %>" class="project-cover" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('image-failed');">
+                  <span class="image-fallback-label"><%= project.title %></span>
                 <% } else { %>
                   <div class="placeholder-img">
                     <span><%= project.category %></span>
@@ -167,7 +168,8 @@
                 </span>
               <% } %>
               <% if (project.images && project.images.length > 0) { %>
-                <img src="/<%= project.images[0] %>" alt="<%= project.title %>" class="project-cover">
+                <img src="/<%= project.images[0] %>" alt="<%= project.title %>" class="project-cover" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('image-failed');">
+                <span class="image-fallback-label"><%= project.title %></span>
               <% } else { %>
                 <div class="placeholder-img">
                   <span><%= project.category %></span>

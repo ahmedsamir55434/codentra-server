@@ -1140,3 +1140,18 @@ html[data-theme="light"] .sale-badge {
 .sale-countdown-ended {
   color: #ff6b6b;
 }
+
+.image-fallback-label {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100%;
+  padding: 18px;
+  text-align: center;
+  font-weight: 800;
+  color: var(--text-primary, #fff);
+  background: linear-gradient(135deg, rgba(125,242,184,.16), rgba(30,41,59,.65));
+}
+
+.image-failed .image-fallback-label { display: flex; }
