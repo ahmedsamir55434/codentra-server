@@ -6,46 +6,8 @@
   <title>Codentra - مشاريع برمجية جاهزة</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/glass-v3.css">
-  <style>
-    html.site-loading,
-    html.site-loading body { overflow: hidden; }
-    .site-loader {
-      position: fixed;
-      inset: 0;
-      z-index: 99999;
-      display: grid;
-      place-items: center;
-      background: rgb(201, 201, 201);
-      color: #101318;
-      opacity: 1;
-      visibility: visible;
-      transition: opacity .55s ease, visibility .55s ease;
-    }
-    .site-loader.is-ready { opacity: 0; visibility: hidden; pointer-events: none; }
-    .site-loader-card { display: grid; gap: 18px; justify-items: center; text-align: center; }
-    .site-loader-mark { width: 74px; height: 74px; border-radius: 24px; object-fit: cover; box-shadow: 0 16px 44px rgba(0,0,0,.16); }
-    .site-loader-spinner { width: 34px; height: 34px; border: 3px solid rgba(16,19,24,.18); border-top-color: #101318; border-radius: 50%; animation: site-loader-spin .8s linear infinite; }
-    .site-loader-copy { display: grid; gap: 5px; }
-    .site-loader-copy strong { font-size: 1rem; }
-    .site-loader-copy span { font-size: .86rem; opacity: .7; direction: rtl; }
-    @keyframes site-loader-spin { to { transform: rotate(360deg); } }
-    html:not([data-theme="light"]) .site-loader { background: #111318; color: #f3f4f6; box-shadow: inset 0 0 120px rgba(0,0,0,.16); }
-    html:not([data-theme="light"]) .site-loader-spinner { border-color: rgba(255,255,255,.2); border-top-color: #fff; }
-    @media (prefers-reduced-motion: reduce) { .site-loader, .site-loader-spinner { animation: none; transition-duration: .01ms; } }
-  </style>
-  <script>document.documentElement.classList.add('site-loading');</script>
 </head>
 <body>
-  <div class="site-loader" id="siteLoader" role="status" aria-live="polite">
-    <div class="site-loader-card">
-      <img class="site-loader-mark" src="/logo.jpg" alt="Codentra">
-      <div class="site-loader-spinner" aria-hidden="true"></div>
-      <div class="site-loader-copy">
-        <strong>Codentra</strong>
-        <span id="siteLoaderText">جاري تجهيز الموقع… 0%</span>
-      </div>
-    </div>
-  </div>
   <%- include('partials/header') %>
   <% const safeRecentProjects = Array.isArray(recentProjects) ? recentProjects : []; %>
   <% const getSubscriptionLabel = (subscription) => {
@@ -314,40 +276,6 @@
       images.forEach(image => image.addEventListener('load', draw));
       addEventListener('resize', resize, { passive: true }); addEventListener('scroll', update, { passive: true }); resize(); update();
       const script = document.createElement('script'); script.src = 'https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js'; script.onload = () => { if (!window.Lenis) return; const lenis = new Lenis({ duration: 1.05, smoothWheel: true }); lenis.on('scroll', update); const raf = time => { lenis.raf(time); requestAnimationFrame(raf); }; requestAnimationFrame(raf); }; document.head.appendChild(script);
-    })();
-  </script>
-  <script>
-    (() => {
-      const loader = document.getElementById('siteLoader');
-      const text = document.getElementById('siteLoaderText');
-      if (!loader) return;
-
-      const frameUrls = Array.from({ length: 24 }, (_, index) => `/frames/frame_${String(index + 1).padStart(2, '0')}.webp`);
-      const pageUrls = Array.from(document.images).map((image) => image.currentSrc || image.src).filter(Boolean);
-      const urls = [...new Set([...pageUrls, ...frameUrls])];
-      let loaded = 0;
-
-      const updateProgress = () => {
-        loaded += 1;
-        const percent = Math.min(100, Math.round((loaded / urls.length) * 100));
-        if (text) text.textContent = `جاري تجهيز الموقع… ${percent}%`;
-      };
-
-      const loadImage = (url) => new Promise((resolve) => {
-        const image = new Image();
-        image.onload = image.onerror = () => { updateProgress(); resolve(); };
-        image.src = url;
-        if (image.complete) { updateProgress(); resolve(); }
-      });
-
-      Promise.all([Promise.all(urls.map(loadImage)), document.fonts ? document.fonts.ready : Promise.resolve()]).then(() => {
-        if (text) text.textContent = 'الموقع جاهز';
-        window.setTimeout(() => {
-          loader.classList.add('is-ready');
-          document.documentElement.classList.remove('site-loading');
-          window.setTimeout(() => loader.remove(), 650);
-        }, 180);
-      });
     })();
   </script>
   <script>
