@@ -49,13 +49,6 @@
     </div>
   </section>
 
-  <section class="frame-sequence" id="frameSequence" aria-label="عرض متحرك للموقع">
-    <div class="frame-sequence-stage">
-      <canvas id="frameCanvas" class="frame-sequence-canvas" aria-hidden="true"></canvas>
-      <div class="frame-sequence-overlay" aria-hidden="true"></div>
-    </div>
-  </section>
-
   <main class="hero">
     <div class="container">
       <h1>مشاريع برمجية احترافية جاهزة</h1>
@@ -262,22 +255,6 @@
       <a href="/compare" class="btn btn-primary" id="goCompareBtn">قارن الآن</a>
     </div>
   </div>
-  <script>
-    (() => {
-      const section = document.getElementById('frameSequence');
-      const canvas = document.getElementById('frameCanvas');
-      if (!section || !canvas) return;
-      const ctx = canvas.getContext('2d', { alpha: false });
-      const images = Array.from({ length: 24 }, (_, i) => { const image = new Image(); image.src = `/frames/frame_${String(i + 1).padStart(2, '0')}.webp`; return image; });
-      let current = 0;
-      const draw = () => { const image = images[current]; if (!image.complete || !image.naturalWidth) return; const rect = canvas.getBoundingClientRect(); const scale = Math.max(rect.width / image.naturalWidth, rect.height / image.naturalHeight); const width = image.naturalWidth * scale; const height = image.naturalHeight * scale; ctx.clearRect(0, 0, rect.width, rect.height); ctx.drawImage(image, (rect.width - width) / 2, (rect.height - height) / 2, width, height); };
-      const resize = () => { const rect = canvas.getBoundingClientRect(); const dpr = Math.min(devicePixelRatio || 1, matchMedia('(max-width: 700px)').matches ? 1.15 : 1.75); canvas.width = rect.width * dpr; canvas.height = rect.height * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); draw(); };
-      const update = () => { const rect = section.getBoundingClientRect(); const progress = Math.max(0, Math.min(1, (innerHeight - rect.top) / (rect.height + innerHeight))); current = Math.min(23, Math.floor(progress * 24)); requestAnimationFrame(draw); };
-      images.forEach(image => image.addEventListener('load', draw));
-      addEventListener('resize', resize, { passive: true }); addEventListener('scroll', update, { passive: true }); resize(); update();
-      const script = document.createElement('script'); script.src = 'https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js'; script.onload = () => { if (!window.Lenis) return; const lenis = new Lenis({ duration: 1.05, smoothWheel: true }); lenis.on('scroll', update); const raf = time => { lenis.raf(time); requestAnimationFrame(raf); }; requestAnimationFrame(raf); }; document.head.appendChild(script);
-    })();
-  </script>
   <script>
     (() => {
       const banner = document.querySelector('.release-banner');
