@@ -1149,9 +1149,11 @@ html[data-theme="light"] .sale-badge {
   min-height: 100%;
   padding: 18px;
   text-align: center;
-  font-weight: 800;
-  color: var(--text-primary, #fff);
-  background: linear-gradient(135deg, rgba(125,242,184,.16), rgba(30,41,59,.65));
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 .image-failed .image-fallback-label { display: flex; }
+.project-image-item.image-failed { display: flex; align-items: center; justify-content: center; min-height: 200px; }
