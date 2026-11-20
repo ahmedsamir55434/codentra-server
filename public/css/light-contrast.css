@@ -1,0 +1,136 @@
+/* Public light-mode contrast pass. Keep the admin visual system isolated. */
+html[data-theme="light"] .home-hero-section .release-banner {
+  background: linear-gradient(135deg, #111923 0%, #152538 58%, #103d42 100%);
+  border-color: rgba(217, 255, 63, .42);
+  box-shadow: 0 28px 72px rgba(15, 23, 42, .18), inset 0 1px 0 rgba(255,255,255,.14);
+}
+
+html[data-theme="light"] .home-hero-section .release-banner h2,
+html[data-theme="light"] .home-hero-section .release-banner p,
+html[data-theme="light"] .home-hero-section .release-banner .attention-proof {
+  color: #f7fafc !important;
+}
+
+html[data-theme="light"] .home-hero-section .release-banner p,
+html[data-theme="light"] .home-hero-section .attention-proof {
+  color: rgba(247, 250, 252, .78) !important;
+}
+
+html[data-theme="light"] .home-hero-section .release-banner-mark {
+  background: linear-gradient(145deg, rgba(255,255,255,.15), rgba(255,255,255,.04));
+  border-color: rgba(255,255,255,.24);
+}
+
+html[data-theme="light"] .home-hero-section .attention-floating {
+  color: #f7fafc;
+  background: rgba(7, 16, 26, .72);
+  border-color: rgba(217,255,63,.36);
+}
+
+html[data-theme="light"] .brand-hero {
+  background: radial-gradient(circle at 78% 35%, rgba(217,255,63,.12), transparent 32%);
+}
+
+html[data-theme="light"] .brand-hero-copy > p,
+html[data-theme="light"] .hero-proof-row span,
+html[data-theme="light"] .hero-code-head,
+html[data-theme="light"] .hero-code-foot,
+html[data-theme="light"] .offerings-heading > p,
+html[data-theme="light"] .offering-card p,
+html[data-theme="light"] .trust-signal p {
+  color: #435166 !important;
+}
+
+html[data-theme="light"] .brand-hero h1,
+html[data-theme="light"] .offerings-heading h2,
+html[data-theme="light"] .offering-card h3,
+html[data-theme="light"] .trust-signal strong,
+html[data-theme="light"] .project-card h3,
+html[data-theme="light"] .project-card .project-title {
+  color: #172235 !important;
+}
+
+html[data-theme="light"] .hero-code-card {
+  background: linear-gradient(145deg, rgba(255,255,255,.98), rgba(240,245,249,.88));
+  border-color: rgba(23,34,53,.22);
+  box-shadow: 0 26px 56px rgba(23,34,53,.15), inset 0 1px 0 #fff;
+}
+
+html[data-theme="light"] .hero-floating-tag {
+  color: #26354a;
+  background: rgba(255,255,255,.94);
+  border-color: rgba(23,34,53,.18);
+  box-shadow: 0 12px 28px rgba(23,34,53,.12);
+}
+
+html[data-theme="light"] .offering-card,
+html[data-theme="light"] .trust-signal,
+html[data-theme="light"] .project-card,
+html[data-theme="light"] .market-filter-bar {
+  border-color: rgba(23,34,53,.16) !important;
+  box-shadow: 0 18px 42px rgba(23,34,53,.10), inset 0 1px 0 rgba(255,255,255,.96) !important;
+}
+
+html[data-theme="light"] .offering-card {
+  background: linear-gradient(145deg, #ffffff, #f4f7fa) !important;
+}
+
+html[data-theme="light"] .offering-custom {
+  background: linear-gradient(145deg, rgba(217,255,63,.34), #ffffff 58%, #f4f7fa) !important;
+}
+
+html[data-theme="light"] .project-card {
+  background: linear-gradient(145deg, #ffffff, #f7f9fb) !important;
+}
+
+html[data-theme="light"] .project-card .project-description,
+html[data-theme="light"] .project-card .project-meta,
+html[data-theme="light"] .project-card .tech-tag {
+  color: #435166 !important;
+}
+
+html[data-theme="light"] .tech-tag,
+html[data-theme="light"] .market-filter-bar,
+html[data-theme="light"] input,
+html[data-theme="light"] textarea,
+html[data-theme="light"] select {
+  background-color: #ffffff !important;
+  color: #172235 !important;
+  border-color: rgba(23,34,53,.18) !important;
+}
+
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder {
+  color: #64748b !important;
+  opacity: 1;
+}
+
+html[data-theme="light"] .section-kicker,
+html[data-theme="light"] .hero-eyebrow {
+  color: #587000 !important;
+  border-color: rgba(88,112,0,.28) !important;
+  background: rgba(217,255,63,.22) !important;
+}
+
+html[data-theme="light"] .nav-user-subscription {
+  color: #536b00 !important;
+  background: rgba(217,255,63,.28) !important;
+  border-color: rgba(83,107,0,.24) !important;
+}
+
+html[data-theme="light"] .nav-user-label,
+html[data-theme="light"] .nav-user-chip strong {
+  color: #172235 !important;
+}
+
+html[data-theme="light"] .hero-proof-row,
+html[data-theme="light"] .offering-link,
+html[data-theme="light"] .attention-proof {
+  border-color: rgba(23,34,53,.16) !important;
+}
+
+@media (max-width: 640px) {
+  html[data-theme="light"] .brand-hero {
+    background: radial-gradient(circle at 50% 42%, rgba(217,255,63,.14), transparent 42%);
+  }
+}
