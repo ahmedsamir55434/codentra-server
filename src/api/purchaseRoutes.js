@@ -3,13 +3,11 @@ const registerPurchaseDownloadApiRoutes = ({
   requireApiUserAuth,
   db,
   verifyToken,
-  path,
-  fs,
-  appRootDir,
   isProjectDownloadsLocked,
   getProjectDownloadsLockReason,
   getDownloadFileName,
-  recordDownloadEvent
+  recordDownloadEvent,
+  downloadStoredFile
 }) => {
   app.get('/api/purchases/:id/download-url', requireApiUserAuth, (req, res) => {
     const purchase = db.purchases().find((item) => item && item.id === req.params.id && item.userId === req.apiUser.id);
@@ -32,7 +30,7 @@ const registerPurchaseDownloadApiRoutes = ({
     });
   });
 
-  app.get('/api/download/:purchaseId', (req, res) => {
+  app.get('/api/download/:purchaseId', async (req, res) => {
     const token = String(req.query.token || '').trim();
     const decoded = token ? verifyToken(token) : null;
     if (!decoded || decoded.role !== 'user') {
@@ -53,8 +51,13 @@ const registerPurchaseDownloadApiRoutes = ({
       }
     }
 
-    const absoluteFilePath = path.resolve(appRootDir, purchase.filePath);
-    if (!fs.existsSync(absoluteFilePath)) {
+    const downloaded = await downloadStoredFile({
+      res,
+      storageKey: purchase.fileStorageKey,
+      filePath: purchase.filePath,
+      fileName: getDownloadFileName(purchase)
+    });
+    if (!downloaded) {
       return res.status(404).json({ error: 'File not found' });
     }
 
@@ -67,7 +70,7 @@ const registerPurchaseDownloadApiRoutes = ({
       meta: { via: 'api-token' }
     });
 
-    return res.download(absoluteFilePath, getDownloadFileName(purchase));
+    return undefined;
   });
 };
 

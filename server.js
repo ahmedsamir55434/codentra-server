@@ -3383,6 +3383,66 @@ const safeDeleteFile = (filePath) => {
   }
 };
 
+const buildFileStorageKey = (storedPath) => {
+  const normalized = normalizeStoredPath(storedPath);
+  return normalized ? `file:${normalized}` : null;
+};
+
+const persistUploadedFile = async ({ file, storedPath }) => {
+  const storageKey = buildFileStorageKey(storedPath);
+  if (!usePostgresStorage() || !storageKey || !file || !file.path || !fs.existsSync(file.path)) {
+    return null;
+  }
+
+  const buffer = fs.readFileSync(file.path);
+  await saveBinaryAsset({
+    key: storageKey,
+    buffer,
+    mimeType: file.mimetype,
+    fileName: file.originalname
+  });
+  safeDeleteFile(file.path);
+  return storageKey;
+};
+
+const downloadStoredFile = async ({ res, storageKey, filePath, fileName }) => {
+  const resolvedStorageKey = storageKey || buildFileStorageKey(filePath);
+
+  if (resolvedStorageKey) {
+    try {
+      const asset = await getBinaryAsset(resolvedStorageKey);
+      if (asset && asset.buffer) {
+        if (asset.mimeType) res.type(asset.mimeType);
+        res.attachment(fileName || asset.fileName || 'download');
+        res.send(asset.buffer);
+        return true;
+      }
+    } catch (error) {
+      console.error('Stored file read error:', error);
+    }
+  }
+
+  const absolutePath = filePath ? toAbsolutePath(filePath) : null;
+  if (!absolutePath || !fs.existsSync(absolutePath)) return false;
+
+  // Migrate older local uploads into durable storage the first time they are downloaded.
+  if (usePostgresStorage() && resolvedStorageKey) {
+    try {
+      await saveBinaryAsset({
+        key: resolvedStorageKey,
+        buffer: fs.readFileSync(absolutePath),
+        mimeType: null,
+        fileName: fileName || path.basename(absolutePath)
+      });
+    } catch (error) {
+      console.error('Stored file migration error:', error);
+    }
+  }
+
+  res.download(absolutePath, fileName || path.basename(absolutePath));
+  return true;
+};
+
 const normalizeCommunityPost = (post) => ({
   ...(post || {}),
   likes: Array.isArray(post && post.likes) ? post.likes : [],
@@ -4814,13 +4874,27 @@ ensureStorageReady().catch((error) => {
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
-app.get('/uploads/*', (req, res, next) => {
+app.get('/uploads/*', async (req, res, next) => {
   const requestedPath = String(req.params[0] || '').replace(/^\/+/, '');
   if (!requestedPath || requestedPath.includes('..')) return next();
 
   const normalizedPath = requestedPath.startsWith('uploads/') ? requestedPath.slice('uploads/'.length) : requestedPath;
   const absolutePath = toAbsolutePath(`uploads/${normalizedPath}`);
-  if (!absolutePath || !fs.existsSync(absolutePath)) return next();
+  if (!absolutePath || !fs.existsSync(absolutePath)) {
+    if (usePostgresStorage()) {
+      try {
+        const asset = await getBinaryAsset(buildFileStorageKey(`uploads/${normalizedPath}`));
+        if (asset && asset.buffer) {
+          if (asset.mimeType) res.type(asset.mimeType);
+          res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+          return res.send(asset.buffer);
+        }
+      } catch (error) {
+        console.error('Stored upload read error:', error);
+      }
+    }
+    return next();
+  }
 
   res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
   return res.sendFile(absolutePath);
@@ -6612,6 +6686,7 @@ app.post('/api/cart/checkout', requireApiUserAuth, (req, res) => {
       status: 'pending',
       purchasedAt: new Date().toISOString(),
       filePath: project.filePath,
+      fileStorageKey: project.fileStorageKey || buildFileStorageKey(project.filePath),
       originalFileName: project.originalFileName || null
     });
   }
@@ -6662,13 +6737,11 @@ registerPurchaseDownloadApiRoutes({
   requireApiUserAuth,
   db,
   verifyToken,
-  path,
-  fs,
-  appRootDir: __dirname,
   isProjectDownloadsLocked,
   getProjectDownloadsLockReason,
   getDownloadFileName,
-  recordDownloadEvent
+  recordDownloadEvent,
+  downloadStoredFile
 });
 
 app.get('/api/community', requireApiUserAuth, (req, res) => {
@@ -7388,7 +7461,7 @@ app.get('/api/custom-projects/:id/download-url', requireApiUserAuth, (req, res) 
   });
 });
 
-app.get('/api/custom-projects/:id/download', (req, res) => {
+app.get('/api/custom-projects/:id/download', async (req, res) => {
   const authHeader = req.headers.authorization;
   const tokenFromQuery = req.query.token;
   const token = authHeader?.startsWith('Bearer ')
@@ -7402,8 +7475,13 @@ app.get('/api/custom-projects/:id/download', (req, res) => {
   const requestItem = getCustomProjectRequestForUser({ requestId: req.params.id, userId: decoded.id });
   if (!requestItem || !requestItem.filePath) return res.status(404).json({ error: 'File not found' });
 
-  const absolutePath = path.resolve(__dirname, requestItem.filePath);
-  if (!fs.existsSync(absolutePath)) return res.status(404).json({ error: 'File not found' });
+  const downloaded = await downloadStoredFile({
+    res,
+    storageKey: requestItem.fileStorageKey,
+    filePath: requestItem.filePath,
+    fileName: requestItem.originalFileName || path.basename(requestItem.filePath)
+  });
+  if (!downloaded) return res.status(404).json({ error: 'File not found' });
 
   recordDownloadEvent({
     req,
@@ -7414,7 +7492,7 @@ app.get('/api/custom-projects/:id/download', (req, res) => {
     meta: { via: 'api-token' }
   });
 
-  return res.download(absolutePath, requestItem.originalFileName || path.basename(absolutePath));
+  return undefined;
 });
 
 // Mobile API - Invoice PDF
@@ -9439,7 +9517,7 @@ app.post('/wallet-card/freeze', requireAuth, (req, res) => {
 });
 
 // Protected download - only approved purchases can download
-app.get('/download/:purchaseId', requireAuth, (req, res) => {
+app.get('/download/:purchaseId', requireAuth, async (req, res) => {
   const purchases = db.purchases();
   const purchase = purchases.find(p => p.id === req.params.purchaseId && p.userId === req.session.user.id);
   
@@ -9462,12 +9540,17 @@ app.get('/download/:purchaseId', requireAuth, (req, res) => {
     return res.status(403).send('Purchase not approved yet. Please wait for admin approval.');
   }
   
-  const absoluteFilePath = toAbsolutePath(purchase.filePath);
-  if (!absoluteFilePath || !fs.existsSync(absoluteFilePath)) {
+  const downloadFileName = getDownloadFileName(purchase);
+  const downloaded = await downloadStoredFile({
+    res,
+    storageKey: purchase.fileStorageKey,
+    filePath: purchase.filePath,
+    fileName: downloadFileName
+  });
+  if (!downloaded) {
     return res.status(404).send('File not found');
   }
-  
-  const downloadFileName = getDownloadFileName(purchase);
+
   recordDownloadEvent({
     req,
     kind: 'purchase',
@@ -9476,23 +9559,28 @@ app.get('/download/:purchaseId', requireAuth, (req, res) => {
     projectId: purchase.projectId || null,
     meta: { via: 'session-download' }
   });
-  res.download(absoluteFilePath, downloadFileName);
+  return undefined;
 });
 
-app.get('/custom-project/download/:requestId', requireAuth, (req, res) => {
+app.get('/custom-project/download/:requestId', requireAuth, async (req, res) => {
   if (!req.session.user || req.session.user.role !== 'user') return res.redirect('/');
 
   const requestItem = getCustomProjectRequestForUser({ requestId: req.params.requestId, userId: req.session.user.id });
   if (!requestItem) return res.status(404).send('Custom project request not found');
   if (!requestItem.filePath) return res.status(404).send('File not found');
 
-  const absolutePath = toAbsolutePath(requestItem.filePath);
-  if (!absolutePath || !fs.existsSync(absolutePath)) return res.status(404).send('File not found');
+  const downloaded = await downloadStoredFile({
+    res,
+    storageKey: requestItem.fileStorageKey,
+    filePath: requestItem.filePath,
+    fileName: requestItem.originalFileName || path.basename(requestItem.filePath)
+  });
+  if (!downloaded) return res.status(404).send('File not found');
 
-  return res.download(absolutePath, requestItem.originalFileName || path.basename(absolutePath));
+  return undefined;
 });
 
-app.get('/admin/custom-projects/:id/download', requireAdminPermission(ADMIN_PERMISSIONS.purchases), (req, res) => {
+app.get('/admin/custom-projects/:id/download', requireAdminPermission(ADMIN_PERMISSIONS.purchases), async (req, res) => {
   const requestItem = getCustomProjectRequestForAdmin(req.params.id);
   if (!requestItem) {
     return res.redirect('/admin/custom-projects?error=' + encodeURIComponent('طلب المشروع غير موجود'));
@@ -9501,12 +9589,17 @@ app.get('/admin/custom-projects/:id/download', requireAdminPermission(ADMIN_PERM
     return res.redirect(`/admin/custom-projects/${req.params.id}?error=${encodeURIComponent('لا يوجد ملف مرفوع لهذا الطلب بعد')}`);
   }
 
-  const absolutePath = toAbsolutePath(requestItem.filePath);
-  if (!absolutePath || !fs.existsSync(absolutePath)) {
+  const downloaded = await downloadStoredFile({
+    res,
+    storageKey: requestItem.fileStorageKey,
+    filePath: requestItem.filePath,
+    fileName: requestItem.originalFileName || path.basename(requestItem.filePath)
+  });
+  if (!downloaded) {
     return res.redirect(`/admin/custom-projects/${req.params.id}?error=${encodeURIComponent('ملف المشروع غير موجود على الخادم')}`);
   }
 
-  return res.download(absolutePath, requestItem.originalFileName || path.basename(absolutePath));
+  return undefined;
 });
 
 // Admin Dashboard
@@ -11128,6 +11221,7 @@ app.get('/admin/projects/new', requireAdminPermission(ADMIN_PERMISSIONS.projects
 app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), projectUploadHandler, async (req, res) => {
   try {
     const { title, description, price, category, technologies } = req.body;
+    const projectId = uuidv4();
     const priceUsd = Number(price);
     const priceGuardConfirmed = String(req.body.priceGuardConfirm || '') === '1';
     const visibility = (req.body.visibility || 'public').trim();
@@ -11155,7 +11249,9 @@ app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), 
       for (const file of req.files.projectImages) {
         try {
           await processImageWithWatermark(file);
-          images.push(`uploads/project-images/${file.filename}`);
+          const storedPath = `uploads/project-images/${file.filename}`;
+          await persistUploadedFile({ file, storedPath });
+          images.push(storedPath);
         } catch (error) {
           console.error('Error processing image:', error);
           // Still add the image even if watermark fails
@@ -11163,9 +11259,15 @@ app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), 
         }
       }
     }
+
+    const projectFile = req.files && req.files.projectFile && req.files.projectFile[0] ? req.files.projectFile[0] : null;
+    const projectFilePath = projectFile ? `uploads/${projectFile.filename}` : null;
+    const projectFileStorageKey = projectFile
+      ? await persistUploadedFile({ file: projectFile, storedPath: projectFilePath })
+      : null;
     
     const newProject = {
-      id: uuidv4(),
+      id: projectId,
       title,
       description,
       price: convertUsdToEgp(priceUsd),
@@ -11181,8 +11283,9 @@ app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), 
       saleOccasion: saleOccasion || null,
       saleDurationDays,
       saleExpiresAt: saleActive ? saleExpiresAt : null,
-      filePath: req.files && req.files.projectFile && req.files.projectFile[0] ? `uploads/${req.files.projectFile[0].filename}` : null,
-      originalFileName: req.files && req.files.projectFile && req.files.projectFile[0] ? req.files.projectFile[0].originalname : null,
+      filePath: projectFilePath,
+      fileStorageKey: projectFileStorageKey,
+      originalFileName: projectFile ? projectFile.originalname : null,
       images: images,
       createdAt: new Date().toISOString()
     };
@@ -11260,7 +11363,9 @@ app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.project
       for (const file of req.files.projectImages) {
         try {
           await processImageWithWatermark(file);
-          newImages.push(`uploads/project-images/${file.filename}`);
+          const storedPath = `uploads/project-images/${file.filename}`;
+          await persistUploadedFile({ file, storedPath });
+          newImages.push(storedPath);
         } catch (error) {
           console.error('Error processing image:', error);
           // Still add the image even if watermark fails
@@ -11283,6 +11388,12 @@ app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.project
         }
       });
     }
+
+    const projectFile = req.files && req.files.projectFile && req.files.projectFile[0] ? req.files.projectFile[0] : null;
+    const projectFilePath = projectFile ? `uploads/${projectFile.filename}` : projects[index].filePath;
+    const projectFileStorageKey = projectFile
+      ? await persistUploadedFile({ file: projectFile, storedPath: projectFilePath })
+      : (projects[index].fileStorageKey || null);
     
     const before = {
       title: projects[index].title,
@@ -11314,8 +11425,9 @@ app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.project
       saleOccasion: saleOccasion || null,
       saleDurationDays,
       saleExpiresAt: saleActive ? saleExpiresAt : null,
-      filePath: req.files && req.files.projectFile && req.files.projectFile[0] ? `uploads/${req.files.projectFile[0].filename}` : projects[index].filePath,
-      originalFileName: req.files && req.files.projectFile && req.files.projectFile[0] ? req.files.projectFile[0].originalname : projects[index].originalFileName,
+      filePath: projectFilePath,
+      fileStorageKey: projectFileStorageKey,
+      originalFileName: projectFile ? projectFile.originalname : projects[index].originalFileName,
       images: images
     };
     
@@ -11726,7 +11838,7 @@ app.post('/admin/custom-projects/:id/messages', requireAdminPermission(ADMIN_PER
   return res.redirect(`/admin/custom-projects/${requestItem.id}?success=${encodeURIComponent('تم إرسال الرسالة')}`);
 });
 
-app.post('/admin/custom-projects/:id/upload', requireAdminPermission(ADMIN_PERMISSIONS.purchases), upload.single('deliveryFile'), (req, res) => {
+app.post('/admin/custom-projects/:id/upload', requireAdminPermission(ADMIN_PERMISSIONS.purchases), upload.single('deliveryFile'), async (req, res) => {
   const requests = db.customProjectRequests();
   const index = requests.findIndex((item) => item && item.id === req.params.id);
   if (index === -1) {
@@ -11737,9 +11849,13 @@ app.post('/admin/custom-projects/:id/upload', requireAdminPermission(ADMIN_PERMI
     return res.redirect(`/admin/custom-projects/${req.params.id}?error=${encodeURIComponent('اختر ملفًا أولًا')}`);
   }
 
+  const storedPath = `uploads/${req.file.filename}`;
+  const fileStorageKey = await persistUploadedFile({ file: req.file, storedPath });
+
   requests[index] = {
     ...requests[index],
-    filePath: `uploads/${req.file.filename}`,
+    filePath: storedPath,
+    fileStorageKey,
     originalFileName: req.file.originalname,
     fileUploadedAt: new Date().toISOString(),
     status: 'completed',
@@ -12477,7 +12593,7 @@ app.post('/admin/purchases/:id/approve', requireAdmin, (req, res) => {
   res.redirect('/admin/purchases');
 });
 
-app.post('/admin/purchases/:id/upload', requireAdminPermission(ADMIN_PERMISSIONS.purchases), upload.single('modifiedFile'), (req, res) => {
+app.post('/admin/purchases/:id/upload', requireAdminPermission(ADMIN_PERMISSIONS.purchases), upload.single('modifiedFile'), async (req, res) => {
   const purchases = db.purchases();
   const purchaseIndex = purchases.findIndex((purchase) => purchase && purchase.id === req.params.id);
   if (purchaseIndex === -1) return res.status(404).send('Purchase not found');
@@ -12486,7 +12602,10 @@ app.post('/admin/purchases/:id/upload', requireAdminPermission(ADMIN_PERMISSIONS
     return res.status(400).send('Modified file is required');
   }
 
-  purchases[purchaseIndex].filePath = `uploads/${req.file.filename}`;
+  const storedPath = `uploads/${req.file.filename}`;
+  const fileStorageKey = await persistUploadedFile({ file: req.file, storedPath });
+  purchases[purchaseIndex].filePath = storedPath;
+  purchases[purchaseIndex].fileStorageKey = fileStorageKey;
   purchases[purchaseIndex].originalFileName = req.file.originalname;
   purchases[purchaseIndex].isModified = true;
   purchases[purchaseIndex].modifiedAt = new Date().toISOString();
@@ -12752,7 +12871,7 @@ app.get('/admin/modifications', requireAdminPermission(ADMIN_PERMISSIONS.modific
 });
 
 // Admin - Complete modification request
-app.post('/admin/modifications/:id/complete', requireAdminPermission(ADMIN_PERMISSIONS.modifications), upload.single('modifiedFile'), (req, res) => {
+app.post('/admin/modifications/:id/complete', requireAdminPermission(ADMIN_PERMISSIONS.modifications), upload.single('modifiedFile'), async (req, res) => {
   const modifications = db.modifications();
   const modIndex = modifications.findIndex(m => m.id === req.params.id);
   if (modIndex === -1) return res.status(404).send('Modification request not found');
@@ -12764,7 +12883,10 @@ app.post('/admin/modifications/:id/complete', requireAdminPermission(ADMIN_PERMI
   const purchaseIndex = purchases.findIndex(p => p.id === modification.purchaseId);
   
   if (purchaseIndex !== -1 && req.file) {
-    purchases[purchaseIndex].filePath = `uploads/${req.file.filename}`;
+    const storedPath = `uploads/${req.file.filename}`;
+    const fileStorageKey = await persistUploadedFile({ file: req.file, storedPath });
+    purchases[purchaseIndex].filePath = storedPath;
+    purchases[purchaseIndex].fileStorageKey = fileStorageKey;
     purchases[purchaseIndex].originalFileName = req.file.originalname;
     purchases[purchaseIndex].isModified = true;
     purchases[purchaseIndex].modificationNote = req.body.note || 'Project modified as requested';
