@@ -68,6 +68,37 @@
   font-style: italic;
 }
 
+.image-management-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 93, 112, .22);
+  border-radius: 14px;
+  color: var(--text-secondary);
+  background: rgba(255, 93, 112, .06);
+  font-size: .78rem;
+}
+
+.image-management-toolbar strong {
+  color: var(--text-primary);
+}
+
+.remove-all-images-btn {
+  min-height: 38px;
+  padding: 8px 13px;
+  white-space: nowrap;
+}
+
+.remove-all-images-btn:disabled {
+  cursor: default;
+  opacity: .65;
+  transform: none;
+}
+
 /* Project display images */
 .project-images-grid {
   display: grid;

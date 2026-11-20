@@ -217,11 +217,19 @@
           
           <div class="form-group">
             <label for="projectImages">صور المشروع (يمكنك اختيار صور متعددة)</label>
+            <% if (project && project.images && project.images.length > 0) { %>
+              <div class="image-management-toolbar">
+                <span>صور المنتج الحالية: <strong><%= project.images.length %></strong></span>
+                <button type="button" class="btn btn-danger remove-all-images-btn" id="removeAllImagesBtn">
+                  حذف جميع الصور
+                </button>
+              </div>
+            <% } %>
             <input type="file" id="projectImages" name="projectImages" accept="image/*" multiple>
             <div class="image-preview-container" id="imagePreviewContainer">
               <% if (project && project.images && project.images.length > 0) { %>
                 <% project.images.forEach((image, index) => { %>
-                  <div class="image-preview-item">
+                  <div class="image-preview-item" data-existing-image="<%= image %>">
                     <img src="<%= String(image || '').startsWith('/') ? image : '/' + image %>" alt="صورة <%= index + 1 %>" class="preview-image" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('image-failed');">
                     <span class="image-fallback-label"><%= project.title %></span>
                     <button type="button" class="remove-image-btn" onclick="removeExistingImage('<%= image %>', this)">×</button>
@@ -247,6 +255,8 @@
     // Image preview and management
     const imageInput = document.getElementById('projectImages');
     const previewContainer = document.getElementById('imagePreviewContainer');
+    const adminForm = document.querySelector('form.admin-form');
+    const removeAllImagesBtn = document.getElementById('removeAllImagesBtn');
     const maxImages = 5;
     
     // Preview new images
@@ -283,16 +293,41 @@
     }
     
     // Remove existing image
+    function addImageRemovalInput(imagePath) {
+      if (!adminForm || !imagePath) return;
+      const alreadyMarked = Array.from(adminForm.querySelectorAll('input[name="removeImages"]'))
+        .some(input => input.value === imagePath);
+      if (alreadyMarked) return;
+      const hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.name = 'removeImages';
+      hiddenInput.value = imagePath;
+      adminForm.appendChild(hiddenInput);
+    }
+
     function removeExistingImage(imagePath, button) {
       if (confirm('هل أنت متأكد من حذف هذه الصورة؟')) {
-        // Add to hidden input to mark for deletion
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.name = 'removeImages';
-        hiddenInput.value = imagePath;
-        document.querySelector('form.admin-form').appendChild(hiddenInput);
+        addImageRemovalInput(imagePath);
         button.parentElement.remove();
       }
+    }
+
+    function removeAllExistingImages() {
+      if (!previewContainer || !adminForm) return;
+      const existingItems = Array.from(previewContainer.querySelectorAll('[data-existing-image]'));
+      if (!existingItems.length) return;
+      if (!confirm('سيتم حذف جميع صور هذا المنتج عند الضغط على حفظ التعديلات. هل تريد المتابعة؟')) return;
+
+      existingItems.forEach(item => addImageRemovalInput(item.dataset.existingImage));
+      existingItems.forEach(item => item.remove());
+      if (removeAllImagesBtn) {
+        removeAllImagesBtn.disabled = true;
+        removeAllImagesBtn.textContent = 'تم تحديد حذف الصور';
+      }
+    }
+
+    if (removeAllImagesBtn) {
+      removeAllImagesBtn.addEventListener('click', removeAllExistingImages);
     }
 
     // Price Guard (double confirmation for risky pricing)
