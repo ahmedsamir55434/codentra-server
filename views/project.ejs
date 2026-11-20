@@ -49,7 +49,7 @@
           <div class="project-images-grid">
             <% project.images.forEach((image, index) => { %>
               <div class="project-image-item" onclick="openLightbox('<%= image %>')">
-                <img src="/<%= image %>" alt="صورة <%= index + 1 %> من <%= project.title %>" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('image-failed');">
+                <img src="<%= String(image || '').startsWith('/') ? image : '/' + image %>" alt="صورة <%= index + 1 %> من <%= project.title %>" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('image-failed');">
                 <span class="image-fallback-label"><%= project.title %></span>
               </div>
             <% }); %>
@@ -132,6 +132,7 @@
     <!-- Sidebar -->
     <aside class="project-sidebar">
       <div class="purchase-box">
+        <div class="purchase-kicker">ابدأ مشروعك من هنا</div>
         <div class="price-tag">
           <span class="amount"><%= displayMoneyValue(project.finalPrice || project.price) %></span>
           <span class="currency"><%= displayCurrencyCode %></span>
@@ -191,6 +192,13 @@
             <div class="success-message">خصم المشتركين: 30% + وصول لمنتجات Business الحصرية</div>
           <% } %>
         <% } %>
+
+        <% if (!user || !user.subscription || user.subscription.status !== 'active') { %>
+          <div class="subscription-purchase-prompt">
+            <div><span>اشترِ أذكى</span><strong>وفّر حتى 30% مع عضوية Codentra</strong></div>
+            <a href="<%= user ? '/subscriptions' : '/register' %>"><%= user ? 'شوف الاشتراكات' : 'ابدأ عضويتك' %> ↙</a>
+          </div>
+        <% } %>
         
         <% if (user) { %>
           <% if (hasPurchased) { %>
@@ -222,6 +230,12 @@
             </p>
           </div>
         <% } %>
+
+        <div class="purchase-benefits" aria-label="مميزات الشراء">
+          <span>✓ كود المصدر كامل</span>
+          <span>✓ تحميل بعد الشراء</span>
+          <span>✓ دعم ومساعدة</span>
+        </div>
 
         <!-- Project Meta Info -->
         <div class="project-meta-list">
@@ -433,7 +447,7 @@
       const lightbox = document.getElementById('imageLightbox');
       const lightboxImg = document.getElementById('lightboxImage');
       
-      lightboxImg.src = '/' + imageSrc;
+      lightboxImg.src = '/' + String(imageSrc || '').replace(/^\/+/, '');
       lightbox.classList.add('active');
       document.body.style.overflow = 'hidden';
     }

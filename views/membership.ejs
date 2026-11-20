@@ -10,78 +10,117 @@
 </head>
 <body>
   <%- include('partials/header') %>
+  <%
+    const getPlanTier = (planId) => {
+      const value = String(planId || '').toLowerCase();
+      if (value === 'business' || value === 'premium') return 'business';
+      if (value === 'pro') return 'pro';
+      if (value === 'starter' || value === 'basic') return 'starter';
+      return 'none';
+    };
+    const tierRank = (tier) => tier === 'starter' ? 1 : tier === 'pro' ? 2 : tier === 'business' ? 3 : 0;
+    const currentTierRank = tierRank(getPlanTier(activeSubscription && activeSubscription.planId));
+    const planCopy = {
+      starter: { note: 'بداية ذكية للمستخدم الجديد', fit: 'لما تكون عايز تبدأ وتوفر من أول شراء' },
+      pro: { note: 'اختيار متوازن للمستخدم النشط', fit: 'لما بتشتري باستمرار وعايز مزايا أكتر' },
+      business: { note: 'تجربة كاملة للمحترفين والفرق', fit: 'لما شغلك كبير والدعم السريع مهم' }
+    };
+  %>
   <main class="page purchases-page">
     <div class="container">
-      <div class="section-head" style="margin-bottom: 20px;">
-        <div>
-          <span class="section-kicker">العضوية</span>
-          <h1 style="margin-top:8px;">مركز العضوية الحالي</h1>
-        </div>
-        <p class="section-copy">كل ما يخص اشتراكك، الوصول الخاص، والخصومات المفعلة في مكان واحد.</p>
-      </div>
-
-      <section class="purchase-card" style="margin-bottom:18px;">
-        <div style="display:grid; gap:10px; width:100%;">
-          <div class="hero-subscription-chip" style="margin-top:0; width: fit-content;">
-            <span class="hero-subscription-kicker">حالة الاشتراك</span>
-            <strong><%= activeSubscription ? activePlan.name : 'بدون اشتراك' %></strong>
-            <span><%= activeSubscription ? 'مزايا مفعلة على حسابك' : 'اشترك لتفعيل المزايا الخاصة' %></span>
+      <section class="membership-hero">
+        <div class="membership-hero-copy">
+          <span class="subscriptions-kicker">مركز العضوية</span>
+          <h1>عضويتك الحالية.<br><span>مزاياك الجاية.</span></h1>
+          <p>تابع مستوى وصولك، اعرف الخصم المتاح لك، وخلي كل مشروع جديد يبدأ من نقطة أقوى.</p>
+          <div class="membership-hero-actions">
+            <a href="#membership-plans" class="btn btn-primary">استكشف الخطط <span>↙</span></a>
+            <a href="/#market" class="btn btn-secondary">تصفح المشاريع</a>
           </div>
-          <% if (activeSubscription) { %>
-            <div style="display:grid; gap:6px; color: var(--text-secondary);">
-              <div>مستوى الوصول: <strong style="color:var(--text-primary);"><%= tierLabel %></strong></div>
-              <div>ينتهي في: <strong style="color:var(--text-primary);"><%= activeSubscription.currentPeriodEnd ? new Date(activeSubscription.currentPeriodEnd).toLocaleString('ar-EG') : '-' %></strong></div>
-              <div>الخصم الحالي: <strong style="color:var(--text-primary);"><%= discountPercent %>%</strong></div>
-            </div>
-          <% } else { %>
-            <div style="color: var(--text-secondary);">لا يوجد اشتراك نشط حالياً.</div>
-          <% } %>
+        </div>
+        <div class="membership-hero-status">
+          <span>الحالة الحالية</span>
+          <strong><%= activeSubscription && activePlan ? activePlan.name : 'بدون اشتراك' %></strong>
+          <small><%= activeSubscription ? 'مزايا مفعلة على حسابك' : 'ابدأ عضويتك لتفعيل الخصومات' %></small>
+          <div class="membership-hero-ring"><b><%= discountPercent %>%</b><span><%= activeSubscription ? 'خصمك الحالي' : 'خصم البداية' %></span></div>
         </div>
       </section>
 
-      <section class="purchases-grid">
-        <div class="purchase-card subscription-card subscription-card-starter">
-          <div class="subscription-card-glow" aria-hidden="true"></div>
-          <div class="subscription-card-head">
-            <div>
-              <span class="subscription-tier-pill">Starter</span>
-              <h2 style="margin:8px 0 6px;">Starter</h2>
-              <p class="subscription-plan-note">بداية ذكية ومناسبة للمستخدم الجديد</p>
-            </div>
-            <div class="subscription-tier-mark">01</div>
+      <section class="membership-status-card" aria-label="تفاصيل العضوية">
+        <div class="membership-status-heading"><span class="subscriptions-kicker">ملخص الحساب</span><h2>أنت فين دلوقتي؟</h2></div>
+        <% if (activeSubscription) { %>
+          <div class="membership-status-data">
+            <div><span>المستوى</span><strong><%= tierLabel %></strong></div>
+            <div><span>الخصم الحالي</span><strong><%= discountPercent %>%</strong></div>
+            <div><span>ينتهي في</span><strong><%= activeSubscription.currentPeriodEnd ? new Date(activeSubscription.currentPeriodEnd).toLocaleDateString('ar-EG') : '-' %></strong></div>
           </div>
-          <div class="subscription-plan-dash" aria-hidden="true"></div>
-          <div class="sale-card">خصم 10% + وصول للمشتركين + إشعارات حصرية</div>
+          <a href="/subscriptions#plans" class="btn btn-secondary">طوّر عضويتك</a>
+        <% } else { %>
+          <p>لسه مفيش اشتراك نشط. اختار خطتك وابدأ تستفيد من أول مشروع.</p>
+          <a href="#membership-plans" class="btn btn-primary">ابدأ عضويتك الآن</a>
+        <% } %>
+      </section>
+
+      <section class="membership-benefits-strip" aria-label="مزايا العضوية">
+        <article><span>01</span><strong>خصم مستمر</strong><p>كل شراء مناسب لمستواك يبقى أوفر.</p></article>
+        <article><span>02</span><strong>وصول مبكر</strong><p>اعرف المنتجات الجديدة قبل الإطلاق.</p></article>
+        <article><span>03</span><strong>دعم أولوية</strong><p>مساعدة أسرع لما تحتاج تكمل شغلك.</p></article>
+      </section>
+
+      <section class="membership-plans-section" id="membership-plans" aria-label="خطط العضوية">
+        <div class="membership-section-heading">
+          <div><span class="subscriptions-kicker">الخطوة الجاية</span><h2>اختار المستوى اللي يخدم شغلك.</h2></div>
+          <p>الخطط دي هي نفس العضويات المتاحة عندك، بأسعارها ومزاياها الحقيقية. تقدر تبدأ دلوقتي وتطوّر وقت ما تحتاج.</p>
         </div>
 
-        <div class="purchase-card subscription-card subscription-card-pro">
-          <div class="subscription-card-glow" aria-hidden="true"></div>
-          <span class="subscription-ribbon">الأكثر طلبًا</span>
-          <div class="subscription-card-head">
-            <div>
-              <span class="subscription-tier-pill">Pro</span>
-              <h2 style="margin:8px 0 6px;">Pro</h2>
-              <p class="subscription-plan-note">خيار متوازن للمستخدم النشط</p>
-            </div>
-            <div class="subscription-tier-mark">02</div>
-          </div>
-          <div class="subscription-plan-dash" aria-hidden="true"></div>
-          <div class="sale-card">خصم 20% + منتجات مبكرة + دعم أولوية</div>
-        </div>
+        <div class="membership-plans-grid">
+          <% plans.forEach((plan, index) => { %>
+            <% const planTier = getPlanTier(plan.id); const planRank = tierRank(planTier); const isCurrent = Boolean(activePlan && activePlan.id === plan.id); const copy = planCopy[planTier] || { note: 'مزايا أكثر لشغلك', fit: 'اختيار مرن حسب احتياجك' }; %>
+            <article class="membership-plan-card subscription-plan-card subscription-plan-card-<%= plan.id %> <%= isCurrent ? 'is-current' : '' %>" style="
+              --tier-accent:<%= plan.id === 'starter' ? 'rgba(110,180,255,.95)' : plan.id === 'pro' ? 'rgba(185,120,255,.95)' : 'rgba(255,190,90,.98)' %>;
+              --tier-accent-soft:<%= plan.id === 'starter' ? 'rgba(110,180,255,.12)' : plan.id === 'pro' ? 'rgba(185,120,255,.14)' : 'rgba(255,190,90,.16)' %>;
+              --tier-glow:<%= plan.id === 'starter' ? 'rgba(110,180,255,.22)' : plan.id === 'pro' ? 'rgba(185,120,255,.26)' : 'rgba(255,190,90,.32)' %>;
+              --tier-border:<%= plan.id === 'starter' ? 'rgba(110,180,255,.32)' : plan.id === 'pro' ? 'rgba(185,120,255,.38)' : 'rgba(255,190,90,.48)' %>;
+            ">
+              <% if (isCurrent) { %>
+                <span class="membership-plan-badge is-current">خطتك الحالية</span>
+              <% } else if (plan.id === 'pro') { %>
+                <span class="membership-plan-badge">الأكثر طلبًا</span>
+              <% } else if (plan.id === 'business') { %>
+                <span class="membership-plan-badge">VIP</span>
+              <% } %>
 
-        <div class="purchase-card subscription-card subscription-card-business">
-          <div class="subscription-card-glow" aria-hidden="true"></div>
-          <span class="subscription-ribbon">VIP</span>
-          <div class="subscription-card-head">
-            <div>
-              <span class="subscription-tier-pill">Business</span>
-              <h2 style="margin:8px 0 6px;">Business</h2>
-              <p class="subscription-plan-note">أقوى تجربة وواجهة أفخم للمحترفين</p>
-            </div>
-            <div class="subscription-tier-mark">03</div>
-          </div>
-          <div class="subscription-plan-dash" aria-hidden="true"></div>
-          <div class="sale-card">خصم 30% + دعم VIP + وصول كامل وحصري</div>
+              <div class="subscription-plan-head">
+                <div>
+                  <span class="subscription-plan-pill">خطة <%= plan.name %></span>
+                  <h2><%= plan.name %></h2>
+                  <p class="subscription-plan-note"><%= copy.note %></p>
+                  <p class="subscription-plan-fit"><%= copy.fit %></p>
+                </div>
+                <div class="subscription-plan-mark"><%= String(index + 1).padStart(2, '0') %></div>
+              </div>
+
+              <div class="membership-plan-price"><strong><%= displayMoney(plan.price) %></strong><span>/<%= plan.durationDays %> يوم</span></div>
+
+              <% if (Array.isArray(plan.features) && plan.features.length) { %>
+                <ul class="membership-plan-features">
+                  <% plan.features.slice(0, 4).forEach(feature => { %><li><span>✓</span><%= feature %></li><% }) %>
+                </ul>
+              <% } %>
+
+              <div class="membership-plan-actions">
+                <% if (isCurrent) { %>
+                  <span class="membership-plan-current">مفعلة على حسابك</span>
+                  <a href="/subscriptions#plans" class="btn btn-secondary">إدارة العضوية</a>
+                <% } else if (activeSubscription && planRank <= currentTierRank) { %>
+                  <span class="membership-plan-muted">أنت على مستوى أعلى</span>
+                  <a href="/subscriptions#plans" class="btn btn-secondary">شوف كل الخطط</a>
+                <% } else { %>
+                  <a href="/subscriptions#plans" class="btn btn-primary"><%= activeSubscription ? 'طوّر عضويتك' : 'ابدأ بهذه الخطة' %> <span>↙</span></a>
+                <% } %>
+              </div>
+            </article>
+          <% }) %>
         </div>
       </section>
     </div>

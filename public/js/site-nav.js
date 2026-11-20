@@ -1,4 +1,12 @@
 (function () {
+  var notice = document.getElementById('siteNotice');
+  var noticeClose = document.getElementById('siteNoticeClose');
+  if (notice && noticeClose) {
+    noticeClose.addEventListener('click', function () {
+      notice.classList.add('is-dismissed');
+    });
+  }
+
   var menuToggle = document.getElementById('navMenuToggle');
   var mobilePanel = document.getElementById('mobileNavPanel');
   if (!menuToggle || !mobilePanel) return;

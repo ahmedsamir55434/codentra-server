@@ -36,12 +36,33 @@
   <main class="subscriptions-page">
     <div class="container subscriptions-layout">
       <section class="subscriptions-hero">
-        <div>
+        <div class="subscriptions-hero-copy">
           <span class="subscriptions-kicker">Codentra Membership</span>
-          <h1>الاشتراكات الشهرية</h1>
-          <p>اختر مستوى العضوية المناسب لك وافتح خصومات، منتجات حصرية، ودعم أسرع بدون زحمة في الصفحة.</p>
+          <h1>اشتراكك مش تكلفة.<br><span>ده اختصار لطريقك.</span></h1>
+          <p>كل ما تشتري أو تبني أكتر، كل ما العضوية تشتغل لصالحك: خصومات ثابتة، وصول قبل الجميع، ومزايا تكبر مع مستواك.</p>
+          <div class="subscriptions-hero-actions">
+            <a href="#plans" class="btn btn-primary">اختار مستواك <span>↙</span></a>
+            <a href="#subscriptionCompare" class="btn btn-secondary">قارن المزايا</a>
+          </div>
+          <div class="subscriptions-hero-proof">
+            <span><b>حتى 30%</b> خصم</span>
+            <span><b>فوري</b> تفعيل المزايا</span>
+            <span><b>3 مستويات</b> تناسب شغلك</span>
+          </div>
         </div>
-        <a href="/membership" class="btn btn-secondary">عرض عضويتي</a>
+        <div class="subscriptions-hero-visual" aria-hidden="true">
+          <div class="subscriptions-hero-orbit subscriptions-hero-orbit-one"></div>
+          <div class="subscriptions-hero-orbit subscriptions-hero-orbit-two"></div>
+          <div class="subscriptions-hero-score"><span>MEMBERSHIP VALUE</span><strong>30<small>%</small></strong><em>خصم أقصى على المشاريع</em></div>
+          <span class="subscriptions-hero-tag subscriptions-hero-tag-top">SMART BUYING</span>
+          <span class="subscriptions-hero-tag subscriptions-hero-tag-bottom">BUILD MORE / SPEND LESS</span>
+        </div>
+      </section>
+
+      <section class="subscription-value-strip" aria-label="مزايا العضوية">
+        <article><span>↗</span><div><strong>اشترِ بذكاء</strong><p>خصم ثابت على المشاريع المناسبة لمستواك.</p></div></article>
+        <article><span>◌</span><div><strong>كن أول واحد</strong><p>شوف الإصدارات والمنتجات الجديدة بدري.</p></div></article>
+        <article><span>✦</span><div><strong>دعم أسرع</strong><p>الأولوية بتزيد مع كل مستوى أعلى.</p></div></article>
       </section>
 
       <% if (error) { %>
@@ -51,7 +72,7 @@
         <div class="success-message"><%= success %></div>
       <% } %>
 
-      <section class="subscription-status-panel">
+      <section class="subscription-status-panel" aria-label="حالة الاشتراك الحالية">
         <div>
           <span class="subscriptions-kicker">الحالة الحالية</span>
           <h2>اشتراكك</h2>
@@ -67,10 +88,16 @@
           </form>
         <% } else { %>
           <p class="subscription-muted">لا يوجد اشتراك نشط حاليًا. اختار خطة من الكروت بالأسفل.</p>
+          <a href="#plans" class="btn btn-primary">ابدأ من هنا ↙</a>
         <% } %>
       </section>
 
-      <section class="subscription-plans-grid" aria-label="خطط الاشتراك">
+      <section class="subscription-plans-section" id="plans" aria-label="خطط الاشتراك">
+        <div class="subscription-section-head subscription-plans-heading">
+          <div><span class="subscriptions-kicker">اختار مستواك</span><h2>خطة تناسب طريقة شغلك.</h2></div>
+          <p>كل خطة معمولة لمرحلة مختلفة — ابدأ صغير، وكبّر مزاياك وقت ما تحتاج.</p>
+        </div>
+        <div class="subscription-plans-grid">
         <% plans.forEach(plan => { %>
           <% const planTier = getPlanTier(plan.id); const planRank = tierRank(planTier); %>
           <article class="subscription-plan-card subscription-plan-card-<%= plan.id %>" style="
@@ -96,6 +123,9 @@
                   <% } else { %>
                     تجربة فخمة كاملة للمحترفين
                   <% } %>
+                </p>
+                <p class="subscription-plan-fit">
+                  <% if (plan.id === 'starter') { %>للبداية وتجربة الشراء بذكاء<% } else if (plan.id === 'pro') { %>للمستخدم النشط اللي بيشتري باستمرار<% } else { %>للفرق والمحترفين والطلبات الكثيرة<% } %>
                 </p>
               </div>
               <div class="subscription-plan-mark"><%= plan.id === 'starter' ? '01' : plan.id === 'pro' ? '02' : '03' %></div>
@@ -134,9 +164,10 @@
             <% } %>
           </article>
         <% }) %>
+        </div>
       </section>
 
-      <section class="subscription-compare-section">
+      <section class="subscription-compare-section" id="subscriptionCompare">
         <div class="subscription-section-head">
           <span class="subscriptions-kicker">مقارنة</span>
           <h2>مقارنة واضحة بين الخطط</h2>
@@ -167,6 +198,19 @@
             <strong>متاح</strong>
             <strong>متاح</strong>
           </div>
+        </div>
+      </section>
+
+      <section class="subscription-faq-section" aria-label="أسئلة شائعة عن الاشتراكات">
+        <div class="subscription-section-head">
+          <span class="subscriptions-kicker">قبل ما تبدأ</span>
+          <h2>أسئلة سريعة.</h2>
+        </div>
+        <div class="subscription-faq-grid">
+          <details open><summary>هل الخصم بيتفعل فورًا؟</summary><p>أيوه، بمجرد نجاح الاشتراك بيتفعل مستوى الخصم على حسابك مباشرة.</p></details>
+          <details><summary>هل أقدر أرقّي خطتي؟</summary><p>تقدر تنتقل للخطة الأعلى من نفس الصفحة، وهنحسب فرق السعر على الترقية.</p></details>
+          <details><summary>هل الاشتراك بيتجدد تلقائيًا؟</summary><p>لا، الاشتراك الحالي لمدة محددة، والتجديد بيكون باختيارك.</p></details>
+          <details><summary>أقدر ألغي الاشتراك؟</summary><p>أيوه، تقدر تلغي من صفحة الاشتراكات، وتفضل بيانات الدفع محفوظة في سجل حسابك.</p></details>
         </div>
       </section>
     </div>

@@ -50,11 +50,11 @@
                 <% if (Array.isArray(msg.attachments) && msg.attachments.length) { %>
                   <div class="message-attachments">
                     <% msg.attachments.forEach(file => { %>
-                      <a href="/<%= file.filePath %>" target="_blank" class="message-attachment">
+                      <a href="<%= String(file.filePath || '').startsWith('/') ? file.filePath : '/' + file.filePath %>" target="_blank" class="message-attachment">
                         <% if (file.mimeType && file.mimeType.startsWith('image/')) { %>
-                          <img src="/<%= file.filePath %>" alt="<%= file.originalName %>">
+                          <img src="<%= String(file.filePath || '').startsWith('/') ? file.filePath : '/' + file.filePath %>" alt="<%= file.originalName %>">
                         <% } else if (file.mimeType && file.mimeType.startsWith('video/')) { %>
-                          <video src="/<%= file.filePath %>" controls></video>
+                          <video src="<%= String(file.filePath || '').startsWith('/') ? file.filePath : '/' + file.filePath %>" controls></video>
                         <% } else { %>
                           <span class="attachment-icon">ملف</span>
                         <% } %>
@@ -193,7 +193,8 @@
       function formatAttachments(attachments) {
         if (!Array.isArray(attachments) || !attachments.length) return '';
         return attachments.map(file => {
-          const fileUrl = encodeURI('/' + (file.filePath || ''));
+          const normalizedPath = String(file.filePath || '').replace(/^\/+/, '');
+          const fileUrl = encodeURI('/' + normalizedPath);
           const title = escapeHtml(file.originalName);
           if (file.mimeType && file.mimeType.startsWith('image/')) {
             return `<a href="${fileUrl}" target="_blank" class="message-attachment"><img src="${fileUrl}" alt="${title}"><span>${title}</span></a>`;
@@ -239,8 +240,8 @@
       const appendedMessageIds = new Set();
 
       function appendMessage(message) {
-        if (!messageContainer || !message) return;
-        if (message.id && appendedMessageIds.has(message.id)) return;
+        if (!messageContainer || !message) return null;
+        if (message.id && appendedMessageIds.has(message.id)) return null;
         if (message.id) appendedMessageIds.add(message.id);
         const wrapper = document.createElement('div');
         const isSent = message.senderId === '<%= user.id %>';
@@ -260,6 +261,7 @@
         wrapper.innerHTML = html;
         messageContainer.appendChild(wrapper);
         scrollToBottom();
+        return wrapper;
       }
 
       function addTypingIndicator() {
@@ -284,6 +286,18 @@
         preview.textContent = names.length ? 'المرفقات: ' + names.join('، ') : '';
       }
 
+      function showSendError(message) {
+        let errorBox = document.getElementById('supportSendError');
+        if (!errorBox) {
+          errorBox = document.createElement('div');
+          errorBox.id = 'supportSendError';
+          errorBox.className = 'error-message';
+          if (preview) preview.insertAdjacentElement('afterend', errorBox);
+        }
+        errorBox.textContent = message || 'تعذر إرسال الرسالة أو رفع المرفق. حاول مرة أخرى.';
+        errorBox.hidden = false;
+      }
+
       async function sendFormData(extraData = null) {
         if (!form) return;
         const data = new FormData(form);
@@ -293,9 +307,10 @@
         const clientTempId = String(data.get('clientTempId') || `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`);
         data.set('clientTempId', clientTempId);
 
+        let pendingMessage = null;
         const pendingContent = String(data.get('content') || '').trim();
         if (pendingContent) {
-          appendMessage({
+          pendingMessage = appendMessage({
             id: clientTempId,
             senderId: '<%= user.id %>',
             senderName: '<%= user.name %>',
@@ -319,7 +334,9 @@
             }
           });
           if (!response.ok) {
-            throw new Error('network');
+            let errorPayload = null;
+            try { errorPayload = await response.json(); } catch (ignore) {}
+            throw new Error(errorPayload && errorPayload.error ? errorPayload.error : 'تعذر إرسال الرسالة أو رفع المرفق');
           }
           const payload = await response.json();
           removeTypingIndicator();
@@ -330,8 +347,9 @@
           renderPreview();
           if (textarea) textarea.value = '';
         } catch (error) {
+          if (pendingMessage && pendingMessage.remove) pendingMessage.remove();
           removeTypingIndicator();
-          form.submit();
+          showSendError(error.message);
         }
       }
 

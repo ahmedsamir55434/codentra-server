@@ -446,6 +446,19 @@ body {
   background: rgba(255, 95, 122, 0.14);
 }
 
+.wishlist-btn.is-pending {
+  cursor: wait;
+  opacity: .68;
+  transform: scale(.9);
+}
+
+.image-upload-status {
+  display: block;
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: .78rem;
+}
+
 html[data-theme="light"] .wishlist-btn {
   background: rgba(255, 255, 255, 0.96);
   border-color: rgba(15, 23, 42, 0.14);

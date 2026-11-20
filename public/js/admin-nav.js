@@ -3,21 +3,47 @@
   const nav = document.querySelector('.admin-sidebar .admin-nav');
   if (!sidebar || !nav) return;
 
+  const syncAdminLinks = () => {
+    if (!Array.isArray(window.codentraAdminNav) || !window.codentraAdminNav.length) return;
+    const currentPath = window.location.pathname;
+    nav.innerHTML = '';
+    window.codentraAdminNav.forEach((item) => {
+      const link = document.createElement('a');
+      link.href = item.href;
+      link.textContent = item.label;
+      const active = item.href === '/admin'
+        ? currentPath === '/admin'
+        : currentPath === item.href || currentPath.startsWith(item.href + '/');
+      if (active) link.classList.add('active');
+      nav.appendChild(link);
+    });
+  };
+
+  syncAdminLinks();
+
   const ensureToggleButton = () => {
-    if (sidebar.querySelector('.admin-nav-toggle')) return;
+    let btn = sidebar.querySelector('.admin-nav-toggle');
+    if (!btn) {
+      // A few older admin pages render the toggle beside the sidebar.
+      // Reuse it and move it inside so every page gets one consistent control.
+      btn = document.getElementById('adminNavToggle');
+      if (btn) sidebar.insertBefore(btn, sidebar.firstChild);
+    }
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'admin-nav-toggle';
+      btn.setAttribute('aria-expanded', 'false');
+      btn.innerHTML = '<span>القائمة</span><span class="icon">☰</span>';
+      sidebar.insertBefore(btn, sidebar.firstChild);
+    }
 
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'admin-nav-toggle';
-    btn.setAttribute('aria-expanded', 'false');
-    btn.innerHTML = '<span>القائمة</span><span class="icon">☰</span>';
-
+    if (btn.dataset.adminNavBound === 'true') return;
+    btn.dataset.adminNavBound = 'true';
     btn.addEventListener('click', () => {
       const isOpen = sidebar.classList.toggle('open');
       btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     });
-
-    sidebar.insertBefore(btn, sidebar.firstChild);
 
     nav.querySelectorAll('a').forEach((a) => {
       a.addEventListener('click', () => {

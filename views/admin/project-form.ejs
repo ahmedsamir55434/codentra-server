@@ -222,7 +222,7 @@
               <% if (project && project.images && project.images.length > 0) { %>
                 <% project.images.forEach((image, index) => { %>
                   <div class="image-preview-item">
-                    <img src="/<%= image %>" alt="صورة <%= index + 1 %>" class="preview-image" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('image-failed');">
+                    <img src="<%= String(image || '').startsWith('/') ? image : '/' + image %>" alt="صورة <%= index + 1 %>" class="preview-image" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('image-failed');">
                     <span class="image-fallback-label"><%= project.title %></span>
                     <button type="button" class="remove-image-btn" onclick="removeExistingImage('<%= image %>', this)">×</button>
                   </div>

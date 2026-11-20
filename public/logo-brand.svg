@@ -1,0 +1,25 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Codentra</title>
+  <desc id="desc">Codentra geometric C mark in acid lime and black</desc>
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientTransform="translate(74 56) rotate(54) scale(224)">
+      <stop stop-color="#27351A"/>
+      <stop offset=".5" stop-color="#121A14"/>
+      <stop offset="1" stop-color="#0B0D10"/>
+    </radialGradient>
+    <linearGradient id="acid" x1="58" y1="54" x2="198" y2="202" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4FF9B"/>
+      <stop offset=".45" stop-color="#D9FF3F"/>
+      <stop offset="1" stop-color="#9CBF16"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="62" fill="url(#bg)"/>
+  <path d="M62 94V62H94" stroke="url(#acid)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <path d="M194 162V194H162" stroke="url(#acid)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+  <path d="M161 93.5C150.7 83.8 136.8 78 121.5 78C88.1 78 61 105.1 61 138.5C61 171.9 88.1 199 121.5 199C136.8 199 150.7 193.2 161 183.5" stroke="#F7F8F2" stroke-width="15" stroke-linecap="round"/>
+  <circle cx="174" cy="78" r="7" fill="#D9FF3F" filter="url(#glow)"/>
+</svg>

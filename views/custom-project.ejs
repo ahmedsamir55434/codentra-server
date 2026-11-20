@@ -13,8 +13,18 @@
 
   <main class="purchases-page">
     <div class="container">
-      <h1>اطلب مشروعك</h1>
-      <p class="wallet-card-note" style="margin-bottom:16px;">أرسل لنا فكرتك، وسيراجعها فريق Codentra ويرد عليك داخل نفس الطلب.</p>
+      <section class="custom-request-hero">
+        <div class="custom-request-hero-copy">
+          <span class="section-kicker">CUSTOM BUILD / 02</span>
+          <h1>فكرتك مش لازم تبدأ من قالب.</h1>
+          <p>احكيلنا على المنتج اللي في دماغك، وفريق Codentra يحولها لخطة واضحة وخطوة تنفيذ حقيقية.</p>
+        </div>
+        <div class="custom-request-steps" aria-label="خطوات طلب المشروع">
+          <div><b>01</b><span>احكي الفكرة</span></div>
+          <div><b>02</b><span>نراجع ونخطط</span></div>
+          <div><b>03</b><span>نبدأ التنفيذ</span></div>
+        </div>
+      </section>
 
       <% if (error) { %>
         <div class="error-message"><%= error %></div>
@@ -23,8 +33,20 @@
         <div class="success-message"><%= success %></div>
       <% } %>
 
-      <div class="purchase-card stacked-card" style="margin-bottom: 16px;">
-        <div class="purchase-info">
+      <div class="custom-request-layout">
+        <aside class="custom-request-proof">
+          <span class="custom-proof-mark">✦</span>
+          <span class="section-kicker">على مقاسك</span>
+          <h2>مشروع يشبهك،<br><em>مش نسخة من غيرك.</em></h2>
+          <p>كل ما نحتاجه في البداية هو فكرتك وبعض التفاصيل. الباقي نرتبه معك خطوة بخطوة.</p>
+          <ul>
+            <li>تقييم أولي للفكرة</li>
+            <li>تحديد النوع والميزانية</li>
+            <li>رد واضح داخل الطلب</li>
+          </ul>
+        </aside>
+        <div class="purchase-card stacked-card custom-form-card" style="margin-bottom: 16px;">
+          <div class="purchase-info">
           <h3 style="margin-top: 0;">بيانات المشروع</h3>
           <form action="/custom-project" method="POST" class="wallet-topup-form" style="margin-top: 12px;">
             <div class="form-group">
@@ -57,6 +79,7 @@
             </div>
             <button type="submit" class="btn btn-primary">إرسال الطلب</button>
           </form>
+          </div>
         </div>
       </div>
 

@@ -2,12 +2,13 @@
   <div class="container">
     <div class="footer-content">
       <div class="footer-brand">
-        <img src="/logo.jpg" alt="Codentra" class="footer-logo">
+        <img src="/logo-wordmark.png" alt="Codentra" class="footer-logo logo-wordmark-img">
         <p>منصة بيع المشاريع البرمجية</p>
       </div>
       <div class="footer-links">
         <a href="/">الرئيسية</a>
-        <a href="/community">Community</a>
+        <a href="<%= user && user.role === 'user' ? '/subscriptions' : '/register' %>">العضوية</a>
+        <% if (user && user.role === 'user') { %><a href="/membership">عضويتي</a><% } %>
         <a href="/login">تسجيل الدخول</a>
       </div>
     </div>
@@ -19,13 +20,16 @@
 
 <script src="/js/theme.js"></script>
 <script src="/js/site-nav.js"></script>
+<script src="/js/wishlist.js"></script>
+<script src="/js/image-upload.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/market-filters.js"></script>
 
 <%
-  const speculationPrerenderUrls = ['/', '/subscriptions', '/community', '/cart', '/my-purchases', '/notifications', '/ai-advisor'];
-  const speculationPrefetchUrls = ['/', '/subscriptions', '/community', '/cart', '/my-purchases', '/notifications', '/ai-advisor', '/login', '/register'];
-  if (user && user.role === 'admin') {
-    speculationPrefetchUrls.push('/admin', '/admin/purchases', '/admin/subscription-plans', '/admin/users');
-  }
+  // Auth-sensitive pages must not be prerendered or prefetched: a page
+  // prepared before login can otherwise be reused after the session changes.
+  const speculationPrerenderUrls = [];
+  const speculationPrefetchUrls = ['/ai-advisor'];
 %>
 <script type="speculationrules">
 {
@@ -37,7 +41,3 @@
   ]
 }
 </script>
-
-<% if (user && user.role === 'admin') { %>
-  <script src="/js/admin-nav.js"></script>
-<% } %>

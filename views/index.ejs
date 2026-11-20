@@ -10,6 +10,14 @@
 <body>
   <%- include('partials/header') %>
   <% const safeRecentProjects = Array.isArray(recentProjects) ? recentProjects : []; %>
+  <%
+    const homeSubscriptionPlans = Array.isArray(subscriptionPlans) ? subscriptionPlans : [];
+    const homeBusinessPlan = homeSubscriptionPlans.find((plan) => String(plan.id || '').toLowerCase() === 'business');
+    const homeMaxDiscount = homeBusinessPlan ? 30 : 20;
+    const homeSubscriptionHref = user && user.role === 'user' ? '/subscriptions' : '/register';
+    const homeSubscriptionCta = user && user.role === 'user' ? 'شوف خطتك' : 'ابدأ عضويتك';
+    const homeActivePlan = activeSubscription ? homeSubscriptionPlans.find((plan) => plan.id === activeSubscription.planId) : null;
+  %>
   <% const getSubscriptionLabel = (subscription) => {
     if (!subscription || subscription.status !== 'active') return null;
     const planId = String(subscription.planId || '').toLowerCase();
@@ -19,49 +27,181 @@
     return 'نشط';
   }; %>
 
-  <section class="release-banner-section" aria-label="Codentra v3 launch">
+  <section class="release-banner-section" aria-label="Codentra launch">
     <div class="container">
       <div class="release-banner">
         <div class="release-banner-orb release-banner-orb-one" aria-hidden="true"></div>
         <div class="release-banner-orb release-banner-orb-two" aria-hidden="true"></div>
-        <div class="release-banner-copy">
-          <span class="release-banner-badge">NEW ERA • GLASS UPGRADE</span>
-          <h2>Codentra v3</h2>
-          <p>التحديث الثالث وصل بهوية أفخم، لمعة زجاجية أعمق، وتجربة أكثر فخامة تخطف العين من أول نظرة.</p>
-          <div class="release-banner-highlights">
-            <span>واجهة Glass Premium</span>
-            <span>حركة وعمق بصري أهدى</span>
-            <span>تجربة أنعم في الدارك واللايت</span>
+        <div class="release-banner-copy attention-copy">
+          <span class="release-banner-badge">CODENTRA / BUILD SYSTEM</span>
+          <h2>فكرتك تستاهل<br><span>أول انطباع أقوى.</span></h2>
+          <p>اختار مشروع جاهز وتبدأ النهارده، أو ابني منتج كامل على مقاس فكرتك. كل بداية هنا معمولة عشان تتحول لحاجة الناس تفتكرها.</p>
+          <div class="attention-actions">
+            <a class="btn btn-primary" href="#market">ابدأ من الجاهز <span>↙</span></a>
+            <a class="btn btn-secondary" href="/custom-project">ابنِ على مقاسك</a>
+          </div>
+          <div class="attention-proof">
+            <span><b>01</b> فكرة واضحة</span>
+            <span><b>02</b> كود جاهز</span>
+            <span><b>03</b> إطلاق أسرع</span>
           </div>
         </div>
-        <div class="release-banner-mark" aria-hidden="true">
-          <div class="release-mark-topline">CODENTRA RELEASE</div>
-          <div class="release-mark-core">
-            <div class="release-mark-word">CODENTRA</div>
-            <div class="release-mark-divider"></div>
-            <div class="release-mark-version">v3</div>
+        <div class="release-banner-mark attention-visual" aria-hidden="true">
+          <div class="attention-visual-grid"></div>
+          <div class="attention-logo-orbit attention-logo-orbit-one"></div>
+          <div class="attention-logo-orbit attention-logo-orbit-two"></div>
+          <div class="attention-brand-stamp">
+            <img src="/logo-wordmark-inverse.png" alt="" class="attention-brand-image">
+            <span>CODE / CREATE / LAUNCH</span>
           </div>
-          <div class="release-mark-shine"></div>
-          <span class="release-mark-corner release-mark-corner-top"></span>
-          <span class="release-mark-corner release-mark-corner-bottom"></span>
+          <div class="attention-floating attention-floating-top">READY TO SHIP</div>
+          <div class="attention-floating attention-floating-bottom">BUILD 02 / 05</div>
+          <div class="attention-cross attention-cross-one">+</div>
+          <div class="attention-cross attention-cross-two">+</div>
         </div>
       </div>
     </div>
   </section>
 
-  <main class="hero">
-    <div class="container">
-      <h1>مشاريع برمجية احترافية جاهزة</h1>
-      <p>اشترِ مشاريع ويب وتطبيقات كاملة مع الكود المصدر فورًا</p>
-      <% if (user && user.role === 'user' && getSubscriptionLabel(user.subscription)) { %>
-        <div class="hero-subscription-chip">
-          <span class="hero-subscription-kicker">اشتراكك الحالي</span>
-          <strong><%= getSubscriptionLabel(user.subscription) %></strong>
-          <span>يوفر لك مزايا ووصولًا خاصًا داخل Codentra</span>
+  <main class="hero brand-hero">
+    <div class="container brand-hero-grid">
+      <div class="brand-hero-copy">
+        <span class="hero-eyebrow"><i></i> سوق الأفكار الجاهزة</span>
+        <h1>فكرتك الجاية<br><span>تبدأ من هنا.</span></h1>
+        <p>مشاريع ويب وتطبيقات كاملة، معمولة بعناية عشان تختصر وقتك من أول سطر كود لحد الإطلاق.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-large" href="#market">استكشف المشاريع <span>↙</span></a>
+          <a class="btn btn-secondary btn-large" href="/ai-advisor">اسأل مستشار AI</a>
         </div>
-      <% } %>
+        <div class="hero-proof-row" aria-label="إحصائيات Codentra">
+          <div><strong>+120</strong><span>مشروع جاهز</span></div>
+          <div><strong>4.9/5</strong><span>رضا العملاء</span></div>
+          <div><strong>فوري</strong><span>تسليم الكود</span></div>
+        </div>
+        <% if (user && user.role === 'user' && getSubscriptionLabel(user.subscription)) { %>
+          <div class="hero-subscription-chip">
+            <span class="hero-subscription-kicker">اشتراكك الحالي</span>
+            <strong><%= getSubscriptionLabel(user.subscription) %></strong>
+            <span>مزايا ووصول خاص داخل Codentra</span>
+          </div>
+        <% } %>
+      </div>
+
+      <div class="hero-visual" aria-hidden="true">
+        <div class="hero-visual-grid"></div>
+        <div class="hero-orbit hero-orbit-one"></div>
+        <div class="hero-orbit hero-orbit-two"></div>
+        <div class="hero-code-card">
+          <div class="hero-code-head"><span></span><span></span><span></span><b>codentra / launch</b></div>
+          <div class="hero-code-lines"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="hero-code-foot"><span>READY TO SHIP</span><strong>100%</strong></div>
+        </div>
+        <div class="hero-floating-tag hero-floating-tag-top">DESIGN → BUILD</div>
+        <div class="hero-floating-tag hero-floating-tag-bottom">GLASS / SYSTEM</div>
+        <div class="hero-cross hero-cross-one">+</div>
+        <div class="hero-cross hero-cross-two">+</div>
+      </div>
     </div>
   </main>
+
+  <section class="offerings-section" aria-label="طرق بدء مشروعك">
+    <div class="container">
+      <div class="offerings-heading">
+        <div>
+          <span class="section-kicker">اختار طريقك</span>
+          <h2>جاهز تبدأ؟<br><span>إحنا مجهزين لك الطريق.</span></h2>
+        </div>
+        <p>سواء عايز تنطلق بسرعة أو تبني حاجة على مقاسك، عندك نقطة بداية واضحة.</p>
+      </div>
+      <div class="offerings-grid">
+        <a class="offering-card offering-template" href="#market">
+          <div class="offering-card-top"><span class="offering-index">01</span><span class="offering-arrow">↙</span></div>
+          <div class="offering-card-copy"><span class="offering-label">جاهز للإطلاق</span><h3>التيمبلتس</h3><p>اختار مشروع كامل، حمّل الكود، وابدأ التعديل من أول يوم.</p></div>
+          <span class="offering-link">تصفح المشاريع <b>↙</b></span>
+        </a>
+        <a class="offering-card offering-custom" href="/custom-project">
+          <div class="offering-card-top"><span class="offering-index">02</span><span class="offering-arrow">↙</span></div>
+          <div class="offering-card-copy"><span class="offering-label">على مقاس فكرتك</span><h3>اطلب مشروعك</h3><p>ابعت فكرتك، والـ Codentra team يحولها لخطة واضحة ومنتج قابل للتنفيذ.</p></div>
+          <div class="offering-steps"><span>فكرة</span><i>→</i><span>خطة</span><i>→</i><span>منتج</span></div>
+          <span class="offering-link">ابدأ طلبك <b>↙</b></span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="subscription-spotlight-section" aria-labelledby="subscriptionSpotlightTitle">
+    <div class="container">
+      <div class="subscription-spotlight">
+        <div class="subscription-spotlight-copy">
+          <div class="subscription-spotlight-kicker">
+            <span class="subscription-spotlight-dot" aria-hidden="true"></span>
+            <span>عضوية Codentra</span>
+            <strong>خصم يصل إلى <%= homeMaxDiscount %>%</strong>
+          </div>
+          <h1 id="subscriptionSpotlightTitle">كل مشروع تبدأه<br><span>قيمته تزيد مع عضويتك.</span></h1>
+          <p>خصومات ثابتة، وصول مبكر للمشاريع، ودعم أسرع — اختار المستوى اللي يناسب طريقة شغلك وخلي كل شراء أذكى من اللي قبله.</p>
+          <div class="subscription-spotlight-actions">
+            <a class="btn btn-primary" href="<%= homeSubscriptionHref %>"><%= homeSubscriptionCta %> <span>↙</span></a>
+            <a class="btn btn-secondary" href="#market">تصفح المشاريع</a>
+          </div>
+          <div class="subscription-spotlight-proof" aria-label="مزايا العضوية">
+            <span><b>01</b> خصم على كل شراء</span>
+            <span><b>02</b> إطلاقات قبل الجميع</span>
+            <span><b>03</b> دعم حسب مستواك</span>
+          </div>
+          <% if (homeActivePlan) { %>
+            <a class="subscription-spotlight-current" href="/membership">
+              <span>عضويتك الحالية</span>
+              <strong><%= homeActivePlan.name %></strong>
+              <small>إدارة المزايا والخصم ↙</small>
+            </a>
+          <% } %>
+        </div>
+
+        <div class="subscription-spotlight-visual" aria-hidden="true">
+          <div class="subscription-spotlight-orbit subscription-spotlight-orbit-one"></div>
+          <div class="subscription-spotlight-orbit subscription-spotlight-orbit-two"></div>
+          <div class="subscription-spotlight-score">
+            <span>VALUE / MEMBERSHIP</span>
+            <strong><%= homeMaxDiscount %><small>%</small></strong>
+            <em>خصم أقصى على المشاريع</em>
+          </div>
+          <div class="subscription-spotlight-tiers">
+            <% homeSubscriptionPlans.slice(0, 3).forEach((plan, index) => { %>
+              <div class="subscription-spotlight-tier subscription-spotlight-tier-<%= index + 1 %>">
+                <b><%= plan.name %></b>
+                <span><%= displayMoney(plan.price) %> / <%= plan.durationDays || 30 %> يوم</span>
+              </div>
+            <% }) %>
+          </div>
+          <span class="subscription-spotlight-tag subscription-spotlight-tag-top">SMART BUYING</span>
+          <span class="subscription-spotlight-tag subscription-spotlight-tag-bottom">BUILD MORE / SPEND LESS</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="trust-strip" aria-label="لماذا Codentra">
+    <div class="container trust-strip-grid">
+      <div class="trust-strip-intro">
+        <span class="section-kicker">ليه Codentra؟</span>
+        <h2>أقل وقت.<br><span>شغل أكتر.</span></h2>
+      </div>
+      <div class="trust-signal"><span class="trust-signal-icon">↗</span><div><strong>ابدأ فورًا</strong><p>كود المصدر جاهز للتحميل بعد الشراء.</p></div></div>
+      <div class="trust-signal"><span class="trust-signal-icon">⌁</span><div><strong>قارن بذكاء</strong><p>قارن حتى 3 مشاريع قبل ما تقرر.</p></div></div>
+      <div class="trust-signal"><span class="trust-signal-icon">◌</span><div><strong>اطلب تخصيصك</strong><p>حوّل الفكرة لمنتج يناسب احتياجك.</p></div></div>
+    </div>
+  </section>
+
+  <section class="phase2-rail" aria-label="Codentra workflow">
+    <div class="container phase2-rail-inner">
+      <span class="phase2-rail-label">CODENTRA WORKFLOW</span>
+      <div class="phase2-rail-track" aria-hidden="true">
+        <span>IDEA</span><i>✦</i><span>BUILD</span><i>✦</i><span>SHIP</span><i>✦</i><span>REPEAT</span><i>✦</i><span>IDEA</span><i>✦</i><span>BUILD</span>
+      </div>
+      <a class="phase2-rail-cta" href="/custom-project">خلّي فكرتك تبدأ <span>↙</span></a>
+    </div>
+  </section>
 
   <% if (safeRecentProjects.length > 0) { %>
     <section class="projects-section recently-viewed-section">
@@ -79,7 +219,7 @@
             <div class="project-card project-card-recent">
               <div class="project-image <%= project.images && project.images.length > 0 ? 'has-cover' : '' %>" style="position:relative;">
                 <% if (project.images && project.images.length > 0) { %>
-                  <img src="/<%= project.images[0] %>" alt="<%= project.title %>" class="project-cover" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('image-failed');">
+                  <img src="<%= String(project.images[0] || '').startsWith('/') ? project.images[0] : '/' + project.images[0] %>" alt="<%= project.title %>" class="project-cover" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('image-failed');">
                   <span class="image-fallback-label"><%= project.title %></span>
                 <% } else { %>
                   <div class="placeholder-img">
@@ -92,7 +232,7 @@
                 <% if (user && user.role === 'user') { %>
                   <form action="/wishlist/toggle" method="POST" class="wishlist-form">
                     <input type="hidden" name="projectId" value="<%= project.id %>">
-                    <button type="submit" class="wishlist-btn <%= isWishlistedRecent ? 'is-active' : '' %>" aria-label="إضافة للمفضلة">
+                    <button type="submit" class="wishlist-btn <%= isWishlistedRecent ? 'is-active' : '' %>" aria-label="<%= isWishlistedRecent ? 'إزالة من المفضلة' : 'إضافة للمفضلة' %>" aria-pressed="<%= isWishlistedRecent ? 'true' : 'false' %>">
                       <%= isWishlistedRecent ? '♥' : '♡' %>
                     </button>
                   </form>
@@ -140,7 +280,7 @@
     </section>
   <% } %>
 
-  <section class="projects-section">
+  <section class="projects-section" id="market">
     <div class="container">
       <div class="section-head">
         <div>
@@ -150,9 +290,76 @@
         <p class="section-copy">تصفح كل المشاريع الجاهزة واختر المشروع الأنسب لاحتياجك الحالي.</p>
       </div>
 
-      <div class="projects-grid">
+      <% const marketTechnologies = Array.from(new Set(projects.flatMap(project => Array.isArray(project.technologies) ? project.technologies : []))).filter(Boolean).sort((a, b) => String(a).localeCompare(String(b), 'ar')); %>
+      <form class="market-filter-bar" id="marketFilterForm" role="search">
+        <label class="market-search-field">
+          <span class="market-filter-icon">⌕</span>
+          <input id="marketSearch" type="search" placeholder="دور على مشروع، تقنية، أو فكرة..." autocomplete="off">
+        </label>
+        <div class="market-filter-select market-dropdown" data-market-dropdown="marketCategory">
+          <span>النوع</span>
+          <button type="button" class="market-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
+            <span class="market-dropdown-value">كل الأنواع</span><b>⌄</b>
+          </button>
+          <div class="market-dropdown-menu" role="listbox" hidden>
+            <button type="button" role="option" data-value="">كل الأنواع</button>
+            <button type="button" role="option" data-value="Web">ويب</button>
+            <button type="button" role="option" data-value="Mobile">موبايل</button>
+            <button type="button" role="option" data-value="Desktop">ديسكتوب</button>
+            <button type="button" role="option" data-value="API">API</button>
+            <button type="button" role="option" data-value="Other">أخرى</button>
+          </div>
+          <select id="marketCategory" class="market-native-select" tabindex="-1" aria-hidden="true">
+            <option value="">كل الأنواع</option><option value="Web">ويب</option><option value="Mobile">موبايل</option><option value="Desktop">ديسكتوب</option><option value="API">API</option><option value="Other">أخرى</option>
+          </select>
+        </div>
+        <div class="market-filter-select market-dropdown" data-market-dropdown="marketTechnology">
+          <span>التقنية</span>
+          <button type="button" class="market-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
+            <span class="market-dropdown-value">كل التقنيات</span><b>⌄</b>
+          </button>
+          <div class="market-dropdown-menu" role="listbox" hidden>
+            <button type="button" role="option" data-value="">كل التقنيات</button>
+            <% marketTechnologies.forEach(technology => { %>
+              <button type="button" role="option" data-value="<%= technology %>"><%= technology %></button>
+            <% }) %>
+          </div>
+          <select id="marketTechnology" class="market-native-select" tabindex="-1" aria-hidden="true">
+            <option value="">كل التقنيات</option>
+            <% marketTechnologies.forEach(technology => { %><option value="<%= technology %>"><%= technology %></option><% }) %>
+          </select>
+        </div>
+        <div class="market-filter-select market-sort-select market-dropdown" data-market-dropdown="marketSort">
+          <span>ترتيب</span>
+          <button type="button" class="market-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
+            <span class="market-dropdown-value">الأكثر صلة</span><b>⌄</b>
+          </button>
+          <div class="market-dropdown-menu" role="listbox" hidden>
+            <button type="button" role="option" data-value="featured">الأكثر صلة</button>
+            <button type="button" role="option" data-value="newest">الأحدث</button>
+            <button type="button" role="option" data-value="best-selling">الأكثر مبيعًا</button>
+            <button type="button" role="option" data-value="price-low">السعر: الأقل أولًا</button>
+            <button type="button" role="option" data-value="price-high">السعر: الأعلى أولًا</button>
+          </div>
+          <select id="marketSort" class="market-native-select" tabindex="-1" aria-hidden="true">
+            <option value="featured">الأكثر صلة</option><option value="newest">الأحدث</option><option value="best-selling">الأكثر مبيعًا</option><option value="price-low">السعر: الأقل أولًا</option><option value="price-high">السعر: الأعلى أولًا</option>
+          </select>
+        </div>
+        <button type="reset" class="market-reset" id="marketReset">مسح</button>
+        <div class="market-results-count" id="marketResultsCount" aria-live="polite"><%= projects.length %> مشروع</div>
+      </form>
+
+      <div class="projects-grid" id="marketGrid">
         <% projects.forEach(project => { %>
-          <div class="project-card">
+          <div class="project-card market-project-card"
+            data-title="<%= project.title %>"
+            data-description="<%= project.description %>"
+            data-category="<%= project.category || '' %>"
+            data-technologies="<%= (project.technologies || []).join(' ') %>"
+            data-price="<%= Number(project.finalPrice || project.price || 0) %>"
+            data-sales="<%= project.trustSignals ? Number(project.trustSignals.salesCount || 0) : 0 %>"
+            data-featured="<%= project.trustSignals && project.trustSignals.isTopSeller ? '1' : '0' %>"
+            data-created-at="<%= project.createdAt || '' %>">
             <div class="project-image <%= project.images && project.images.length > 0 ? 'has-cover' : '' %>" style="position:relative;">
               <% if (project.visibility && project.visibility !== 'public') { %>
                 <span class="sale-badge" style="position:absolute; top:12px; right:12px; z-index:2;">
@@ -168,7 +375,7 @@
                 </span>
               <% } %>
               <% if (project.images && project.images.length > 0) { %>
-                <img src="/<%= project.images[0] %>" alt="<%= project.title %>" class="project-cover" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('image-failed');">
+                <img src="<%= String(project.images[0] || '').startsWith('/') ? project.images[0] : '/' + project.images[0] %>" alt="<%= project.title %>" class="project-cover" onerror="this.onerror=null;this.style.display='none';this.parentElement.classList.add('image-failed');">
                 <span class="image-fallback-label"><%= project.title %></span>
               <% } else { %>
                 <div class="placeholder-img">
@@ -181,7 +388,7 @@
               <% if (user && user.role === 'user') { %>
                 <form action="/wishlist/toggle" method="POST" class="wishlist-form">
                   <input type="hidden" name="projectId" value="<%= project.id %>">
-                  <button type="submit" class="wishlist-btn <%= isWishlisted ? 'is-active' : '' %>" aria-label="إضافة للمفضلة">
+                  <button type="submit" class="wishlist-btn <%= isWishlisted ? 'is-active' : '' %>" aria-label="<%= isWishlisted ? 'إزالة من المفضلة' : 'إضافة للمفضلة' %>" aria-pressed="<%= isWishlisted ? 'true' : 'false' %>">
                     <%= isWishlisted ? '♥' : '♡' %>
                   </button>
                 </form>
@@ -241,6 +448,10 @@
           <p>لا توجد مشاريع متاحة حاليًا</p>
         </div>
       <% } %>
+      <div class="empty-state market-filter-empty" id="marketFilterEmpty" hidden>
+        <p>مفيش مشروع مطابق للبحث الحالي.</p>
+        <button type="button" class="btn btn-secondary" id="marketEmptyReset">عرض كل المشاريع</button>
+      </div>
     </div>
   </section>
 

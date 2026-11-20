@@ -10,7 +10,7 @@
   --glass-v3-glow: 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.18);
   --glass-v3-pill: rgba(255, 255, 255, 0.08);
   --glass-v3-pill-hover: rgba(255, 255, 255, 0.16);
-  --glass-v3-backdrop: blur(28px) saturate(165%);
+  --glass-v3-backdrop: blur(16px) saturate(145%);
 }
 
 html[data-theme="light"] {
@@ -39,7 +39,7 @@ body::after {
   pointer-events: none;
   z-index: -1;
   border-radius: 999px;
-  filter: blur(18px);
+  filter: blur(10px);
   opacity: 0.9;
 }
 
@@ -78,8 +78,8 @@ html[data-theme="light"] body::after {
   background: linear-gradient(145deg, rgba(24, 28, 44, 0.54) 0%, rgba(28, 34, 52, 0.42) 52%, rgba(32, 40, 60, 0.32) 100%);
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 20px 48px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.16), inset 0 0 22px rgba(255, 255, 255, 0.04);
-  -webkit-backdrop-filter: blur(34px) saturate(180%);
-  backdrop-filter: blur(34px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
 }
 
 html[data-theme="light"] .main-header .container {
@@ -190,8 +190,8 @@ button:hover {
     0 28px 90px rgba(0, 0, 0, 0.32),
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
     inset 0 0 30px rgba(255, 255, 255, 0.05);
-  -webkit-backdrop-filter: blur(38px) saturate(185%);
-  backdrop-filter: blur(38px) saturate(185%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
   overflow: hidden;
   animation: releaseAmbientGlow 5.2s ease-in-out infinite;
   transform-style: preserve-3d;
@@ -219,7 +219,7 @@ button:hover {
   width: 42%;
   pointer-events: none;
   background: linear-gradient(90deg, transparent 0%, rgba(141, 166, 255, 0.18) 45%, rgba(255, 255, 255, 0.34) 50%, rgba(141, 166, 255, 0.18) 55%, transparent 100%);
-  filter: blur(14px);
+  filter: blur(8px);
   opacity: 0.55;
   transform: skewX(-20deg) translateX(-140%);
   animation: releaseScanlineSweep 5.4s linear infinite;
@@ -263,7 +263,7 @@ html[data-theme="light"] .release-banner {
   position: absolute;
   border-radius: 999px;
   pointer-events: none;
-  filter: blur(18px);
+  filter: blur(10px);
   opacity: 0.9;
 }
 

@@ -1,13 +1,12 @@
 <% 
   const guestPrimaryLinks = [
     { href: '/', label: 'المشاريع' },
-    { href: '/community', label: 'Community' },
     { href: '/ai-advisor', label: 'مستشار AI' }
   ];
 
   const userPrimaryLinks = [
     { href: '/', label: 'المشاريع' },
-    { href: '/community', label: 'Community' },
+    { href: '/custom-project', label: 'اطلب مشروعك', featured: true },
     { href: '/wishlist', label: 'المفضلة' },
     { href: '/my-purchases', label: 'مشترياتي' },
     { href: '/notifications', label: 'الإشعارات', badge: user && user.unreadNotificationsCount ? user.unreadNotificationsCount : 0 }
@@ -27,7 +26,6 @@
 
   const adminPrimaryLinks = [
     { href: '/', label: 'المشاريع' },
-    { href: '/community', label: 'Community' },
     { href: '/admin', label: 'لوحة التحكم' }
   ];
 
@@ -71,8 +69,7 @@
   <div class="container nav-shell">
     <div class="logo nav-brand">
       <a href="/">
-        <img src="/logo.jpg" alt="Codentra" class="logo-img">
-        <span>Codentra</span>
+        <img src="/logo-wordmark.png" alt="Codentra" class="logo-img logo-wordmark-img">
       </a>
     </div>
 
@@ -81,6 +78,7 @@
         <% primaryLinks.forEach(link => { %>
           <a href="<%= link.href %>" class="nav-pill">
             <span><%= link.label %></span>
+            <% if (link.featured) { %><span class="nav-pill-featured">جديد</span><% } %>
             <% if (link.badge) { %>
               <span class="nav-pill-badge"><%= link.badge > 9 ? '9+' : link.badge %></span>
             <% } %>
@@ -142,7 +140,7 @@
       <div class="mobile-nav-head">
         <button type="button" class="mobile-nav-close" data-close-nav aria-label="إغلاق القائمة">×</button>
         <a href="/" class="mobile-nav-brand">
-          <img src="/logo.jpg" alt="Codentra" class="mobile-nav-brand-logo">
+          <img src="/logo-wordmark.png" alt="Codentra" class="mobile-nav-brand-logo logo-wordmark-img">
           <span class="mobile-nav-brand-copy">
             <span class="mobile-nav-kicker">Codentra</span>
             <strong>القائمة</strong>
@@ -188,3 +186,63 @@
     </div>
   </div>
 </header>
+
+<div class="site-notice" id="siteNotice" role="status" aria-live="polite">
+  <div class="site-notice-inner container">
+    <span class="site-notice-dot" aria-hidden="true"></span>
+    <strong>جديد في Codentra</strong>
+    <span>قارن المشاريع، شوف الصور كاملة، واختار نقطة انطلاقك في دقائق.</span>
+    <a href="/#market">ابدأ الاستكشاف <span aria-hidden="true">↙</span></a>
+    <button type="button" class="site-notice-close" id="siteNoticeClose" aria-label="إغلاق الإشعار">×</button>
+  </div>
+</div>
+
+<link rel="stylesheet" href="/css/brand-redesign.css">
+<link rel="stylesheet" href="/css/brand-phase2.css">
+<% if (typeof isAdminPage !== 'undefined' && isAdminPage) { %>
+  <%
+    const canAdmin = (permission) => Boolean(user && (user.isSuperAdmin || (user.adminPermissions && user.adminPermissions[permission])));
+    const adminMenuLinks = [
+      { href: '/admin', label: 'الرئيسية' },
+      { href: '/admin/command-center', label: 'Command Center' },
+      { href: '/admin/support-load', label: 'توقع ضغط الدعم' },
+      { href: '/admin/audit-replay', label: 'Audit Replay' },
+      { href: '/admin/team', label: 'جروب الفريق' },
+      { href: '/admin/projects/new', label: 'إضافة مشروع', permission: 'projects' },
+      { href: '/admin/sales', label: 'عروض المنتجات', permission: 'projects' },
+      { href: '/admin/purchases', label: 'المشتريات', permission: 'purchases' },
+      { href: '/admin/custom-projects', label: 'طلبات المشاريع المخصصة', permission: 'purchases' },
+      { href: '/admin/payments-inbox', label: 'Payments Inbox', permission: 'purchases' },
+      { href: '/admin/net-profit', label: 'صافي الأرباح', permission: 'purchases' },
+      { href: '/admin/leak-radar', label: 'Leak Radar', permission: 'purchases' },
+      { href: '/admin/leak-ai', label: 'AI كشف التسريب', permission: 'purchases' },
+      { href: '/admin/leak-reports', label: 'بلاغات التسريب', permission: 'purchases' },
+      { href: '/admin/file-health', label: 'سلامة الملفات', permission: 'purchases' },
+      { href: '/admin/live-feed', label: 'الأحداث المباشرة' },
+      { href: '/admin/ai-pricing', label: 'التسعير الذكي', permission: 'projects' },
+      { href: '/admin/modifications', label: 'طلبات التعديل', permission: 'modifications' },
+      { href: '/admin/messages', label: 'الرسائل', permission: 'messages' },
+      { href: '/admin/reviews', label: 'التقييمات', permission: 'reviews' },
+      { href: '/admin/coupons', label: 'الكوبونات', permission: 'coupons' },
+      { href: '/admin/coupon-fraud', label: 'كشف احتيال الكوبونات', permission: 'coupons' },
+      { href: '/admin/referrals', label: 'الإحالات', permission: 'referrals' },
+      { href: '/admin/wallet-codes', label: 'أكواد الشحن', permission: 'walletCodes' },
+      { href: '/admin/wallet-balances', label: 'أرصدة العملاء', permission: 'walletBalances' },
+      { href: '/admin/appointments', label: 'المواعيد', permission: 'appointments' },
+      { href: '/admin/subscription-coupons', label: 'كوبونات الاشتراك', permission: 'subscriptionCoupons' },
+      { href: '/admin/subscription-plans', label: 'خطط الاشتراك', permission: 'subscriptionPlans' },
+      { href: '/admin/subscription-reports', label: 'تقارير الاشتراك', permission: 'subscriptionReports' },
+      { href: '/admin/community/jobs', label: 'وظائف الكوميونتي', superOnly: true },
+      { href: '/admin/meeting-recordings', label: 'تسجيلات الاجتماعات', superOnly: true },
+      { href: '/admin/admins', label: 'إدارة الأدمنز', superOnly: true },
+      { href: '/admin/users', label: 'المستخدمين', permission: 'users' },
+      { href: '/community', label: 'فتح الكوميونتي' },
+      { href: '/', label: 'العودة للموقع' }
+    ].filter((link) => {
+      if (link.superOnly) return Boolean(user && user.isSuperAdmin);
+      return !link.permission || canAdmin(link.permission);
+    });
+  %>
+  <script>window.codentraAdminNav = <%- JSON.stringify(adminMenuLinks) %>;</script>
+  <script src="/js/admin-nav.js?v=3" defer></script>
+<% } %>

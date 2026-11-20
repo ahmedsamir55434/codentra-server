@@ -15,6 +15,7 @@ const mammoth = require('mammoth');
 const { v4: uuidv4 } = require('uuid');
 const { Server } = require('socket.io');
 const PDFDocument = require('pdfkit');
+const sharp = require('sharp');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 const PptxGenJS = require('pptxgenjs');
@@ -4814,15 +4815,20 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
 app.get('/uploads/*', (req, res, next) => {
-  const requestedPath = req.params[0];
+  const requestedPath = String(req.params[0] || '').replace(/^\/+/, '');
   if (!requestedPath || requestedPath.includes('..')) return next();
 
-  const absolutePath = toAbsolutePath(`uploads/${requestedPath}`);
+  const normalizedPath = requestedPath.startsWith('uploads/') ? requestedPath.slice('uploads/'.length) : requestedPath;
+  const absolutePath = toAbsolutePath(`uploads/${normalizedPath}`);
   if (!absolutePath || !fs.existsSync(absolutePath)) return next();
 
+  res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
   return res.sendFile(absolutePath);
 });
-app.use('/uploads', express.static(UPLOADS_DIR));
+app.use('/uploads', express.static(UPLOADS_DIR, {
+  maxAge: '7d',
+  fallthrough: true
+}));
 
 app.use((req, res, next) => {
   storageRequestContext.run({ pendingPersists: [] }, () => {
@@ -4888,6 +4894,12 @@ app.use((req, res, next) => {
   } catch (error) {
     // ignore auth cookie hydration failures
   }
+  next();
+});
+
+// Keep the admin visual system isolated from the public storefront.
+app.use((req, res, next) => {
+  res.locals.isAdminPage = req.path === '/admin' || req.path.startsWith('/admin/');
   next();
 });
 
@@ -5021,6 +5033,18 @@ const supportAttachmentUpload = multer({
   limits: { fileSize: 200 * 1024 * 1024 }
 });
 
+const supportAttachmentUploadHandler = (req, res, next) => {
+  supportAttachmentUpload.array('attachments', 5)(req, res, (error) => {
+    if (!error) return next();
+    const message = error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE'
+      ? 'حجم المرفق كبير جدًا. الحد الأقصى 200MB.'
+      : 'تعذر رفع الصورة أو المرفق. جرّب JPG أو PNG أو WebP بحجم أصغر.';
+    console.error('Support attachment upload error:', error);
+    if (requestWantsJson(req)) return res.status(400).json({ ok: false, error: message });
+    return res.redirect(`/messages?error=${encodeURIComponent(message)}`);
+  });
+};
+
 const communityMediaStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, COMMUNITY_MEDIA_DIR),
   filename: (req, file, cb) => cb(null, buildSafeUploadFileName({ file, fallbackBaseName: 'community-media' }))
@@ -5102,23 +5126,68 @@ const projectImagesUpload = multer({
 
 // Custom file processor for watermark
 const processImageWithWatermark = async (file) => {
+  const sourcePath = file.path;
+  const sourceBuffer = fs.readFileSync(sourcePath);
+  let processedBuffer = sourceBuffer;
+
   try {
-    const imageBuffer = fs.readFileSync(file.path);
-    const watermarkedBuffer = await watermarkProcessor.addWatermarkToBuffer(imageBuffer, {
+    processedBuffer = await watermarkProcessor.addWatermarkToBuffer(sourceBuffer, {
       position: 'bottom-right',
       opacity: 0.7,
       scale: 0.15,
       margin: 20
     });
-    
-    // Save the watermarked image
-    fs.writeFileSync(file.path, watermarkedBuffer);
-    return file;
   } catch (error) {
-    console.error('Error processing image with watermark:', error);
-    // Return original file if watermark fails
-    return file;
+    console.warn('Watermark skipped for uploaded image:', error.message);
   }
+
+  // Always store browser-safe WebP bytes with a matching extension. Previously
+  // the processor wrote PNG bytes into a JPG/HEIC filename, which made the
+  // upload succeed on disk but fail to render in the browser.
+  const safeBuffer = await sharp(processedBuffer)
+    .rotate()
+    .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 72, effort: 4 })
+    .toBuffer();
+  const nextFilename = `${path.basename(file.filename, path.extname(file.filename))}.webp`;
+  const nextPath = path.join(path.dirname(sourcePath), nextFilename);
+
+  fs.writeFileSync(nextPath, safeBuffer);
+  if (nextPath !== sourcePath) safeDeleteFile(sourcePath);
+  file.filename = nextFilename;
+  file.path = nextPath;
+  file.mimetype = 'image/webp';
+  file.size = safeBuffer.length;
+  return file;
+};
+
+const optimizeUploadedImage = async (file) => {
+  if (!file || !String(file.mimetype || '').startsWith('image/')) return file;
+  try {
+    const sourceBuffer = fs.readFileSync(file.path);
+    const optimizedBuffer = await sharp(sourceBuffer)
+      .rotate()
+      .resize({ width: 1400, height: 1400, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 72, effort: 4 })
+      .toBuffer();
+    const nextFilename = `${path.basename(file.filename, path.extname(file.filename))}.webp`;
+    const nextPath = path.join(path.dirname(file.path), nextFilename);
+    fs.writeFileSync(nextPath, optimizedBuffer);
+    if (nextPath !== file.path) safeDeleteFile(file.path);
+    file.filename = nextFilename;
+    file.path = nextPath;
+    file.mimetype = 'image/webp';
+    file.size = optimizedBuffer.length;
+  } catch (error) {
+    console.warn('Image optimization skipped:', error.message);
+  }
+  return file;
+};
+
+const optimizeUploadedImages = async (files = []) => {
+  const optimized = [];
+  for (const file of files) optimized.push(await optimizeUploadedImage(file));
+  return optimized;
 };
 
 // Combined upload for project form (single file + multiple images)
@@ -5160,6 +5229,29 @@ const projectUpload = multer({
   { name: 'projectFile', maxCount: 1 },
   { name: 'projectImages', maxCount: 5 }
 ]);
+
+const getProjectUploadErrorMessage = (error) => {
+  if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+    return 'حجم الملف كبير جدًا. حاول رفع صورة أصغر أو ملف مشروع أقل حجمًا.';
+  }
+  if (error && /image files are allowed/i.test(error.message || '')) {
+    return 'ارفع صورًا بصيغة JPG أو PNG أو WebP فقط.';
+  }
+  return 'تعذر رفع الملفات الآن. تأكد من الصيغة والحجم وحاول مرة أخرى.';
+};
+
+const projectUploadHandler = (req, res, next) => {
+  projectUpload(req, res, (error) => {
+    if (!error) return next();
+    const message = getProjectUploadErrorMessage(error);
+    console.error('Project upload error:', error);
+    if (requestWantsJson(req)) return res.status(400).json({ ok: false, error: message });
+    const editPath = req.path.startsWith('/admin/projects/') && req.path !== '/admin/projects'
+      ? `${req.path}/edit`
+      : '/admin/projects/new';
+    return res.redirect(`${editPath}?error=${encodeURIComponent(message)}`);
+  });
+};
 
 // Auth middleware
 const requireAuth = (req, res, next) => {
@@ -5267,7 +5359,18 @@ app.get('/', (req, res) => {
     const currentUser = db.users().find((u) => u && u.id === req.session.user.id && u.role === 'user');
     wishlistProjectIds = currentUser && Array.isArray(currentUser.wishlistProjectIds) ? currentUser.wishlistProjectIds : [];
   }
-  res.render('index', { projects: projectsWithTrustSignals, recentProjects, user: req.session.user, wishlistProjectIds });
+  const subscriptionPlans = ensureSubscriptionPlans().filter((plan) => plan && plan.active);
+  const activeSubscription = req.session.user && req.session.user.role === 'user'
+    ? getActiveSubscriptionForUser({ userId: req.session.user.id })
+    : null;
+  res.render('index', {
+    projects: projectsWithTrustSignals,
+    recentProjects,
+    user: req.session.user,
+    wishlistProjectIds,
+    subscriptionPlans,
+    activeSubscription
+  });
 });
 
 app.get('/wishlist', requireAuth, (req, res) => {
@@ -5296,6 +5399,14 @@ app.post('/wishlist/toggle', requireAuth, (req, res) => {
   users[userIndex].wishlistProjectIds = exists ? wishlist.filter((id) => id !== projectId) : [...wishlist, projectId];
   db.saveUsers(users);
   req.session.user = buildSessionUser(users[userIndex]);
+  if (String(req.get('accept') || '').includes('application/json')) {
+    return res.json({
+      ok: true,
+      projectId,
+      isWishlisted: !exists,
+      wishlistProjectIds: users[userIndex].wishlistProjectIds
+    });
+  }
   return res.redirect(req.get('referer') || '/');
 });
 
@@ -5771,6 +5882,29 @@ app.post('/community/jobs/:id/apply', requireCommunityMember, communityCvUploadH
 });
 
 // Auth routes
+const requestWantsJson = (req) => String(req.get('accept') || '').includes('application/json');
+
+const sendAuthSuccess = ({ req, res, redirect }) => {
+  const wantsJson = requestWantsJson(req);
+  const payload = { ok: true, redirect, user: req.session.user };
+  res.setHeader('Cache-Control', 'no-store');
+
+  const complete = () => wantsJson ? res.json(payload) : res.redirect(redirect);
+  if (!req.session || typeof req.session.save !== 'function') return complete();
+
+  // Persist the session before redirecting so the first page after auth
+  // already contains the logged-in navigation and user state.
+  return req.session.save((error) => {
+    if (error) return res.status(500).json({ ok: false, error: 'تعذر حفظ جلسة الدخول' });
+    return complete();
+  });
+};
+
+const sendAuthError = ({ req, res, status = 400, error, view, extra = {} }) => {
+  if (requestWantsJson(req)) return res.status(status).json({ ok: false, error });
+  return res.status(status).render(view, { error, user: null, ...extra });
+};
+
 app.get('/login', (req, res) => {
   if (req.session.user) return res.redirect('/');
   res.render('login', {
@@ -5811,16 +5945,19 @@ app.get('/blocked', (req, res) => {
 });
 
 app.post('/login', (req, res) => {
-  const { email, password } = req.body;
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const password = String(req.body.password || '');
   const users = db.users();
   const user = users.find(u => u.email === email);
   
   if (!user || !user.password || !bcrypt.compareSync(password, user.password)) {
-    return res.render('login', {
-      error: user && !user.password ? 'هذا الحساب مرتبط بتسجيل اجتماعي. استخدم جوجل أو GitHub.' : 'Invalid email or password',
-      user: null,
-      googleAuthEnabled: isGoogleAuthConfigured(),
-      githubAuthEnabled: isGitHubAuthConfigured()
+    return sendAuthError({
+      req,
+      res,
+      status: 401,
+      view: 'login',
+      error: user && !user.password ? 'هذا الحساب مرتبط بتسجيل اجتماعي. استخدم جوجل أو GitHub.' : 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
+      extra: { googleAuthEnabled: isGoogleAuthConfigured(), githubAuthEnabled: isGitHubAuthConfigured() }
     });
   }
 
@@ -5843,7 +5980,7 @@ app.post('/login', (req, res) => {
     }
     req.session.user = buildSessionUser(user);
     setAuthCookie(res, user.id);
-    return res.redirect('/blocked');
+    return sendAuthSuccess({ req, res, redirect: '/blocked' });
   }
 
   if (user.role === 'admin') {
@@ -5865,7 +6002,7 @@ app.post('/login', (req, res) => {
   req.session.user = buildSessionUser(user);
   setAuthCookie(res, user.id);
   syncRecentlyViewedProjectsForUser({ req, userId: user.id });
-  res.redirect(user.role === 'admin' ? '/admin' : '/');
+  return sendAuthSuccess({ req, res, redirect: user.role === 'admin' ? '/admin' : '/' });
 });
 
 app.get('/register', (req, res) => {
@@ -5880,21 +6017,24 @@ app.get('/register', (req, res) => {
 });
 
 app.post('/register', (req, res) => {
-  const { name, email, password, walletPassword } = req.body;
+  const name = String(req.body.name || '').trim();
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const password = String(req.body.password || '');
+  const walletPassword = String(req.body.walletPassword || '');
   const referralInput = normalizeReferralCode(req.body.referralCode);
   const users = db.users();
 
   if (!walletPassword || String(walletPassword).trim().length < 4) {
-    return res.render('register', { error: 'كلمة مرور البطاقة يجب ألا تقل عن 4 أحرف أو أرقام', user: null, referralPrefill: referralInput, googleAuthEnabled: isGoogleAuthConfigured(), githubAuthEnabled: isGitHubAuthConfigured() });
+    return sendAuthError({ req, res, status: 400, view: 'register', error: 'كلمة مرور البطاقة يجب ألا تقل عن 4 أحرف أو أرقام', extra: { referralPrefill: referralInput, googleAuthEnabled: isGoogleAuthConfigured(), githubAuthEnabled: isGitHubAuthConfigured() } });
   }
   
   if (users.find(u => u.email === email)) {
-    return res.render('register', { error: 'Email already registered', user: null, referralPrefill: referralInput, googleAuthEnabled: isGoogleAuthConfigured(), githubAuthEnabled: isGitHubAuthConfigured() });
+    return sendAuthError({ req, res, status: 400, view: 'register', error: 'البريد الإلكتروني مسجل بالفعل', extra: { referralPrefill: referralInput, googleAuthEnabled: isGoogleAuthConfigured(), githubAuthEnabled: isGitHubAuthConfigured() } });
   }
 
   const referralCheck = validateReferralCodeForUser({ users, code: referralInput, targetUserId: null });
   if (!referralCheck.valid) {
-    return res.render('register', { error: referralCheck.reason, user: null, referralPrefill: referralInput, googleAuthEnabled: isGoogleAuthConfigured(), githubAuthEnabled: isGitHubAuthConfigured() });
+    return sendAuthError({ req, res, status: 400, view: 'register', error: referralCheck.reason, extra: { referralPrefill: referralInput, googleAuthEnabled: isGoogleAuthConfigured(), githubAuthEnabled: isGitHubAuthConfigured() } });
   }
   
   const newUser = {
@@ -5927,7 +6067,7 @@ app.post('/register', (req, res) => {
   req.session.user = buildSessionUser(newUser);
   setAuthCookie(res, newUser.id);
   syncRecentlyViewedProjectsForUser({ req, userId: newUser.id });
-  res.redirect('/');
+  return sendAuthSuccess({ req, res, redirect: '/' });
 });
 
 app.get('/auth/google', (req, res) => {
@@ -10985,7 +11125,7 @@ app.get('/admin/projects/new', requireAdminPermission(ADMIN_PERMISSIONS.projects
   res.render('admin/project-form', { project: null, user: req.session.user, error: req.query.error || null, success: req.query.success || null });
 });
 
-app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), projectUpload, async (req, res) => {
+app.post('/admin/projects', requireAdminPermission(ADMIN_PERMISSIONS.projects), projectUploadHandler, async (req, res) => {
   try {
     const { title, description, price, category, technologies } = req.body;
     const priceUsd = Number(price);
@@ -11086,7 +11226,7 @@ app.get('/admin/projects/:id/edit', requireAdminPermission(ADMIN_PERMISSIONS.pro
   res.render('admin/project-form', { project, user: req.session.user, error: req.query.error || null, success: req.query.success || null });
 });
 
-app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.projects), projectUpload, async (req, res) => {
+app.post('/admin/projects/:id', requireAdminPermission(ADMIN_PERMISSIONS.projects), projectUploadHandler, async (req, res) => {
   try {
     const { title, description, price, category, technologies } = req.body;
     const priceUsd = Number(price);
@@ -13828,10 +13968,10 @@ const buildSupportAiReply = async ({ content, attachments, userId, purchaseChat 
 };
 
 // User - Send message to admin
-app.post('/messages', requireAuth, supportAttachmentUpload.array('attachments', 5), async (req, res) => {
+app.post('/messages', requireAuth, supportAttachmentUploadHandler, async (req, res) => {
   const { purchaseId, clientTempId } = req.body;
   const content = String(req.body.content || '').trim();
-  const attachments = buildSupportAttachments(req.files || []);
+  const attachments = buildSupportAttachments(await optimizeUploadedImages(req.files || []));
   if (!content && attachments.length === 0) return res.redirect('/messages');
 
   const messages = db.messages();
@@ -13920,13 +14060,13 @@ app.post('/messages', requireAuth, supportAttachmentUpload.array('attachments', 
   res.redirect('/messages');
 });
 
-app.post('/messages/purchase/:purchaseId', requireAuth, supportAttachmentUpload.array('attachments', 5), async (req, res) => {
+app.post('/messages/purchase/:purchaseId', requireAuth, supportAttachmentUploadHandler, async (req, res) => {
   const purchaseChat = getPurchaseChatContextForUser(req.params.purchaseId, req.session.user.id);
   if (!purchaseChat) return res.status(404).send('Purchase not found');
 
   const { clientTempId } = req.body;
   const content = String(req.body.content || '').trim();
-  const attachments = buildSupportAttachments(req.files || []);
+  const attachments = buildSupportAttachments(await optimizeUploadedImages(req.files || []));
   if (!content && attachments.length === 0) return res.redirect(`/messages/purchase/${purchaseChat.purchaseId}`);
 
   const messages = db.messages();

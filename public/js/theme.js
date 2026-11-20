@@ -75,6 +75,15 @@
 
     var lastScrollY = window.pageYOffset;
     var ticking = false;
+    var scrollStopTimer;
+
+    function markScrolling() {
+      document.documentElement.classList.add('is-scrolling');
+      window.clearTimeout(scrollStopTimer);
+      scrollStopTimer = window.setTimeout(function () {
+        document.documentElement.classList.remove('is-scrolling');
+      }, 140);
+    }
 
     function updateHeader() {
       var currentScrollY = window.pageYOffset;
@@ -92,6 +101,7 @@
     }
 
     function requestTick() {
+      markScrolling();
       if (!ticking) {
         requestAnimationFrame(updateHeader);
         ticking = true;
