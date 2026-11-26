@@ -517,10 +517,9 @@ html[data-theme="light"] .attention-proof {
   transform: rotate(8deg);
 }
 
-.home-hero-logo-badge span {
-  color: var(--phase2-acid, #d9ff3f);
-  font: 900 1.5rem/.9 Arial, sans-serif;
-  letter-spacing: -.12em;
+.home-hero-logo-badge img {
+  width: 31px;
+  height: 31px;
 }
 
 @keyframes codentraProductFloat {
@@ -607,7 +606,8 @@ html[data-theme="light"] .attention-proof {
     border-radius: 13px;
   }
 
-  .home-hero-logo-badge span {
-    font-size: 1.2rem;
+  .home-hero-logo-badge img {
+    width: 25px;
+    height: 25px;
   }
 }
